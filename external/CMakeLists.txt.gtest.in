@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.11.4)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest-download
+  GIT_REPOSITORY    https://github.com/shamazo/googletest.git
+# Using a fork for now due to https://stackoverflow.com/questions/67314177/compilation-error-googlegtest-fails-with-compilation-error
+# and https://github.com/google/googletest/issues/3659
+# (If we were being proper this would be a patch
+  GIT_TAG           origin/v1.13.x)
+
+FetchContent_MakeAvailable(googletest-download)
