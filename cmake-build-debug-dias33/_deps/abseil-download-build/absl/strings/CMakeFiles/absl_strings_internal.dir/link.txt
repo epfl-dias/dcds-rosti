@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_strings_internal.a CMakeFiles/absl_strings_internal.dir/internal/ostringstream.cc.o CMakeFiles/absl_strings_internal.dir/internal/utf8.cc.o CMakeFiles/absl_strings_internal.dir/internal/escaping.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_strings_internal.a

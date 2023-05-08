@@ -1,4 +1,4 @@
-function(datapipes_target_enable_default_warnings target)
+function(dcds_target_enable_default_warnings target)
   set(scope PRIVATE)
 
   if (${ARGC} GREATER 1)
@@ -23,7 +23,10 @@ function(datapipes_target_enable_default_warnings target)
     -Wno-conversion
     -Wno-covered-switch-default
     -Wno-global-constructors
+    -Wno-error=c++20-compat
+    -Wno-exit-time-destructors
     # these are just annoying while actively writing code
+          -Wno-padded
     -Wno-error=unused-variable
     -Wno-error=unused-function
     -Wno-error=unused-parameter

@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_bad_any_cast_impl.a CMakeFiles/absl_bad_any_cast_impl.dir/bad_any_cast.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_bad_any_cast_impl.a

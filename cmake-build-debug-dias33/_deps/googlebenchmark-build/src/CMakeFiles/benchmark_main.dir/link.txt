@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libbenchmark_main.a CMakeFiles/benchmark_main.dir/benchmark_main.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libbenchmark_main.a

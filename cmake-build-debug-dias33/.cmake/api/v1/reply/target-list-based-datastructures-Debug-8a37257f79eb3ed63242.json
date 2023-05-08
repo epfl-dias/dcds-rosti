@@ -1,0 +1,891 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "benchmarks/microbenches/list-based-ds/data-structures/liblist-based-datastructures.so"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"add_link_options",
+			"target_link_libraries",
+			"target_link_libraries_system",
+			"absl_cc_library",
+			"set_property",
+			"find_package",
+			"set_target_properties",
+			"include",
+			"target_include_directories",
+			"target_compile_features"
+		],
+		"files" : 
+		[
+			"benchmarks/microbenches/list-based-ds/data-structures/CMakeLists.txt",
+			"CMakeLists.txt",
+			"cmake/utils.cmake",
+			"cmake-build-debug-dias33/_deps/googlebenchmark-src/src/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/CMake/AbseilHelpers.cmake",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/log/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/strings/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/hash/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/types/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/debugging/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/synchronization/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/time/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/container/CMakeLists.txt",
+			"cmake-build-debug-dias33/_deps/abseil-download-src/absl/base/CMakeLists.txt",
+			"/scratch/pelago/builds/llvm-14/opt/share/cmake-3.23/Modules/FindThreads.cmake",
+			"cmake-build-debug-dias33/_deps/googlebenchmark-src/CMakeLists.txt",
+			"cmake/vtune.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 6,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 69,
+				"parent" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 18,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 7,
+				"parent" : 4
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"file" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 3,
+				"line" : 43,
+				"parent" : 7
+			},
+			{
+				"file" : 5
+			},
+			{
+				"command" : 4,
+				"file" : 5,
+				"line" : 147,
+				"parent" : 9
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 330,
+				"parent" : 10
+			},
+			{
+				"command" : 4,
+				"file" : 5,
+				"line" : 182,
+				"parent" : 9
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 12
+			},
+			{
+				"file" : 6
+			},
+			{
+				"command" : 4,
+				"file" : 6,
+				"line" : 396,
+				"parent" : 14
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 330,
+				"parent" : 15
+			},
+			{
+				"command" : 4,
+				"file" : 5,
+				"line" : 487,
+				"parent" : 9
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 17
+			},
+			{
+				"file" : 7
+			},
+			{
+				"command" : 4,
+				"file" : 7,
+				"line" : 17,
+				"parent" : 19
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 20
+			},
+			{
+				"file" : 8
+			},
+			{
+				"command" : 4,
+				"file" : 8,
+				"line" : 163,
+				"parent" : 22
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 330,
+				"parent" : 23
+			},
+			{
+				"command" : 4,
+				"file" : 8,
+				"line" : 296,
+				"parent" : 22
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 330,
+				"parent" : 25
+			},
+			{
+				"command" : 4,
+				"file" : 5,
+				"line" : 219,
+				"parent" : 9
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 27
+			},
+			{
+				"file" : 9
+			},
+			{
+				"command" : 4,
+				"file" : 9,
+				"line" : 115,
+				"parent" : 29
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 30
+			},
+			{
+				"command" : 4,
+				"file" : 9,
+				"line" : 19,
+				"parent" : 29
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 32
+			},
+			{
+				"command" : 4,
+				"file" : 9,
+				"line" : 61,
+				"parent" : 29
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 34
+			},
+			{
+				"file" : 10
+			},
+			{
+				"command" : 4,
+				"file" : 10,
+				"line" : 50,
+				"parent" : 36
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 37
+			},
+			{
+				"file" : 11
+			},
+			{
+				"command" : 4,
+				"file" : 11,
+				"line" : 17,
+				"parent" : 39
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 40
+			},
+			{
+				"file" : 12
+			},
+			{
+				"command" : 4,
+				"file" : 12,
+				"line" : 186,
+				"parent" : 42
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 330,
+				"parent" : 43
+			},
+			{
+				"command" : 4,
+				"file" : 6,
+				"line" : 17,
+				"parent" : 14
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 45
+			},
+			{
+				"command" : 4,
+				"file" : 5,
+				"line" : 56,
+				"parent" : 9
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 47
+			},
+			{
+				"file" : 13
+			},
+			{
+				"command" : 4,
+				"file" : 13,
+				"line" : 177,
+				"parent" : 49
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 255,
+				"parent" : 50
+			},
+			{
+				"file" : 15
+			},
+			{
+				"command" : 6,
+				"file" : 15,
+				"line" : 322,
+				"parent" : 52
+			},
+			{
+				"file" : 14,
+				"parent" : 53
+			},
+			{
+				"command" : 5,
+				"file" : 14,
+				"line" : 250,
+				"parent" : 54
+			},
+			{
+				"command" : 8,
+				"file" : 1,
+				"line" : 110,
+				"parent" : 2
+			},
+			{
+				"file" : 16,
+				"parent" : 56
+			},
+			{
+				"command" : 7,
+				"file" : 16,
+				"line" : 14,
+				"parent" : 57
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 7,
+				"parent" : 4
+			},
+			{
+				"command" : 9,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 9,
+				"file" : 2,
+				"line" : 6,
+				"parent" : 4
+			},
+			{
+				"command" : 9,
+				"file" : 2,
+				"line" : 6,
+				"parent" : 4
+			},
+			{
+				"command" : 9,
+				"file" : 2,
+				"line" : 6,
+				"parent" : 4
+			},
+			{
+				"command" : 10,
+				"file" : 0,
+				"line" : 31,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-stdlib=libc++ -ffunction-sections -fdata-sections -march=native -mtune=native -fvisibility-inlines-hidden -O3 -g -fPIC"
+				},
+				{
+					"backtrace" : 59,
+					"fragment" : "-pthread"
+				},
+				{
+					"fragment" : "-std=c++20"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 5,
+					"define" : "BENCHMARK_STATIC_DEFINE"
+				},
+				{
+					"define" : "list_based_datastructures_EXPORTS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 60,
+					"path" : "/tmp/tmp.Y6NElX1M2E/benchmarks/microbenches/list-based-ds/data-structures/include"
+				},
+				{
+					"backtrace" : 60,
+					"path" : "/tmp/tmp.Y6NElX1M2E/benchmarks/microbenches/list-based-ds/data-structures"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/tmp/tmp.Y6NElX1M2E/dcds/include"
+				},
+				{
+					"backtrace" : 61,
+					"isSystem" : true,
+					"path" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/abseil-download-src"
+				},
+				{
+					"backtrace" : 62,
+					"isSystem" : true,
+					"path" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-src"
+				},
+				{
+					"backtrace" : 63,
+					"isSystem" : true,
+					"path" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/googlebenchmark-src/include"
+				},
+				{
+					"backtrace" : 6,
+					"isSystem" : true,
+					"path" : "/opt/intel/vtune_profiler/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					64,
+					59
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_severity::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_raw_logging_internal::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_spinlock_wait::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_malloc_internal::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_base::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_throw_delegate::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_strerror::@a5c00a8252647ab58522"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_stacktrace::@51ca923f6e70c6ec027d"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_symbolize::@51ca923f6e70c6ec027d"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_examine_stack::@51ca923f6e70c6ec027d"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_debugging_internal::@51ca923f6e70c6ec027d"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_demangle_internal::@51ca923f6e70c6ec027d"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_hash::@7de7bebf21cba4c2d8ef"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_city::@7de7bebf21cba4c2d8ef"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_low_level_hash::@7de7bebf21cba4c2d8ef"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_conditions::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_format::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_globals::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_proto::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_message::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_log_sink_set::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_internal_nullguard::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_globals::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_entry::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_log_sink::@fbf46ab49133b178df8a"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_int128::@9f29457371df4fb7a140"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_strings::@ea23287853137cf41a47"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_strings_internal::@ea23287853137cf41a47"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_str_format_internal::@ea23287853137cf41a47"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_graphcycles_internal::@aa2a7ed1a407d0f03b15"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_synchronization::@aa2a7ed1a407d0f03b15"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_time::@979d50227ad3927e75ad"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_civil_time::@979d50227ad3927e75ad"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_time_zone::@979d50227ad3927e75ad"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_bad_optional_access::@a93bbf1a1955b98f6dbd"
+		},
+		{
+			"backtrace" : 59,
+			"id" : "absl_bad_variant_access::@a93bbf1a1955b98f6dbd"
+		},
+		{
+			"backtrace" : 5,
+			"id" : "benchmark::@a5e768fe43450e220d4b"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "dcds::@a44911bbd29b53102cba"
+		}
+	],
+	"id" : "list-based-datastructures::@74b29731b8afcf499aa3",
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "-stdlib=libc++",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "-ldl",
+				"role" : "flags"
+			},
+			{
+				"fragment" : "-Wl,-rpath,/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/dcds",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "../../../../_deps/googlebenchmark-build/src/libbenchmark.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 6,
+				"fragment" : "../../../../dcds/libdcds.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 6,
+				"fragment" : "-ldl",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 8,
+				"fragment" : "-lrt",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 11,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_conditions.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 11,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_message.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/debugging/libabsl_examine_stack.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_format.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 16,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/strings/libabsl_str_format_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_proto.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_nullguard.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_log_sink_set.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_internal_globals.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_globals.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 18,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/hash/libabsl_hash.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 21,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/hash/libabsl_city.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 24,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/types/libabsl_bad_optional_access.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 26,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/types/libabsl_bad_variant_access.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 21,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/hash/libabsl_low_level_hash.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 28,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/synchronization/libabsl_synchronization.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 31,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/debugging/libabsl_stacktrace.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 31,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/debugging/libabsl_symbolize.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 33,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/debugging/libabsl_debugging_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 35,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/debugging/libabsl_demangle_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 38,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/synchronization/libabsl_graphcycles_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 35,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_malloc_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_sink.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/log/libabsl_log_entry.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_strerror.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/time/libabsl_time.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 41,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/time/libabsl_civil_time.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 41,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/time/libabsl_time_zone.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/strings/libabsl_strings.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 44,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_throw_delegate.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 46,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/strings/libabsl_strings_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 48,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_base.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_raw_logging_internal.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 13,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_log_severity.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 51,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/base/libabsl_spinlock_wait.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 55,
+				"fragment" : "-pthread",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 51,
+				"fragment" : "-lrt",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 46,
+				"fragment" : "../../../../_deps/abseil-download-build/absl/numeric/libabsl_int128.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 58,
+				"fragment" : "/opt/intel/vtune_profiler/lib64/libittnotify.a",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "list-based-datastructures",
+	"nameOnDisk" : "liblist-based-datastructures.so",
+	"paths" : 
+	{
+		"build" : "benchmarks/microbenches/list-based-ds/data-structures",
+		"source" : "benchmarks/microbenches/list-based-ds/data-structures"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "benchmarks/microbenches/list-based-ds/data-structures/lib/parser-generated/list.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "SHARED_LIBRARY"
+}

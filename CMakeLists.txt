@@ -108,6 +108,8 @@ include(abseil)
 include(gtest)
 include(googlebenchmark)
 include(vtune)
+#include(memkind)
+include(cuckoo)
 
 
 option(${PROJECT_NAME}_ENABLE_CLANG_TIDY "Enable clang-tidy." ON)
@@ -124,4 +126,4 @@ include(clang-tidy)
 #-----------------------------------------------------------------------
 
 add_subdirectory(benchmarks)
-add_subdirectory(dcds/util)
+add_subdirectory(dcds)

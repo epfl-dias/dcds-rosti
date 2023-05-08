@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_symbolize.a CMakeFiles/absl_symbolize.dir/symbolize.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_symbolize.a

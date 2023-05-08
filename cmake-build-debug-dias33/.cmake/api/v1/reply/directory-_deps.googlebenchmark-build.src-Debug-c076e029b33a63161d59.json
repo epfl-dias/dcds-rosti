@@ -1,0 +1,154 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"cmake-build-debug-dias33/_deps/googlebenchmark-src/src/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 105,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 113,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 119,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 123,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 127,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 161,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu",
+			"paths" : 
+			[
+				"_deps/googlebenchmark-build/src/libbenchmark.a"
+			],
+			"targetId" : "benchmark::@a5e768fe43450e220d4b",
+			"targetIndex" : 111,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu",
+			"paths" : 
+			[
+				"_deps/googlebenchmark-build/src/libbenchmark_main.a"
+			],
+			"targetId" : "benchmark_main::@a5e768fe43450e220d4b",
+			"targetIndex" : 112,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include",
+			"paths" : 
+			[
+				"cmake-build-debug-dias33/_deps/googlebenchmark-src/include/benchmark",
+				"cmake-build-debug-dias33/_deps/googlebenchmark-build/include/benchmark"
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu/cmake/benchmark",
+			"paths" : 
+			[
+				"cmake-build-debug-dias33/_deps/googlebenchmark-build/benchmarkConfig.cmake",
+				"cmake-build-debug-dias33/_deps/googlebenchmark-build/benchmarkConfigVersion.cmake"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu/pkgconfig",
+			"paths" : 
+			[
+				"cmake-build-debug-dias33/_deps/googlebenchmark-build/benchmark.pc"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu/cmake/benchmark",
+			"exportName" : "benchmarkTargets",
+			"exportTargets" : 
+			[
+				{
+					"id" : "benchmark::@a5e768fe43450e220d4b",
+					"index" : 111
+				},
+				{
+					"id" : "benchmark_main::@a5e768fe43450e220d4b",
+					"index" : 112
+				}
+			],
+			"paths" : 
+			[
+				"_deps/googlebenchmark-build/src/CMakeFiles/Export/lib/x86_64-linux-gnu/cmake/benchmark/benchmarkTargets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "Unspecified",
+			"destination" : "share/doc/dcds",
+			"paths" : 
+			[
+				{
+					"from" : "cmake-build-debug-dias33/_deps/googlebenchmark-src/docs",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "_deps/googlebenchmark-build/src",
+		"source" : "cmake-build-debug-dias33/_deps/googlebenchmark-src/src"
+	}
+}

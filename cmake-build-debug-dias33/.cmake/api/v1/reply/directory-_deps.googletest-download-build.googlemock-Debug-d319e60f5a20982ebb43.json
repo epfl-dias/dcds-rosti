@@ -1,0 +1,116 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"install_project"
+		],
+		"files" : 
+		[
+			"cmake-build-debug-dias33/_deps/googletest-download-src/googletest/cmake/internal_utils.cmake",
+			"cmake-build-debug-dias33/_deps/googletest-download-src/googlemock/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 120,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 327,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 330,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 352,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 352,
+				"parent" : 1
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include",
+			"paths" : 
+			[
+				{
+					"from" : "cmake-build-debug-dias33/_deps/googletest-download-src/googlemock/include",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu",
+			"paths" : 
+			[
+				"lib/libgmock.a"
+			],
+			"targetId" : "gmock::@0de65a8884c565cecbdc",
+			"targetIndex" : 115,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu",
+			"paths" : 
+			[
+				"lib/libgmock_main.a"
+			],
+			"targetId" : "gmock_main::@0de65a8884c565cecbdc",
+			"targetIndex" : 116,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu/pkgconfig",
+			"paths" : 
+			[
+				"cmake-build-debug-dias33/_deps/googletest-download-build/googletest/generated/gmock.pc"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "lib/x86_64-linux-gnu/pkgconfig",
+			"paths" : 
+			[
+				"cmake-build-debug-dias33/_deps/googletest-download-build/googletest/generated/gmock_main.pc"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "_deps/googletest-download-build/googlemock",
+		"source" : "cmake-build-debug-dias33/_deps/googletest-download-src/googlemock"
+	}
+}

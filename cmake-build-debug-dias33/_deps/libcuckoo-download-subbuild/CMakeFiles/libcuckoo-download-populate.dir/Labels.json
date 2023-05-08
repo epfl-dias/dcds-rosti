@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/CMakeFiles/libcuckoo-download-populate"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/CMakeFiles/libcuckoo-download-populate.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/CMakeFiles/libcuckoo-download-populate-complete.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-build.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-configure.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-download.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-install.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-mkdir.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-patch.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-test.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/libcuckoo-download-subbuild/libcuckoo-download-populate-prefix/src/libcuckoo-download-populate-stamp/libcuckoo-download-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"libcuckoo-download-populate"
+		],
+		"name" : "libcuckoo-download-populate"
+	}
+}

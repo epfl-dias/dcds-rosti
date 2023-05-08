@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/CMakeFiles/jemalloc-download-populate"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/CMakeFiles/jemalloc-download-populate.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/CMakeFiles/jemalloc-download-populate-complete.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-build.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-configure.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-download.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-install.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-mkdir.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-patch.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-test.rule"
+		},
+		{
+			"file" : "/tmp/tmp.Y6NElX1M2E/cmake-build-debug-dias33/_deps/jemalloc-download-subbuild/jemalloc-download-populate-prefix/src/jemalloc-download-populate-stamp/jemalloc-download-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"jemalloc-download-populate"
+		],
+		"name" : "jemalloc-download-populate"
+	}
+}

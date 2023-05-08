@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_random_distributions.a CMakeFiles/absl_random_distributions.dir/discrete_distribution.cc.o CMakeFiles/absl_random_distributions.dir/gaussian_distribution.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_random_distributions.a

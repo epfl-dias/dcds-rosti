@@ -1,0 +1,6 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="                             Copyright (c) &amp;#36;today.year.&#10;         Data Intensive Applications and Systems Laboratory (DIAS)&#10;                 École Polytechnique Fédérale de Lausanne&#10;&#10;                             All Rights Reserved.&#10;&#10;     Permission to use, copy, modify and distribute this software and&#10;     its documentation is hereby granted, provided that both the&#10;     copyright notice and this permission notice appear in all copies of&#10;     the software, derivative works or modified versions, and any&#10;     portions thereof, and that both notices appear in supporting&#10;     documentation.&#10;&#10;     This code is distributed in the hope that it will be useful, but&#10;     WITHOUT ANY WARRANTY; without even the implied warranty of&#10;     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS&#10;     DISCLAIM ANY LIABILITY OF ANY KIND FOR ANY DAMAGES WHATSOEVER&#10;     RESULTING FROM THE USE OF THIS SOFTWARE." />
+    <option name="myName" value="dias" />
+  </copyright>
+</component>

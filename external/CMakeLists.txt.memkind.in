@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.11.4)
+
+include(FetchContent)
+FetchContent_Declare(
+        memkind-download
+        GIT_REPOSITORY https://github.com/memkind/memkind.git
+        GIT_TAG       v1.14.0)
+
+FetchContent_MakeAvailable(memkind-download)

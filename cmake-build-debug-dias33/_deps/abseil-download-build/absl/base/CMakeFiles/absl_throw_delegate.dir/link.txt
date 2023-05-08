@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_throw_delegate.a CMakeFiles/absl_throw_delegate.dir/internal/throw_delegate.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_throw_delegate.a

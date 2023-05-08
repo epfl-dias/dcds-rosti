@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_status.a CMakeFiles/absl_status.dir/status.cc.o CMakeFiles/absl_status.dir/status_payload_printer.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_status.a

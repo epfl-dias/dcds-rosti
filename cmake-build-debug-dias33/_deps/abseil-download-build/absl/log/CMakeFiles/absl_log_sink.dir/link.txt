@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_log_sink.a CMakeFiles/absl_log_sink.dir/log_sink.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_log_sink.a

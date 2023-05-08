@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_flags_marshalling.a CMakeFiles/absl_flags_marshalling.dir/marshalling.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_flags_marshalling.a

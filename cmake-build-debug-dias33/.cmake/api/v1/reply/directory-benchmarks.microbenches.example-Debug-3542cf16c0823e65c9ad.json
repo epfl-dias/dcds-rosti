@@ -1,0 +1,45 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"benchmarks/microbenches/example/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 18,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"benchmarks/microbenches/example/example-bench"
+			],
+			"targetId" : "example-bench::@a6fe59f9baa0780ff6ce",
+			"targetIndex" : 114,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "benchmarks/microbenches/example",
+		"source" : "benchmarks/microbenches/example"
+	}
+}

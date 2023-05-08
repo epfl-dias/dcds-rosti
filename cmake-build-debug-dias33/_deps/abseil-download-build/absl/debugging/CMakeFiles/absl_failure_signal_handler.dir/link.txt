@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_failure_signal_handler.a CMakeFiles/absl_failure_signal_handler.dir/failure_signal_handler.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_failure_signal_handler.a

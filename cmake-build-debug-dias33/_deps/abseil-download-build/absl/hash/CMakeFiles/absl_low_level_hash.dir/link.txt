@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_low_level_hash.a CMakeFiles/absl_low_level_hash.dir/internal/low_level_hash.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_low_level_hash.a

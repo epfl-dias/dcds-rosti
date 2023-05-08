@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_scoped_set_env.a CMakeFiles/absl_scoped_set_env.dir/internal/scoped_set_env.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_scoped_set_env.a

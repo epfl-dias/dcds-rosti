@@ -24,11 +24,14 @@
 //
 
 #include <benchmark/benchmark.h>
-#include <sstream>
+
 #include <iostream>
 #include <span>
-#include "dcds/util/profiling.hpp"
-#include "dcds/util/logging.hpp"
+#include <sstream>
+
+#include <dcds/util/logging.hpp>
+#include <dcds/util/profiling.hpp>
+
 
 using StridedAccessArgs = std::tuple<std::span<uint8_t>, std::span<uint8_t>, size_t, size_t>;
 

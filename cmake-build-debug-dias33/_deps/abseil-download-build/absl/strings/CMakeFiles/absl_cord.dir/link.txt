@@ -1,0 +1,2 @@
+/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_cord.a CMakeFiles/absl_cord.dir/cord.cc.o CMakeFiles/absl_cord.dir/cord_analysis.cc.o CMakeFiles/absl_cord.dir/cord_buffer.cc.o
+/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_cord.a
