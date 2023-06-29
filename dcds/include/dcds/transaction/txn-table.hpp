@@ -19,17 +19,13 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-
 #ifndef DCDS_TXN_TABLE_HPP
 #define DCDS_TXN_TABLE_HPP
 
+namespace dcds::txn {
 
-namespace dcds::txn{
+class TransactionTable {};
 
-class TransactionTable{
-
-};
-
-}
+}  // namespace dcds::txn
 
 #endif  // DCDS_TXN_TABLE_HPP

@@ -19,29 +19,17 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_ATTRIBUTE_DEF_HPP
-#define DCDS_ATTRIBUTE_DEF_HPP
+#ifndef DCDS_GUARD_HPP
+#define DCDS_GUARD_HPP
 
-#include <iostream>
+namespace dcds::utils::locks {
 
-#include "dcds/common/common.hpp"
+class Guard {};
 
-namespace dcds::storage {
+class ReadGuard {};
 
-class AttributeDef {
- public:
-  [[nodiscard]] inline auto getName() const { return std::get<0>(col); }
-  [[nodiscard]] inline auto getType() const { return std::get<1>(col); }
-  [[nodiscard]] inline auto getWidth() const { return std::get<2>(col); }
-  [[nodiscard]] inline auto getSize() const { return getWidth(); }
-  [[nodiscard]] inline auto getColumnDef() const { return col; }
+class WriteGuard {};
 
-  explicit AttributeDef(const std::string &name, valueType dType, size_t width) : col(name, dType, width) {}
+}  // namespace dcds::utils::locks
 
- private:
-  std::tuple<std::string, valueType, size_t> col;
-};
-
-}  // namespace dcds::storage
-
-#endif  // DCDS_ATTRIBUTE_DEF_HPP
+#endif  // DCDS_GUARD_HPP

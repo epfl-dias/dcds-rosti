@@ -32,8 +32,7 @@ bool TableRegistry::exists(const std::string &name) {
   return table_name_map.contains(name);
 }
 
-std::shared_ptr<Table> TableRegistry::createTable(const std::string& name,
-                                                  const std::vector<AttributeDef>& columns,
+std::shared_ptr<Table> TableRegistry::createTable(const std::string &name, const std::vector<AttributeDef> &columns,
                                                   bool multi_version) {
   size_t record_size = 0;
   for (const auto &c : columns) {
@@ -48,14 +47,13 @@ std::shared_ptr<Table> TableRegistry::createTable(const std::string& name,
 
   LOG(INFO) << "record size: " << record_size;
 
-  if(multi_version){
+  if (multi_version) {
     throw std::runtime_error("unimplemented MV");
   } else {
     auto tablePtr = std::make_shared<SingleVersionRowStore>(tableId, name, record_size, columns);
     tables.emplace(tableId, tablePtr);
     return tablePtr;
   }
-
 }
 
 std::shared_ptr<Table> TableRegistry::getTable(table_id_t tableId) {

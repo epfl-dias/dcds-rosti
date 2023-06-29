@@ -19,29 +19,26 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_ATTRIBUTE_DEF_HPP
-#define DCDS_ATTRIBUTE_DEF_HPP
+#ifndef DCDS_SINGLETON_HPP
+#define DCDS_SINGLETON_HPP
 
-#include <iostream>
+#include "dcds/util/erase-constructor-idioms.hpp"
 
-#include "dcds/common/common.hpp"
+namespace dcds {
 
-namespace dcds::storage {
+template <typename T>
+class Singleton : public remove_copy_move {
+ protected:
+  Singleton() = default;
 
-class AttributeDef {
  public:
-  [[nodiscard]] inline auto getName() const { return std::get<0>(col); }
-  [[nodiscard]] inline auto getType() const { return std::get<1>(col); }
-  [[nodiscard]] inline auto getWidth() const { return std::get<2>(col); }
-  [[nodiscard]] inline auto getSize() const { return getWidth(); }
-  [[nodiscard]] inline auto getColumnDef() const { return col; }
-
-  explicit AttributeDef(const std::string &name, valueType dType, size_t width) : col(name, dType, width) {}
-
- private:
-  std::tuple<std::string, valueType, size_t> col;
+  static T& getInstance()  // singleton
+  {
+    static T instance;
+    return instance;
+  }
 };
 
-}  // namespace dcds::storage
+}  // namespace dcds
 
-#endif  // DCDS_ATTRIBUTE_DEF_HPP
+#endif  // DCDS_SINGLETON_HPP

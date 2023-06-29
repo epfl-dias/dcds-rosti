@@ -22,29 +22,21 @@
 #ifndef DCDS_BENCH_LIST_DS_QUEUE_HPP
 #define DCDS_BENCH_LIST_DS_QUEUE_HPP
 
-
 #include <dcds/builder/builder.hpp>
 
 // Functionality based on https://en.cppreference.com/w/cpp/container/queue
-class ParserGeneratedQueue{
+class ParserGeneratedQueue {
+  void init();
 
+  void createStructsAndAttributes(dcds::Builder& builder);
 
-    void init();
-
-
-
-    void createStructsAndAttributes(dcds::Builder& builder);
-
-    // Functions
-    void createFunction_size(dcds::Builder& builder);
-    void createFunction_empty(dcds::Builder& builder);
-    void createFunction_front(dcds::Builder& builder);
-    void createFunction_back(dcds::Builder& builder);
-    void createFunction_pop(dcds::Builder& builder);
-    void createFunction_push(dcds::Builder& builder);
-
-
+  // Functions
+  void createFunction_size(dcds::Builder& builder);
+  void createFunction_empty(dcds::Builder& builder);
+  void createFunction_front(dcds::Builder& builder);
+  void createFunction_back(dcds::Builder& builder);
+  void createFunction_pop(dcds::Builder& builder);
+  void createFunction_push(dcds::Builder& builder);
 };
 
-
-#endif //DCDS_BENCH_LIST_DS_QUEUE_HPP
+#endif  // DCDS_BENCH_LIST_DS_QUEUE_HPP

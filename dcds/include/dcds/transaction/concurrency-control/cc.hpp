@@ -22,25 +22,16 @@
 #ifndef DCDS_CC_HPP
 #define DCDS_CC_HPP
 
-
 #include "dcds/common/types.hpp"
-#include "dcds/util/locks/spin-lock.hpp"
-#include "dcds/util/locks/lock.hpp"
-#include "dcds/transaction/txn-utils.hpp"
 #include "dcds/transaction/concurrency-control/record-metadata.hpp"
-
+#include "dcds/transaction/txn-utils.hpp"
+#include "dcds/util/locks/lock.hpp"
+#include "dcds/util/locks/spin-lock.hpp"
 
 namespace dcds::txn::cc {
 
 class MV2PL {
-
-
-
-
-
-
-  static inline bool __attribute__((always_inline))
-  is_readable(const xid_t tmin, const TxnTs &xact) {
+  static inline bool __attribute__((always_inline)) is_readable(const xid_t tmin, const TxnTs &xact) {
     // TODO: delete conditions?
     if (tmin <= xact.start_time || tmin == xact.txn_id) {
       return true;
@@ -48,10 +39,8 @@ class MV2PL {
       return false;
     }
   }
-
-
 };
 
-}
+}  // namespace dcds::txn::cc
 
 #endif  // DCDS_CC_HPP

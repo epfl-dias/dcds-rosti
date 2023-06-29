@@ -26,11 +26,9 @@
 
 namespace dcds {
 
-    class DCDS {
-        static void init();
+class DCDS {
+  static void init();
+};
+}  // namespace dcds
 
-    };
-}
-
-
-#endif //DCDS_DCDS_HPP
+#endif  // DCDS_DCDS_HPP

@@ -21,18 +21,18 @@
 
 #include "dcds/builder/builder.hpp"
 
-namespace dcds{
+namespace dcds {
 
-//Attribute* Builder::getAttributeByName(const std::string &name){
-//  return this->attr_map[name];
-//}
+// Attribute* Builder::getAttributeByName(const std::string &name){
+//   return this->attr_map[name];
+// }
 //
-//void Builder::add_attribute_int8(const std::string& name){
-//  attributes_.emplace_back(attribute_type::INTEGER, name);
-//}
+// void Builder::add_attribute_int8(const std::string& name){
+//   attributes_.emplace_back(attribute_type::INTEGER, name);
+// }
 //
-//void Builder::add_attribute_recordPtr(const std::string& name){
-//  attributes_.emplace_back(attribute_type::RECORD_ID, name);
-//}
+// void Builder::add_attribute_recordPtr(const std::string& name){
+//   attributes_.emplace_back(attribute_type::RECORD_ID, name);
+// }
 
 }

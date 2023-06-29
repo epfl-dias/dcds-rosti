@@ -25,6 +25,8 @@ class Builder {
 
   auto getName() { return ctx_name; }
 
+  void codegen();
+
   // FunctionBuilder ------- BEGIN
 
  public:
@@ -66,11 +68,6 @@ class Builder {
   // std::deque<Attribute> attributes;
 
   // Attributes ------- END
-
-
-
-
-
 
   // Add Structure (tables essentially)
   // Add Attributes to that structure

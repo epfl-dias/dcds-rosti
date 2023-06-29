@@ -30,8 +30,6 @@ namespace dcds::txn {
 // ACTIVE, COMMITTED, ABORTED
 enum txn_status { ACTIVE, COMMITTED, ABORTED };
 
-
-
 class TxnTs {
  public:
   xid_t txn_id;
@@ -45,14 +43,12 @@ class TxnTs {
   };
 };
 
-class TxnTsGenerator{
+class TxnTsGenerator {
  public:
   static constexpr auto baseShift = 27u;
 
  public:
-  inline xid_t __attribute__((always_inline)) getCommitTs() {
-    return gen.fetch_add(1);
-  }
+  inline xid_t __attribute__((always_inline)) getCommitTs() { return gen.fetch_add(1); }
 
   inline TxnTs __attribute__((always_inline)) getTxnTs() {
     auto x = gen.fetch_add(1);
@@ -61,7 +57,6 @@ class TxnTsGenerator{
 
  private:
   std::atomic<xid_t> gen{};
-
 };
 
 }  // namespace dcds::txn

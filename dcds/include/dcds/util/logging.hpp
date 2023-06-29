@@ -26,5 +26,6 @@
 #ifndef DCDS_LOGGING_HPP
 #define DCDS_LOGGING_HPP
 #include <absl/log/log.h>
+
 #include <cassert>
-#endif //DCDS_LOGGING_HPP
+#endif  // DCDS_LOGGING_HPP

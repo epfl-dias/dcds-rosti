@@ -168,11 +168,9 @@ class Table {
   virtual void updateRefTypeData(std::shared_ptr<txn::Txn> &, record_metadata_t *, record_reference_t &value,
                                  uint attribute_idx) = 0;
 
-//  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, uint attribute_idx);
-  virtual void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void* dst, size_t offset, size_t len) = 0;
-  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void* dst, uint attribute_idx) = 0;
-
-
+  //  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, uint attribute_idx);
+  virtual void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
+  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, uint attribute_idx) = 0;
 
   virtual size_t size() = 0;
   virtual size_t capacity() = 0;
@@ -225,9 +223,8 @@ class SingleVersionRowStore : public Table {
   record_reference_t insertRecord(const std::shared_ptr<txn::Txn> &txn, const void *data) override;
   void updateAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *, void *value, uint attribute_idx) override;
 
-
-  void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void* dst, size_t offset, size_t len) override;
-  void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void* dst, uint attribute_idx) override;
+  void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, size_t offset, size_t len) override;
+  void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, uint attribute_idx) override;
 
  public:
   size_t size() override { return records_data.size(); }

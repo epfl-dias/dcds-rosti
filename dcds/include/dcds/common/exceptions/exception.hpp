@@ -22,7 +22,6 @@
 #ifndef DCDS_EXCEPTION_HPP
 #define DCDS_EXCEPTION_HPP
 
-
 #include <iostream>
 
 namespace dcds::exceptions {
@@ -30,16 +29,13 @@ namespace dcds::exceptions {
 class dcds_dynamic_exception : public std::exception {
   // shared_ptr as exceptions are not allowed to throw during copy
   std::shared_ptr<std::string> msg_;
+
  public:
-  dcds_dynamic_exception(std::string msg)
-      : msg_(std::make_shared<std::string>(std::move(msg))) {}
+  dcds_dynamic_exception(std::string msg) : msg_(std::make_shared<std::string>(std::move(msg))) {}
 
-  [[nodiscard]] const char* what() const noexcept override {
-    return msg_->c_str();
-  }
-
+  [[nodiscard]] const char* what() const noexcept override { return msg_->c_str(); }
 };
 
-}
+}  // namespace dcds::exceptions
 
 #endif  // DCDS_EXCEPTION_HPP

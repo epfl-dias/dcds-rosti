@@ -7,11 +7,8 @@
 
 namespace dcds {
 
-class Statement {
+class Statement {};
 
-};
-
-
-}
+}  // namespace dcds
 
 #endif  // DCDS_STATEMENT_HPP

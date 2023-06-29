@@ -22,12 +22,10 @@
 #ifndef DCDS_STORAGE_UTILS_HPP
 #define DCDS_STORAGE_UTILS_HPP
 
-namespace dcds::storage{
+namespace dcds::storage {
 
-class StorageUtils {
+class StorageUtils {};
 
-};
-
-}
+}  // namespace dcds::storage
 
 #endif  // DCDS_STORAGE_UTILS_HPP

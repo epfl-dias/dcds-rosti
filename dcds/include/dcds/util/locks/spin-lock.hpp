@@ -7,8 +7,7 @@
 
 #include <atomic>
 
-
-namespace dcds::utils::locks{
+namespace dcds::utils::locks {
 
 class SpinLock {
  public:
@@ -43,6 +42,6 @@ class SpinLock {
   inline void release() { lk.store(false); }
 };
 
-}
+}  // namespace dcds::utils::locks
 
 #endif  // DCDS_SPIN_LOCK_HPP

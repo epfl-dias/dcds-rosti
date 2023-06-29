@@ -24,34 +24,23 @@
 
 #include <deque>
 #include <mutex>
-#include <unordered_map>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include "dcds/common/common.hpp"
 #include "dcds/common/exceptions/storage-exceptions.hpp"
 #include "dcds/transaction/transaction-manager.hpp"
+#include "dcds/util/singleton.hpp"
 
 namespace dcds::txn {
 
-class NamespaceRegistry {
- public:
-  // Singleton
-  static inline NamespaceRegistry &getInstance() {
-    static NamespaceRegistry instance;
-    return instance;
-  }
-
-  NamespaceRegistry(NamespaceRegistry &&) = delete;
-  NamespaceRegistry &operator=(NamespaceRegistry &&) = delete;
-  NamespaceRegistry(const NamespaceRegistry &) = delete;
-  NamespaceRegistry &operator=(const NamespaceRegistry &) = delete;
-
+class NamespaceRegistry : public dcds::Singleton<NamespaceRegistry> {
  private:
+  friend class Singleton<NamespaceRegistry>;
   NamespaceRegistry() {
     std::unique_lock<std::shared_mutex> lk(registry_lk);
 
     // create a default namespace.
-
     auto defaultNS = std::make_shared<TransactionManager>("default");
     namespaces.emplace_back(defaultNS);
     namespace_map.emplace("default", defaultNS);
@@ -67,10 +56,7 @@ class NamespaceRegistry {
   }
 
  public:
-
-  auto getDefaultNamespace(){
-    return default_namespace;
-  }
+  auto getDefaultNamespace() { return default_namespace; }
 
   auto get(const std::string& key) {
     std::shared_lock<std::shared_mutex> lk(registry_lk);
@@ -81,7 +67,7 @@ class NamespaceRegistry {
     }
   }
 
-  auto getOrCreate(const std::string& key){
+  auto getOrCreate(const std::string& key) {
     std::unique_lock<std::shared_mutex> lk(registry_lk);
     if (!namespace_map.contains(key)) {
       auto ns = std::make_shared<TransactionManager>(key);
@@ -107,9 +93,7 @@ class NamespaceRegistry {
     return ns;
   }
 
-  auto remove(std::string){
-    throw std::runtime_error("unimplemented");
-  }
+  auto remove(std::string) { throw std::runtime_error("unimplemented"); }
 
  private:
   std::deque<std::shared_ptr<TransactionManager>> namespaces;

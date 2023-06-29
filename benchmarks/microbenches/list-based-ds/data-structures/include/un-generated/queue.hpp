@@ -22,29 +22,26 @@
 #ifndef DCDS_UN_GENERATED_QUEUE_HPP
 #define DCDS_UN_GENERATED_QUEUE_HPP
 
-#include <iostream>
-
 #include <dcds/storage/table.hpp>
+#include <iostream>
 #include <utility>
 
 using queueValueType = size_t;
 
-class UnGeneratedQueue{
+class UnGeneratedQueue {
  public:
-
-  explicit UnGeneratedQueue(){
+  explicit UnGeneratedQueue() {
     LOG(INFO) << "initializing with default";
     init("default");
   }
-  explicit UnGeneratedQueue(const std::string& txn_namespace){
+  explicit UnGeneratedQueue(const std::string& txn_namespace) {
     LOG(INFO) << "initializing with ns: " << txn_namespace;
     init(txn_namespace);
   }
 
-
-  size_t popAndReturn();           // pop from the front & returns value
-  void pop();                      // pop from the front
-  void push(queueValueType val);                // insert at the end
+  size_t popAndReturn();          // pop from the front & returns value
+  void pop();                     // pop from the front
+  void push(queueValueType val);  // insert at the end
 
   queueValueType front();
   queueValueType back();
@@ -56,28 +53,25 @@ class UnGeneratedQueue{
  private:
   void init(const std::string& txn_namespace);
 
-
  private:
   std::shared_ptr<dcds::txn::TransactionManager> txnManager;
   dcds::storage::record_reference_t mainRecord;
   std::shared_ptr<dcds::storage::Table> listTable;
   std::shared_ptr<dcds::storage::Table> listNodeTable;
 
-
  private:
-  struct  __attribute__((packed)) list_record_st{
+  struct __attribute__((packed)) list_record_st {
     dcds::storage::record_reference_t head;
     dcds::storage::record_reference_t tail;
     size_t size{};
   };
 
-  struct  __attribute__((packed)) node_record_st{
+  struct __attribute__((packed)) node_record_st {
     dcds::storage::record_reference_t next{};
     queueValueType payload{};
   };
 
   static void initTables(const std::string& txn_namespace);
-
 };
 
 #endif  // DCDS_UN_GENERATED_QUEUE_HPP

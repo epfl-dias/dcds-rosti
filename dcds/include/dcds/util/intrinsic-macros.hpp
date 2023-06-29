@@ -19,29 +19,17 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_ATTRIBUTE_DEF_HPP
-#define DCDS_ATTRIBUTE_DEF_HPP
+#ifndef DCDS_INTRINSIC_MACROS_HPP
+#define DCDS_INTRINSIC_MACROS_HPP
 
-#include <iostream>
+#if defined(__i386__) || defined(__amd64__)
+#include <xmmintrin.h>
+#define DCDS_SPIN_PAUSE() \
+  { _mm_pause(); }
 
-#include "dcds/common/common.hpp"
+#else
+#define DCDS_SPIN_PAUSE() \
+  {}
+#endif
 
-namespace dcds::storage {
-
-class AttributeDef {
- public:
-  [[nodiscard]] inline auto getName() const { return std::get<0>(col); }
-  [[nodiscard]] inline auto getType() const { return std::get<1>(col); }
-  [[nodiscard]] inline auto getWidth() const { return std::get<2>(col); }
-  [[nodiscard]] inline auto getSize() const { return getWidth(); }
-  [[nodiscard]] inline auto getColumnDef() const { return col; }
-
-  explicit AttributeDef(const std::string &name, valueType dType, size_t width) : col(name, dType, width) {}
-
- private:
-  std::tuple<std::string, valueType, size_t> col;
-};
-
-}  // namespace dcds::storage
-
-#endif  // DCDS_ATTRIBUTE_DEF_HPP
+#endif  // DCDS_INTRINSIC_MACROS_HPP

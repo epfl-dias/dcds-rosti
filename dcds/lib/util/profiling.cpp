@@ -20,36 +20,36 @@
  */
 
 #include "dcds/util/profiling.hpp"
+
 #include "dcds/util/logging.hpp"
 
 using namespace dcds::profiling;
 
 ProfileRegion::ProfileRegion(std::string region_name) {
 #if __has_include("ittnotify.h")
-    m_event = __itt_event_create( region_name.c_str(), region_name.length());
-    __itt_event_start(m_event);
+  m_event = __itt_event_create(region_name.c_str(), region_name.length());
+  __itt_event_start(m_event);
 #else
-    LOG(WARNING) << "ProfileRegion noop: vtune headers unavailable at build time";
+  LOG(WARNING) << "ProfileRegion noop: vtune headers unavailable at build time";
 #endif
 }
 
 ProfileRegion::~ProfileRegion() {
 #if __has_include("ittnotify.h")
-    __itt_event_end(m_event);
+  __itt_event_end(m_event);
 #endif
 }
 
-ProfileMarkPoint::ProfileMarkPoint(std::string point_name){
+ProfileMarkPoint::ProfileMarkPoint(std::string point_name) {
 #if __has_include("ittnotify.h")
-    m_event = __itt_event_create( point_name.c_str(), point_name.length());
+  m_event = __itt_event_create(point_name.c_str(), point_name.length());
 #else
-    LOG(WARNING) << "ProfileRegion noop: vtune headers unavailable at build time";
+  LOG(WARNING) << "ProfileRegion noop: vtune headers unavailable at build time";
 #endif
 }
 
-void ProfileMarkPoint::mark(){
+void ProfileMarkPoint::mark() {
 #if __has_include("ittnotify.h")
-    __itt_event_start(m_event);
+  __itt_event_start(m_event);
 #endif
 }
-

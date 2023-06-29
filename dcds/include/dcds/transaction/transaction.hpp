@@ -58,7 +58,6 @@ class Txn {
   [[maybe_unused]] xid_t commit_ts{};
   txn_status status;
 
-
   friend class TransactionManager;
 
   // std::vector<row_uuid_t> undoLogVector;

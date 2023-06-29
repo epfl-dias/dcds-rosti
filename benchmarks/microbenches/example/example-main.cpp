@@ -19,18 +19,16 @@
      RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <iostream>
-
 #include <benchmark/benchmark.h>
+
+#include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
 
-
-
 int main(int argc, char** argv) {
-    benchmark::Initialize(&argc, argv);
-    if (benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
-    benchmark::RunSpecifiedBenchmarks();
+  benchmark::Initialize(&argc, argv);
+  if (benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
+  benchmark::RunSpecifiedBenchmarks();
 
-    libcuckoo::cuckoohash_map<size_t, size_t> indexPartitions;
-    return 0;
+  libcuckoo::cuckoohash_map<size_t, size_t> indexPartitions;
+  return 0;
 }

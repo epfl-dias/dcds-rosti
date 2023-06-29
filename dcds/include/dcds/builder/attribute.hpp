@@ -35,9 +35,11 @@ namespace dcds {
 
 class Attribute {
  public:
+  Attribute(std::string attribute_name, dcds::valueType attribute_type)
+      : name(std::move(attribute_name)), type(attribute_type) {}
 
-  Attribute(std::string attribute_name, dcds::valueType attribute_type):name(std::move(attribute_name)), type(attribute_type){}
-
+  // Transactional Variables.
+  // GET/ INSERT/ DELETE/ UPDATE
 
  public:
   const std::string name;
@@ -46,26 +48,25 @@ class Attribute {
  private:
 };
 //
-//class Uint64T_Attribute{
+// class Uint64T_Attribute{
 //
 //
 //  const dcds::valueType type = valueType::INTEGER;
 //  uint64_t val_;
 //};
 //
-//template <class T>
-//class AttributeCRTP{
+// template <class T>
+// class AttributeCRTP{
 //
 //};
 //
-//class [[nodiscard]] attribute_t : public AttributeCRTP<attribute_t>{
+// class [[nodiscard]] attribute_t : public AttributeCRTP<attribute_t>{
 //
 //};
 //
 
-
 //
-//class BoolConstant
+// class BoolConstant
 //    : public TConstant<bool, BoolType, Constant::ConstantType::BOOL,
 //                       BoolConstant> {
 // public:
@@ -73,8 +74,5 @@ class Attribute {
 //                  BoolConstant>::TConstant;
 //};
 
-
-
 }  // namespace dcds
 #endif  // DCDS_ATTRIBUTE_HPP
-

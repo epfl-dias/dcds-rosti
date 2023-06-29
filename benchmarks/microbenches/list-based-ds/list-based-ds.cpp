@@ -19,39 +19,38 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <iostream>
-
 #include <benchmark/benchmark.h>
-#include <libcuckoo/cuckoohash_map.hh>
+
 #include <dcds/util/logging.hpp>
+#include <iostream>
+#include <libcuckoo/cuckoohash_map.hh>
 
 #include "un-generated/queue.hpp"
 
-
 int main(int argc, char** argv) {
-    LOG(INFO) << "listBasedDS";
-    UnGeneratedQueue defaultNSQueue;
-    LOG(INFO) << "[main] init-done";
-    LOG(INFO) << "defaultNSQueue: size: " << defaultNSQueue.size();
-    LOG(INFO) << "-------";
-//    UnGeneratedQueue nSQueue("separated");
-//    LOG(INFO) << "nSQueue: size: " << nSQueue.size();
+  LOG(INFO) << "listBasedDS";
+  UnGeneratedQueue defaultNSQueue;
+  LOG(INFO) << "[main] init-done";
+  LOG(INFO) << "defaultNSQueue: size: " << defaultNSQueue.size();
+  LOG(INFO) << "-------";
+  //    UnGeneratedQueue nSQueue("separated");
+  //    LOG(INFO) << "nSQueue: size: " << nSQueue.size();
 
-    LOG(INFO) << "###########";
-    defaultNSQueue.printQueue();
-    defaultNSQueue.push(10);
-    LOG(INFO) << "###########";
-    defaultNSQueue.printQueue();
-    defaultNSQueue.push(11);
-    LOG(INFO) << "###########";
-    defaultNSQueue.printQueue();
-    defaultNSQueue.push(10);
-    LOG(INFO) << "###########";
-    defaultNSQueue.printQueue();
-    defaultNSQueue.push(12);
-    LOG(INFO) << "###########";
-    defaultNSQueue.printQueue();
+  LOG(INFO) << "###########";
+  defaultNSQueue.printQueue();
+  defaultNSQueue.push(10);
+  LOG(INFO) << "###########";
+  defaultNSQueue.printQueue();
+  defaultNSQueue.push(11);
+  LOG(INFO) << "###########";
+  defaultNSQueue.printQueue();
+  defaultNSQueue.push(10);
+  LOG(INFO) << "###########";
+  defaultNSQueue.printQueue();
+  defaultNSQueue.push(12);
+  LOG(INFO) << "###########";
+  defaultNSQueue.printQueue();
 
-    LOG(INFO) << "------- DONE";
-    return 0;
+  LOG(INFO) << "------- DONE";
+  return 0;
 }

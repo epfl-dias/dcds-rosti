@@ -19,29 +19,20 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_ATTRIBUTE_DEF_HPP
-#define DCDS_ATTRIBUTE_DEF_HPP
+#ifndef DCDS_RDTSC_HPP
+#define DCDS_RDTSC_HPP
 
-#include <iostream>
+#include <cstdint>
 
-#include "dcds/common/common.hpp"
+#if defined(__powerpc64__) || defined(__ppc64__)
+inline uint64_t rdtsc() {
+  uint64_t c;
+  asm volatile("mfspr %0, 268" : "=r"(c));
+  return c;
+}
+#else
+#include <x86intrin.h>
+inline uint64_t rdtsc() { return __rdtsc(); }
+#endif
 
-namespace dcds::storage {
-
-class AttributeDef {
- public:
-  [[nodiscard]] inline auto getName() const { return std::get<0>(col); }
-  [[nodiscard]] inline auto getType() const { return std::get<1>(col); }
-  [[nodiscard]] inline auto getWidth() const { return std::get<2>(col); }
-  [[nodiscard]] inline auto getSize() const { return getWidth(); }
-  [[nodiscard]] inline auto getColumnDef() const { return col; }
-
-  explicit AttributeDef(const std::string &name, valueType dType, size_t width) : col(name, dType, width) {}
-
- private:
-  std::tuple<std::string, valueType, size_t> col;
-};
-
-}  // namespace dcds::storage
-
-#endif  // DCDS_ATTRIBUTE_DEF_HPP
+#endif  // DCDS_RDTSC_HPP

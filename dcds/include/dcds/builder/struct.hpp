@@ -22,13 +22,10 @@
 #ifndef DCDS_STRUCT_HPP
 #define DCDS_STRUCT_HPP
 
-namespace dcds{
+namespace dcds {
 
-    class Struct{
+class Struct {};
 
+}  // namespace dcds
 
-    };
-
-}
-
-#endif //DCDS_STRUCT_HPP
+#endif  // DCDS_STRUCT_HPP

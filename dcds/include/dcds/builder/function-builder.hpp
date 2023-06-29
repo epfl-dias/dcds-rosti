@@ -49,15 +49,18 @@ class FunctionBuilder {
     addArguments(args...);
   }
 
+  // variableType createLocalVariable(name, type)
 
+  // addOperation
+
+  // CRUD on DS-Attributes
+  // Function calls on DS-Attributes (composed attribute, its gonna provide functions also)
 
  public:
-  void finalize(){
-    isFinalized = true;
-  }
-  auto isFinal(){return isFinalized;}
+  void finalize() { isFinalized = true; }
+  auto isFinal() { return isFinalized; }
 
-  auto getName(){return name;}
+  auto getName() { return name; }
 
  private:
   void addArguments(std::same_as<dcds::valueType> auto &...args) {
@@ -74,7 +77,6 @@ class FunctionBuilder {
   dcds::valueType returnValueType;
 
   std::vector<dcds::valueType> functionArguments;
-
 
   bool isFinalized;
 };

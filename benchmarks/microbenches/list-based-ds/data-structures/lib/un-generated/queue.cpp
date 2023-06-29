@@ -33,12 +33,11 @@
 using namespace dcds;
 using namespace dcds::storage;
 
-void UnGeneratedQueue::initTables(const std::string& txn_namespace){
-
+void UnGeneratedQueue::initTables(const std::string& txn_namespace) {
   const std::string dsName = txn_namespace + "::" + "UnGeneratedQueue";
   const std::string dsName_node = txn_namespace + "::" + "UnGeneratedQueue_node";
 
-  auto &tableRegistry = TableRegistry::getInstance();
+  auto& tableRegistry = TableRegistry::getInstance();
 
   // Table1: RECORD_PTR, RECORD_PTR, INTEGER
   // Table2: RECORD_PTR, PAYLOAD
@@ -64,7 +63,6 @@ void UnGeneratedQueue::initTables(const std::string& txn_namespace){
 
   LOG(INFO) << "alignTable: " << alignof(Table);
   LOG(INFO) << "sizeTable: " << sizeof(Table);
-
 }
 
 void UnGeneratedQueue::init(const std::string& txn_namespace) {
@@ -77,14 +75,12 @@ void UnGeneratedQueue::init(const std::string& txn_namespace) {
   // create table if not exists within the namespace.
   // should initialize the mainRecord
 
-  auto &tableRegistry = TableRegistry::getInstance();
+  auto& tableRegistry = TableRegistry::getInstance();
   txnManager = txn::NamespaceRegistry::getInstance().getOrCreate(txn_namespace);
-
 
   if (!(tableRegistry.exists(dsName))) {
     initTables(txn_namespace);
   }
-
 
   this->listTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedQueue");
   this->listNodeTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedQueue_node");
@@ -94,45 +90,41 @@ void UnGeneratedQueue::init(const std::string& txn_namespace) {
   auto txn = txnManager->beginTransaction(false);
   auto mainTable = tableRegistry.getTable(dsName);
 
-  struct list_record_st tmp{};
+  struct list_record_st tmp {};
 
   assert(!(mainRecord.valid()));
   // insert a default record for referencing the data structure
   auto tmpMainRecord = mainTable->insertRecord(txn, &tmp);
   this->mainRecord = tmpMainRecord;
   assert(mainRecord.valid());
-  //this->mainRecord = mainTable->insertRecord(txn, &tmp);
+  // this->mainRecord = mainTable->insertRecord(txn, &tmp);
   LOG(INFO) << "MainRecord created";
 
-
-
   //---
-  //LOG(INFO) << "sizeof(dcds::storage::record_reference_t ): " << sizeof(dcds::storage::record_reference_t );
-//  mainRecord->withLatch([&](record_metadata_t* rc){
-//    LOG(INFO) << "Latched mainRecord";
-//
-//    auto head = listTable->getRefTypeData(rc, 0);
-//    LOG(INFO) << " head isValid: " << head.valid();
-//    auto tail = listTable->getRefTypeData(rc, 1);
-//    LOG(INFO) << "got ref to tail";
-//    if(tail.valid()){
-//      LOG(INFO) << "Tail Valid";
-//      tail.print();
-//    } else {
-//      LOG(INFO) << "Tail Invalid";
-//    }
-//
-//  });
+  // LOG(INFO) << "sizeof(dcds::storage::record_reference_t ): " << sizeof(dcds::storage::record_reference_t );
+  //  mainRecord->withLatch([&](record_metadata_t* rc){
+  //    LOG(INFO) << "Latched mainRecord";
+  //
+  //    auto head = listTable->getRefTypeData(rc, 0);
+  //    LOG(INFO) << " head isValid: " << head.valid();
+  //    auto tail = listTable->getRefTypeData(rc, 1);
+  //    LOG(INFO) << "got ref to tail";
+  //    if(tail.valid()){
+  //      LOG(INFO) << "Tail Valid";
+  //      tail.print();
+  //    } else {
+  //      LOG(INFO) << "Tail Invalid";
+  //    }
+  //
+  //  });
   //---
-
-
 
   txnManager->commitTransaction(txn);
 
   assert(mainRecord.valid());
 
   LOG(INFO) << "Initialization done";
-//  assert(mainRecord());
+  //  assert(mainRecord());
 }
 
 // pop from the front & returns value
@@ -146,7 +138,7 @@ void UnGeneratedQueue::push(queueValueType val) {
   auto txn = txnManager->beginTransaction(false);
 
   // Insert a new node
-  struct node_record_st nodeTmp{};
+  struct node_record_st nodeTmp {};
   nodeTmp.payload = val;
   nodeTmp.next = listNodeTable->getNullReference();
 
@@ -155,28 +147,25 @@ void UnGeneratedQueue::push(queueValueType val) {
   LOG(INFO) << "Inserted new node: " << newNode.valid();
   // FIXME: how does 2PL works here? we need to acquire the locks!
 
-
   // insert at the end
   // if(tail) tail->next = newNode
   // tail = newNode
   // size++;
 
-  mainRecord->withLatch([&](record_metadata_t* rc){
+  mainRecord->withLatch([&](record_metadata_t* rc) {
     LOG(INFO) << "Latched mainRecord";
-//    auto* listRecord = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
-//    LOG(INFO) << "sizeBeforeIns: " << listRecord->size;
+    //    auto* listRecord = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
+    //    LOG(INFO) << "sizeBeforeIns: " << listRecord->size;
     size_t listSize = 0;
     listTable->getAttribute(txn, rc, &listSize, 2);
     LOG(INFO) << "sizeBeforeIns: " << listSize;
 
-    if(listSize){
+    if (listSize) {
       LOG(INFO) << "Tail isValid -> update existing tail";
       auto tail = listTable->getRefTypeData(rc, 1);
       assert(tail.valid());
-      tail->readWithLatch([&](record_metadata_t* tailNodeRc){
-        listNodeTable->updateRefTypeData(txn, tailNodeRc, newNode, 0);
-      });
-
+      tail->readWithLatch(
+          [&](record_metadata_t* tailNodeRc) { listNodeTable->updateRefTypeData(txn, tailNodeRc, newNode, 0); });
     }
 
     // tail = newNode
@@ -186,22 +175,19 @@ void UnGeneratedQueue::push(queueValueType val) {
     // updateSize!
     listSize++;
     listTable->updateAttribute(txn, rc, &listSize, 2);
-
   });
 
   txnManager->commitTransaction(txn);
   LOG(INFO) << "PushDone";
 }
 
-
-
 queueValueType UnGeneratedQueue::front() {
   queueValueType ret;
-  mainRecord->readWithLatch([&](record_metadata_t* rc){
+  mainRecord->readWithLatch([&](record_metadata_t* rc) {
     auto head = listTable->getRefTypeData(rc, 0);
 
     // Can there be a deadlock?
-    head->readWithLatch([&](record_metadata_t* nodeRc){
+    head->readWithLatch([&](record_metadata_t* nodeRc) {
       auto* nodeData = reinterpret_cast<struct node_record_st*>(listNodeTable->getRecordData(nodeRc));
       ret = nodeData->payload;
     });
@@ -211,11 +197,11 @@ queueValueType UnGeneratedQueue::front() {
 }
 queueValueType UnGeneratedQueue::back() {
   queueValueType ret;
-  mainRecord->readWithLatch([&](record_metadata_t* rc){
+  mainRecord->readWithLatch([&](record_metadata_t* rc) {
     auto tail = listTable->getRefTypeData(rc, 1);
 
     // Can there be a deadlock?
-    tail->readWithLatch([&](record_metadata_t* nodeRc){
+    tail->readWithLatch([&](record_metadata_t* nodeRc) {
       auto* nodeData = reinterpret_cast<struct node_record_st*>(listNodeTable->getRecordData(nodeRc));
       ret = nodeData->payload;
     });
@@ -230,7 +216,7 @@ size_t UnGeneratedQueue::size() {
   //  maybe create a static interface in table, where one can pass in the recordRef and Txn. or w/o txn.
 
   size_t ret = 0;
-  mainRecord->readWithLatch([&](record_metadata_t* rc){
+  mainRecord->readWithLatch([&](record_metadata_t* rc) {
     auto* data = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
     ret = data->size;
   });
@@ -238,24 +224,22 @@ size_t UnGeneratedQueue::size() {
   return ret;
 }
 
-void UnGeneratedQueue::printQueue(){
+void UnGeneratedQueue::printQueue() {
   LOG(INFO) << "[printQueue] begin";
-  mainRecord->readWithLatch([&](record_metadata_t* rc){
+  mainRecord->readWithLatch([&](record_metadata_t* rc) {
     auto* data = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
     LOG(INFO) << "[printQueue] Size of list: " << data->size;
 
     auto tmp = data->head;
-    for(size_t i = 0; i < data->size; i++){
-      if(tmp.valid()){
-        tmp->readWithLatch([&](record_metadata_t* nodeRc){
+    for (size_t i = 0; i < data->size; i++) {
+      if (tmp.valid()) {
+        tmp->readWithLatch([&](record_metadata_t* nodeRc) {
           auto* nodeData = reinterpret_cast<struct node_record_st*>(listNodeTable->getRecordData(nodeRc));
-          LOG(INFO) << "[printQueue] i:"<<i<< " | value: " << nodeData->payload;
+          LOG(INFO) << "[printQueue] i:" << i << " | value: " << nodeData->payload;
           tmp = nodeData->next;
         });
       }
-
     }
   });
   LOG(INFO) << "[printQueue] end";
-
 }

@@ -26,22 +26,16 @@
 
 #include "dcds/common/exceptions/exception.hpp"
 
-namespace dcds::exceptions{
+namespace dcds::exceptions {
 
 class namespace_not_found : public std::exception {
-  const char* what() const noexcept override {
-    return "namespace_not_found";
-  }
+  const char* what() const noexcept override { return "namespace_not_found"; }
 };
 
 class duplicate_namespace_key : public std::exception {
-  const char* what() const noexcept override {
-    return "namespace_not_found";
-  }
+  const char* what() const noexcept override { return "namespace_not_found"; }
 };
 
-
-
-}
+}  // namespace dcds::exceptions
 
 #endif  // DCDS_STORAGE_EXCEPTIONS_HPP

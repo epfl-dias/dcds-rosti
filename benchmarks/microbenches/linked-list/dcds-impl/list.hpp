@@ -22,5 +22,4 @@
 #ifndef DCDS_LIST_HPP
 #define DCDS_LIST_HPP
 
-
-#endif //DCDS_LIST_HPP
+#endif  // DCDS_LIST_HPP

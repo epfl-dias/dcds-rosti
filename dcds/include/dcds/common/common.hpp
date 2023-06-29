@@ -7,9 +7,9 @@
 
 #include <absl/log/log.h>
 
-
 #include "dcds/common/types.hpp"
 
-
+#define likely(x) __builtin_expect((x), 1)
+#define unlikely(x) __builtin_expect((x), 0)
 
 #endif  // DCDS_COMMON_HPP

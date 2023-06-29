@@ -24,62 +24,47 @@
 
 #include <map>
 #include <mutex>
-#include  <shared_mutex>
-
+#include <shared_mutex>
 
 #include "dcds/common/common.hpp"
 #include "dcds/storage/table.hpp"
+#include "dcds/util/singleton.hpp"
 
 // do we need schema if the reference would be returned back?
 
 namespace dcds::storage {
 
-class TableRegistry {
+class TableRegistry : public dcds::Singleton<TableRegistry> {
+  friend class dcds::Singleton<TableRegistry>;
+
  public:
-  static inline TableRegistry &getInstance() {
-    static TableRegistry instance;
-    return instance;
-  }
-
-  TableRegistry(TableRegistry &&) = delete;
-  TableRegistry &operator=(TableRegistry &&) = delete;
-  TableRegistry(const TableRegistry &) = delete;
-  TableRegistry &operator=(const TableRegistry &) = delete;
-
-
-
   bool exists(table_id_t tableId);
-  bool exists(const std::string &name);
+  bool exists(const std::string& name);
 
-
-//  std::shared_ptr<Table> create_table(
-//      const std::string &name, layout_type layout, const TableDef &columns,
-//      uint64_t initial_num_records = 10000000, bool indexed = true,
-//      bool partitioned = true, int numa_idx = -1,
-//      size_t max_partition_size = 0);
-
+  //  std::shared_ptr<Table> create_table(
+  //      const std::string &name, layout_type layout, const TableDef &columns,
+  //      uint64_t initial_num_records = 10000000, bool indexed = true,
+  //      bool partitioned = true, int numa_idx = -1,
+  //      size_t max_partition_size = 0);
 
   // Do we need create table or register table?
-  // or what about having single vs multiple txnManager? we store it in schema or table class a reference to what txnMgr to use.
+  // or what about having single vs multiple txnManager? we store it in schema or table class a reference to what txnMgr
+  // to use.
 
   std::shared_ptr<Table> getTable(table_id_t tableId);
-  std::shared_ptr<Table> getTable(const std::string &name);
+  std::shared_ptr<Table> getTable(const std::string& name);
 
-//  void registerTable();
-//  void unregisterTable();
+  //  void registerTable();
+  //  void unregisterTable();
 
-  std::shared_ptr<Table> createTable(const std::string& name,
-                                     const std::vector<AttributeDef>& columns,
+  std::shared_ptr<Table> createTable(const std::string& name, const std::vector<AttributeDef>& columns,
                                      bool multi_version = false);
-  void dropTable(); // how to drop if it is a sharedPtr, someone might be holding reference to it?
-
-
+  void dropTable();  // how to drop if it is a sharedPtr, someone might be holding reference to it?
 
  private:
   std::shared_mutex registry_lk;
   std::map<table_id_t, std::shared_ptr<Table>> tables{};
   std::map<std::string, table_id_t> table_name_map{};
-
 
   std::atomic<table_id_t> table_id_generator;
 
@@ -89,9 +74,8 @@ class TableRegistry {
     LOG(INFO) << "TableRegistry::~TableRegistry()";
   }
   TableRegistry() = default;
-
 };
 
-}
+}  // namespace dcds::storage
 
 #endif  // DCDS_TABLE_REGISTRY_HPP
