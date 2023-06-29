@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_crc_internal.a CMakeFiles/absl_crc_internal.dir/internal/crc.cc.o CMakeFiles/absl_crc_internal.dir/internal/crc_x86_arm_combined.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_crc_internal.a

@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_raw_logging_internal.a CMakeFiles/absl_raw_logging_internal.dir/internal/raw_logging.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_raw_logging_internal.a

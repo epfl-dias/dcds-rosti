@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_hashtablez_sampler.a CMakeFiles/absl_hashtablez_sampler.dir/internal/hashtablez_sampler.cc.o CMakeFiles/absl_hashtablez_sampler.dir/internal/hashtablez_sampler_force_weak_definition.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_hashtablez_sampler.a

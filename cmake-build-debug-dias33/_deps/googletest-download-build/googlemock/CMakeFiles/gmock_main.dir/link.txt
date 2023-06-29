@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc ../../../lib/libgmock_main.a CMakeFiles/gmock_main.dir/src/gmock_main.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib ../../../lib/libgmock_main.a

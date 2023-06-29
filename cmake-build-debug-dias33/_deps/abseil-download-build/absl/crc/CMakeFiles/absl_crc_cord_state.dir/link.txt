@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_crc_cord_state.a CMakeFiles/absl_crc_cord_state.dir/internal/crc_cord_state.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_crc_cord_state.a

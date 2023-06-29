@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_flags_parse.a CMakeFiles/absl_flags_parse.dir/parse.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_flags_parse.a

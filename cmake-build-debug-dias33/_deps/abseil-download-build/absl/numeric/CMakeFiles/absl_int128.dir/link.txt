@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_int128.a CMakeFiles/absl_int128.dir/int128.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_int128.a

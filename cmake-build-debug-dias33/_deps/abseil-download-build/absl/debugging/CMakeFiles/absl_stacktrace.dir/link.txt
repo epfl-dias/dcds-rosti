@@ -1,2 +1,0 @@
-/scratch/pelago/llvm-14/opt/bin/llvm-ar qc libabsl_stacktrace.a CMakeFiles/absl_stacktrace.dir/stacktrace.cc.o
-/scratch/pelago/llvm-14/opt/bin/llvm-ranlib libabsl_stacktrace.a
