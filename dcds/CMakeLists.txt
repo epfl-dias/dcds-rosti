@@ -6,7 +6,7 @@ set(dcds_cxx
         lib/builder/builder.cpp
 
         # Indexes
-        lib/indexes/art-node.cpp
+        # lib/indexes/art-node.cpp
 
         # Storage
         lib/storage/table-registry.cpp
