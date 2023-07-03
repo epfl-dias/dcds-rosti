@@ -82,6 +82,9 @@ ccache*
 .idea/**/shelf
 .idea/deployment.xml
 .idea/misc.xml
+.idea/deployment.xml
+.idea/other.xml
+.idea/vcs.xml
 
 ## Generated files
 .idea/**/contentModel.xml
