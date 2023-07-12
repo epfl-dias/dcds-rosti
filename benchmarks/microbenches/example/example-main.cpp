@@ -21,6 +21,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include <dcds/util/logging.hpp>
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
 

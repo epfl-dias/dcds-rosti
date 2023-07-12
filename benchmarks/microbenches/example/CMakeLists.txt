@@ -9,6 +9,7 @@ target_link_libraries_system(example-bench
         )
 target_link_libraries(example-bench
         PUBLIC
+        LLVM::LLVM
         dcds)
 
 target_compile_features(example-bench PUBLIC cxx_std_20)
