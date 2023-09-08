@@ -19,25 +19,19 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <benchmark/benchmark.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
 
 #include <dcds/util/logging.hpp>
-
-#include "un-generated/counter.hpp"
+#include <dcds/util/profiling.hpp>
+#include <iostream>
+#include <libcuckoo/cuckoohash_map.hh>
 
 int main(int argc, char** argv) {
-  // LOG(INFO) << "counterBasedDS";
-  UnGeneratedCounter defaultNSCounter{2, 3};
-  // LOG(INFO) << "[main] init-done";
-  // LOG(INFO) << "-------";
-  UnGeneratedCounter nSCounter("separated", 5, 2);
-  // LOG(INFO) << "###########";
-  // LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
-  // LOG(INFO) << "###########";
-  defaultNSCounter.update();
-  // LOG(INFO) << "###########";
-  // LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
+  // LOG(INFO) << "Aunn2";
+  llvm::LLVMContext c;
 
-  // LOG(INFO) << "------- DONE";
+  libcuckoo::cuckoohash_map<size_t, size_t> indexPartitions;
   return 0;
 }

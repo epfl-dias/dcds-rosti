@@ -30,9 +30,15 @@
 #include <vector>
 
 #include "dcds/common/types.hpp"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 
 namespace dcds {
 class FunctionBuilder {
+  friend class Visitor;
+
  public:
   FunctionBuilder(std::string functionName) : name(std::move(functionName)), doesReturn(false), hasArguments(false) {}
 
@@ -49,32 +55,49 @@ class FunctionBuilder {
     addArguments(args...);
   }
 
-  // variableType createLocalVariable(name, type)
-
-  // addOperation
-
-  // CRUD on DS-Attributes
-  // Function calls on DS-Attributes (composed attribute, its gonna provide functions also)
-
- public:
   void finalize() { isFinalized = true; }
   auto isFinal() { return isFinalized; }
-
   auto getName() { return name; }
+  bool getDoesReturnStatus() { return doesReturn; }
+  dcds::valueType getReturnValueType() { return returnValueType; }
+  bool getHasArgumentsStatus() { return hasArguments; }
+
+  auto codegen(std::unique_ptr<llvm::LLVMContext> &theContext, std::unique_ptr<llvm::Module> &theModule, bool hasAttr) {
+    std::vector<llvm::Type *> argTypes;
+    llvm::Type *returnType = llvm::Type::getVoidTy(*theContext);
+
+    if (hasAttr) argTypes.push_back(llvm::Type::getInt8PtrTy(*theContext));
+
+    for (auto arg : functionArguments) {
+      if (arg == dcds::valueType::INTEGER)
+        argTypes.push_back(llvm::Type::getInt64PtrTy(*theContext));
+      else if (arg == dcds::valueType::RECORD_PTR)
+        argTypes.push_back(llvm::Type::getInt8PtrTy(*theContext));
+    }
+
+    if (returnValueType == dcds::valueType::INTEGER)
+      returnType = llvm::Type::getInt64Ty(*theContext);
+    else if (returnValueType == dcds::valueType::RECORD_PTR)
+      returnType = llvm::Type::getInt8PtrTy(*theContext);
+
+    auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
+    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, theModule.get());
+
+    return fn;
+  }
 
  private:
-  void addArguments(std::same_as<dcds::valueType> auto &...args) {
+  void addArguments(std::same_as<dcds::valueType> auto &... args) {
     // const std::size_t num_args = sizeof...(args);
     for (auto i : {args...}) {
       functionArguments.emplace_back(i);
     }
   }
 
- private:
   const std::string name;
   const bool doesReturn;
+  dcds::valueType returnValueType = dcds::valueType::VOID;
   const bool hasArguments;
-  dcds::valueType returnValueType;
 
   std::vector<dcds::valueType> functionArguments;
 

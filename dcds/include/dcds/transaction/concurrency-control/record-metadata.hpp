@@ -39,7 +39,8 @@ struct ts_t {
 };
 
 class RecordMetaData {
- protected:
+  // protected:
+ public:
   // record_id_t row_id; we do not need record_id for now.
   utils::locks::SpinLock latch;
   utils::locks::Lock write_lock;
@@ -65,13 +66,10 @@ class RecordMetaData_SingleVersion : RecordMetaData {
   //  writeWithLatch: additionally log changes in case of abort.
   //  readWithLatch: future optimization for optimistic reads.
   template <class lambda>
-  inline void writeWithLatch(lambda &&func, Txn &txn, table_id_t table_id) {
+  inline void writeWithLatch(lambda &&func) {
     this->latch.acquire();
     func(this);
     this->latch.release();
-
-    //    txn.undoLogVector.emplace_back(
-    //        storage::StorageUtils::get_row_uuid(table_id, row_id));
   }
 
   template <class lambda>

@@ -93,7 +93,10 @@ class NamespaceRegistry : public dcds::Singleton<NamespaceRegistry> {
     return ns;
   }
 
-  auto remove(std::string) { throw std::runtime_error("unimplemented"); }
+  auto remove(std::string) {
+    //      throw std::runtime_error("unimplemented");
+    std::cout << "Reached here! unimplemented\n\n";
+  }
 
  private:
   std::deque<std::shared_ptr<TransactionManager>> namespaces;

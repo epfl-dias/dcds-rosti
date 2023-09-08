@@ -3,8 +3,19 @@ add_subdirectory(
 )
 
 add_executable(counter-based-ds
-        counter-based-ds.cpp
-)
+#        counter-based-ds.cpp
+#        counter-example.cpp
+#        counter-benchmark.cpp
+#        two-counter-example.cpp
+#        linked-list.cpp
+        lru_implementation.cpp
+#        doubly_connected_node.cpp
+#        composable_lru_implementation.cpp
+#        1counter-benchmark.cpp
+#        3counter-benchmark.cp
+#        lru-benchmark.cpp
+#        dll-benchmark.cpp
+        )
 
 target_link_libraries_system(counter-based-ds
         benchmark::benchmark
@@ -12,8 +23,10 @@ target_link_libraries_system(counter-based-ds
 )
 target_link_libraries(counter-based-ds
         PUBLIC
+        LLVM::LLVM
         dcds
-        counter-based-datastructures)
+        counter-based-datastructures
+        pthread)
 
 target_compile_features(counter-based-ds PUBLIC cxx_std_20)
 

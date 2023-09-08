@@ -71,7 +71,7 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
  private:
   ~TableRegistry() {
     // also clear up the tables if remaining.
-    LOG(INFO) << "TableRegistry::~TableRegistry()";
+    // LOG(INFO) << "TableRegistry::~TableRegistry()";
   }
   TableRegistry() = default;
 };

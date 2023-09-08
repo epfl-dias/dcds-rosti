@@ -28,29 +28,29 @@
 #include "un-generated/queue.hpp"
 
 int main(int argc, char** argv) {
-  LOG(INFO) << "listBasedDS";
+  // LOG(INFO) << "listBasedDS";
   UnGeneratedQueue defaultNSQueue;
-  LOG(INFO) << "[main] init-done";
-  LOG(INFO) << "defaultNSQueue: size: " << defaultNSQueue.size();
-  LOG(INFO) << "-------";
+  // LOG(INFO) << "[main] init-done";
+  // LOG(INFO) << "defaultNSQueue: size: " << defaultNSQueue.size();
+  // LOG(INFO) << "-------";
   //    UnGeneratedQueue nSQueue("separated");
-  //    LOG(INFO) << "nSQueue: size: " << nSQueue.size();
+  //    // LOG(INFO) << "nSQueue: size: " << nSQueue.size();
 
-  LOG(INFO) << "###########";
+  // LOG(INFO) << "###########";
   defaultNSQueue.printQueue();
   defaultNSQueue.push(10);
-  LOG(INFO) << "###########";
+  // LOG(INFO) << "###########";
   defaultNSQueue.printQueue();
   defaultNSQueue.push(11);
-  LOG(INFO) << "###########";
+  // LOG(INFO) << "###########";
   defaultNSQueue.printQueue();
   defaultNSQueue.push(10);
-  LOG(INFO) << "###########";
+  // LOG(INFO) << "###########";
   defaultNSQueue.printQueue();
   defaultNSQueue.push(12);
-  LOG(INFO) << "###########";
+  // LOG(INFO) << "###########";
   defaultNSQueue.printQueue();
 
-  LOG(INFO) << "------- DONE";
+  // LOG(INFO) << "------- DONE";
   return 0;
 }

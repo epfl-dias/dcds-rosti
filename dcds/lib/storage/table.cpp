@@ -39,8 +39,8 @@ Table::Table(table_id_t tableId, std::string tableName, size_t recordSize, std::
       record_size_data_only(recordSize),
       columns(std::move(attributes)),
       is_multiversion(is_multi_versioned) {
-  LOG(INFO) << "Table(): " << table_name;
-  LOG(INFO) << "sizeof(record_metadata_t): " << sizeof(record_metadata_t);
+  // LOG(INFO) << "Table(): " << table_name;
+  // LOG(INFO) << "sizeof(record_metadata_t): " << sizeof(record_metadata_t);
 
   size_t rec_size = 0;
   size_t col_offset = 0;
@@ -61,7 +61,7 @@ Table::Table(table_id_t tableId, std::string tableName, size_t recordSize, std::
 
 void* SingleVersionRowStore::allocateRecordMemory() const {
   // TODO: use some sort of caching or allocate more and then return from the allocations.
-  LOG(INFO) << "allocateRecordMemory(): " << record_size << " | actualSize: " << record_size_data_only;
+  // LOG(INFO) << "allocateRecordMemory(): " << record_size << " | actualSize: " << record_size_data_only;
   return malloc(record_size);
 }
 void SingleVersionRowStore::freeRecordMemory(void* mem) { free(mem); }

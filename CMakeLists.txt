@@ -104,6 +104,7 @@ string(STRIP "${CMAKE_C_FLAGS} ${COMPILER_FLAGS}" CMAKE_C_FLAGS)
 
 #-----------------------------------------------------------------------
 # Various dependencies
+include(llvm-virtual)
 include(abseil)
 include(gtest)
 include(googlebenchmark)

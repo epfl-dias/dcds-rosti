@@ -1,4 +1,5 @@
 add_subdirectory(example)
-add_subdirectory(linked-list)
+add_subdirectory(play)
+#add_subdirectory(linked-list)
 add_subdirectory(list-based-ds)
 add_subdirectory(counter-based-ds)

@@ -331,7 +331,7 @@ bool ART<K, V>::insert_recursive_opt(ARTNode *node, ARTNode **nodeRef, V const &
 
     auto temp_node = node;
 
-    //    LOG(INFO) << "split leaf";
+    //    // LOG(INFO) << "split leaf";
     if (parent != nullptr && !parent->isLeaf())
       static_cast<ARTInnerNode *>(parent)->insertChild(key[parentD], newNode);
     else

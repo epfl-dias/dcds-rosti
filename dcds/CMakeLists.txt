@@ -4,6 +4,8 @@ set(dcds_cxx
 
         # Builder
         lib/builder/builder.cpp
+        lib/codegen/codegen.cpp
+        lib/builder/storage.cpp
 
         # Indexes
         # lib/indexes/art-node.cpp
@@ -17,7 +19,7 @@ set(dcds_cxx
 
         # Util
         lib/util/profiling.cpp
-        )
+        include/dcds/context/DCDSContext.hpp lib/codegen/codegen.cpp include/dcds/builder/storage.hpp lib/builder/storage.cpp)
 
 add_library(dcds SHARED
         ${dcds_cxx}
@@ -33,7 +35,12 @@ target_include_directories(dcds
 
 target_link_libraries_system(dcds
         absl::log
-        cuckoo::cuckoo)
+        cuckoo::cuckoo
+        LLVM::LLVM)
+
+if (VTUNE AND VTUNE_ENABLE)
+    target_link_libraries(dcds PUBLIC vtune::vtune)
+endif ()
 
 target_link_libraries(dcds
         PUBLIC

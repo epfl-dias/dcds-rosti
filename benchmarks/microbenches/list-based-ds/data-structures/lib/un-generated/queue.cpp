@@ -58,15 +58,15 @@ void UnGeneratedQueue::initTables(const std::string& txn_namespace) {
   tableRegistry.createTable(dsName, table_1_columns);
   tableRegistry.createTable(dsName_node, table_2_columns);
 
-  LOG(INFO) << "Created table: " << dsName;
-  LOG(INFO) << "Created table: " << dsName_node;
+  // LOG(INFO) << "Created table: " << dsName;
+  // LOG(INFO) << "Created table: " << dsName_node;
 
-  LOG(INFO) << "alignTable: " << alignof(Table);
-  LOG(INFO) << "sizeTable: " << sizeof(Table);
+  // LOG(INFO) << "alignTable: " << alignof(Table);
+  // LOG(INFO) << "sizeTable: " << sizeof(Table);
 }
 
 void UnGeneratedQueue::init(const std::string& txn_namespace) {
-  LOG(INFO) << "UnGeneratedQueue::init ns: " << txn_namespace;
+  // LOG(INFO) << "UnGeneratedQueue::init ns: " << txn_namespace;
   const std::string dsName = txn_namespace + "::" + "UnGeneratedQueue";
   // serializing initialization so that two datastructures does not initialize the tables together.
   static std::mutex initLock;
@@ -84,8 +84,8 @@ void UnGeneratedQueue::init(const std::string& txn_namespace) {
 
   this->listTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedQueue");
   this->listNodeTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedQueue_node");
-  LOG(INFO) << "listTable: " << listTable->name();
-  LOG(INFO) << "listNodeTable: " << listNodeTable->name();
+  // LOG(INFO) << "listTable: " << listTable->name();
+  // LOG(INFO) << "listNodeTable: " << listNodeTable->name();
 
   auto txn = txnManager->beginTransaction(false);
   auto mainTable = tableRegistry.getTable(dsName);
@@ -98,22 +98,22 @@ void UnGeneratedQueue::init(const std::string& txn_namespace) {
   this->mainRecord = tmpMainRecord;
   assert(mainRecord.valid());
   // this->mainRecord = mainTable->insertRecord(txn, &tmp);
-  LOG(INFO) << "MainRecord created";
+  // LOG(INFO) << "MainRecord created";
 
   //---
-  // LOG(INFO) << "sizeof(dcds::storage::record_reference_t ): " << sizeof(dcds::storage::record_reference_t );
+  // // LOG(INFO) << "sizeof(dcds::storage::record_reference_t ): " << sizeof(dcds::storage::record_reference_t );
   //  mainRecord->withLatch([&](record_metadata_t* rc){
-  //    LOG(INFO) << "Latched mainRecord";
+  //    // LOG(INFO) << "Latched mainRecord";
   //
   //    auto head = listTable->getRefTypeData(rc, 0);
-  //    LOG(INFO) << " head isValid: " << head.valid();
+  //    // LOG(INFO) << " head isValid: " << head.valid();
   //    auto tail = listTable->getRefTypeData(rc, 1);
-  //    LOG(INFO) << "got ref to tail";
+  //    // LOG(INFO) << "got ref to tail";
   //    if(tail.valid()){
-  //      LOG(INFO) << "Tail Valid";
+  //      // LOG(INFO) << "Tail Valid";
   //      tail.print();
   //    } else {
-  //      LOG(INFO) << "Tail Invalid";
+  //      // LOG(INFO) << "Tail Invalid";
   //    }
   //
   //  });
@@ -123,7 +123,7 @@ void UnGeneratedQueue::init(const std::string& txn_namespace) {
 
   assert(mainRecord.valid());
 
-  LOG(INFO) << "Initialization done";
+  // LOG(INFO) << "Initialization done";
   //  assert(mainRecord());
 }
 
@@ -144,7 +144,7 @@ void UnGeneratedQueue::push(queueValueType val) {
 
   auto newNode = listNodeTable->insertRecord(txn, &nodeTmp);
 
-  LOG(INFO) << "Inserted new node: " << newNode.valid();
+  // LOG(INFO) << "Inserted new node: " << newNode.valid();
   // FIXME: how does 2PL works here? we need to acquire the locks!
 
   // insert at the end
@@ -153,15 +153,15 @@ void UnGeneratedQueue::push(queueValueType val) {
   // size++;
 
   mainRecord->withLatch([&](record_metadata_t* rc) {
-    LOG(INFO) << "Latched mainRecord";
+    // LOG(INFO) << "Latched mainRecord";
     //    auto* listRecord = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
-    //    LOG(INFO) << "sizeBeforeIns: " << listRecord->size;
+    //    // LOG(INFO) << "sizeBeforeIns: " << listRecord->size;
     size_t listSize = 0;
     listTable->getAttribute(txn, rc, &listSize, 2);
-    LOG(INFO) << "sizeBeforeIns: " << listSize;
+    // LOG(INFO) << "sizeBeforeIns: " << listSize;
 
     if (listSize) {
-      LOG(INFO) << "Tail isValid -> update existing tail";
+      // LOG(INFO) << "Tail isValid -> update existing tail";
       auto tail = listTable->getRefTypeData(rc, 1);
       assert(tail.valid());
       tail->readWithLatch(
@@ -169,7 +169,7 @@ void UnGeneratedQueue::push(queueValueType val) {
     }
 
     // tail = newNode
-    LOG(INFO) << "updating tail ref";
+    // LOG(INFO) << "updating tail ref";
     listTable->updateRefTypeData(txn, rc, newNode, 1);
 
     // updateSize!
@@ -178,7 +178,7 @@ void UnGeneratedQueue::push(queueValueType val) {
   });
 
   txnManager->commitTransaction(txn);
-  LOG(INFO) << "PushDone";
+  // LOG(INFO) << "PushDone";
 }
 
 queueValueType UnGeneratedQueue::front() {
@@ -225,21 +225,21 @@ size_t UnGeneratedQueue::size() {
 }
 
 void UnGeneratedQueue::printQueue() {
-  LOG(INFO) << "[printQueue] begin";
+  // LOG(INFO) << "[printQueue] begin";
   mainRecord->readWithLatch([&](record_metadata_t* rc) {
     auto* data = reinterpret_cast<struct list_record_st*>(listTable->getRecordData(rc));
-    LOG(INFO) << "[printQueue] Size of list: " << data->size;
+    // LOG(INFO) << "[printQueue] Size of list: " << data->size;
 
     auto tmp = data->head;
     for (size_t i = 0; i < data->size; i++) {
       if (tmp.valid()) {
         tmp->readWithLatch([&](record_metadata_t* nodeRc) {
           auto* nodeData = reinterpret_cast<struct node_record_st*>(listNodeTable->getRecordData(nodeRc));
-          LOG(INFO) << "[printQueue] i:" << i << " | value: " << nodeData->payload;
+          // LOG(INFO) << "[printQueue] i:" << i << " | value: " << nodeData->payload;
           tmp = nodeData->next;
         });
       }
     }
   });
-  LOG(INFO) << "[printQueue] end";
+  // LOG(INFO) << "[printQueue] end";
 }

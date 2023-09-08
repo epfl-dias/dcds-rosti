@@ -52,7 +52,7 @@ void BMStridedAccess(benchmark::State& state, Args&&... args) {
       std::memcpy(&destination[index], &source[index], read_size);
       index += stride;
     }
-    //        LOG(INFO) << "hi";
+    //        // LOG(INFO) << "hi";
   }
   state.SetBytesProcessed(state.iterations() * bytes_per_iteration);
 }
@@ -68,7 +68,7 @@ static void BM_SomeFunction(benchmark::State& state) {
     for (int i = 0; i < 100; i++) {
       sum += 1;
     }
-    LOG(INFO) << sum;
+    // LOG(INFO) << sum;
   }
 }
 // Register the function as a benchmark

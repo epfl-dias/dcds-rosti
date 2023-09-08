@@ -46,13 +46,13 @@ void UnGeneratedCounter::initTables(const std::string& txn_namespace) {
   table_1_columns.emplace_back("value", valueType::INTEGER, sizeof(size_t));
   tableRegistry.createTable(dsName, table_1_columns);
 
-  LOG(INFO) << "Created table: " << dsName;
-  LOG(INFO) << "alignTable: " << alignof(Table);
-  LOG(INFO) << "sizeTable: " << sizeof(Table);
+  // LOG(INFO) << "Created table: " << dsName;
+  // LOG(INFO) << "alignTable: " << alignof(Table);
+  // LOG(INFO) << "sizeTable: " << sizeof(Table);
 }
 
 void UnGeneratedCounter::init(const std::string& txn_namespace) {
-  LOG(INFO) << "UnGeneratedCounter::init ns: " << txn_namespace;
+  // LOG(INFO) << "UnGeneratedCounter::init ns: " << txn_namespace;
   const std::string dsName = txn_namespace + "::" + "UnGeneratedCounter";
   // serializing initialization so that two datastructures do not initialize the tables together.
   static std::mutex initLock;
@@ -69,13 +69,13 @@ void UnGeneratedCounter::init(const std::string& txn_namespace) {
   }
 
   this->counterTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedCounter");
-  LOG(INFO) << "counterTable: " << counterTable->name();
+  // LOG(INFO) << "counterTable: " << counterTable->name();
 
   auto txn = txnManager->beginTransaction(false);
   auto mainTable = tableRegistry.getTable(dsName);
 
   struct counter_record_st tmp {
-    this->initialCounterValue
+      this->initialCounterValue
   };
 
   assert(!(mainRecord.valid()));
@@ -83,12 +83,12 @@ void UnGeneratedCounter::init(const std::string& txn_namespace) {
   auto tmpMainRecord = mainTable->insertRecord(txn, &tmp);
   this->mainRecord = tmpMainRecord;
   assert(mainRecord.valid());
-  LOG(INFO) << "MainRecord created";
+  // LOG(INFO) << "MainRecord created";
 
   txnManager->commitTransaction(txn);
   assert(mainRecord.valid());
 
-  LOG(INFO) << "Initialization done";
+  // LOG(INFO) << "Initialization done";
 }
 
 counterValueType UnGeneratedCounter::read() {
@@ -99,7 +99,7 @@ counterValueType UnGeneratedCounter::read() {
     auto* counterData = reinterpret_cast<struct counter_record_st*>(counterTable->getRecordData(countRc));
     counterValue = counterData->value;
   });
-  LOG(INFO) << "Counter Value read";
+  // LOG(INFO) << "Counter Value read";
   return counterValue;
 }
 
@@ -109,5 +109,14 @@ void UnGeneratedCounter::update() {
     auto* counterData = reinterpret_cast<struct counter_record_st*>(counterTable->getRecordData(countRc));
     counterData->value = counterData->value + counterStep;
   });
-  LOG(INFO) << "Counter value updated";
+  // LOG(INFO) << "Counter value updated";
+}
+
+void UnGeneratedCounter::write(counterValueType writeVariable) {
+  // Can there be a deadlock?
+  mainRecord->readWithLatch([&](record_metadata_t* countRc) {
+    auto* counterData = reinterpret_cast<struct counter_record_st*>(counterTable->getRecordData(countRc));
+    counterData->value = writeVariable;
+  });
+  // LOG(INFO) << "Counter value updated";
 }

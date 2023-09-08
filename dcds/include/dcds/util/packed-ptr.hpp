@@ -56,7 +56,8 @@ class PackerPtr {
 
   auto operator->() const { return reinterpret_cast<void*>(pt & PTR_MASK); }
 
-  void print() const { LOG(INFO) << "data: " << getData() << " | pt:  " << reinterpret_cast<void*>(pt & PTR_MASK); }
+  void print() const { // LOG(INFO) << "data: " << getData() << " | pt:  " << reinterpret_cast<void*>(pt & PTR_MASK);
+  }
 
   [[nodiscard]] uint16_t getData() const { return (pt >> 56u); }
   [[nodiscard]] auto getPtr() const { return pt; }
