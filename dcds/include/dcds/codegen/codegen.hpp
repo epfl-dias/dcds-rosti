@@ -122,14 +122,14 @@ class Visitor {
 
     // Promote allocas to registers.
     theFPM->add(createPromoteMemoryToRegisterPass());
-//    // Do simple "peephole" optimizations and bit-twiddling optzns.
-//    theFPM->add(createInstructionCombiningPass());
-//    // Reassociate expressions.
-//    theFPM->add(createReassociatePass());
-//    // Eliminate Common SubExpressions.
-//    theFPM->add(createGVNPass());
-//    // Simplify the control flow graph (deleting unreachable blocks, etc).
-//    theFPM->add(createCFGSimplificationPass());
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    theFPM->add(createInstructionCombiningPass());
+    // Reassociate expressions.
+    theFPM->add(createReassociatePass());
+    // Eliminate Common SubExpressions.
+    theFPM->add(createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    theFPM->add(createCFGSimplificationPass());
 
     // TODO: Eliminate unnecessary code generation at its source (wherever it makes sense to do so).
     theFPM->add(createDeadCodeEliminationPass());
