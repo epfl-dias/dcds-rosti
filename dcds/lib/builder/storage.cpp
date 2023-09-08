@@ -20,14 +20,9 @@ void dcds::StorageLayer::initTables(const std::string& txn_namespace, const std:
     columns.emplace_back(name, attribute->type, sizeVar);
   }
   tableRegistry.createTable(dsTableName, columns);
-
-  // LOG(INFO) << "Created table: " << dsTableName;
-  // LOG(INFO) << "alignTable: " << alignof(dcds::storage::Table);
-  // LOG(INFO) << "sizeTable: " << sizeof(dcds::storage::Table);
 }
 
 void dcds::StorageLayer::init(const std::string& txnNamespace) {
-  // LOG(INFO) << "StorageLayer::init ns: " << txnNamespace;
   const std::string dsTableName = txnNamespace + "::" + "StorageLayer";
 
   // serializing initialization so that two datastructures do not initialize the tables together.
@@ -44,25 +39,21 @@ void dcds::StorageLayer::init(const std::string& txnNamespace) {
   }
 
   this->dsTable = tableRegistry.getTable(dsTableName);
-  // LOG(INFO) << "DS Table: " << this->dsTable->name();
 
   auto txn = txnManager->beginTransaction(false);
   auto mainTable = tableRegistry.getTable(dsTableName);
   assert(!(mainRecord.valid()));
 
   // insert a default record for referencing the data structure
-  std::vector<DSValueType> tmp;  // This might become tuple with data structures having attributes of multiple types.
+  std::vector<DSValueType> tmp;
   tmp.emplace_back(this->attributes.begin()->second->initVal);
 
   auto tmpMainRecord = mainTable->insertRecord(txn, &tmp);
   this->mainRecord = tmpMainRecord;
   assert(mainRecord.valid());
-  // LOG(INFO) << "MainRecord created";
 
   txnManager->commitTransaction(txn);
   assert(mainRecord.valid());
-
-  // LOG(INFO) << "Initialization done";
 }
 
 void dcds::StorageLayer::read(void* readVariable, uint64_t attributeIndex, void* txnPtr) {

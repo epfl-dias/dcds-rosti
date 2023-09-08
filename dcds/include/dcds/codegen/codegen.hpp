@@ -560,12 +560,10 @@ class Visitor {
   std::vector<llvm::Function *> usrFns;
   std::vector<llvm::Value *> dsAttrAllocVec;
   std::unordered_map<std::string, llvm::Value *> tempVarIRMap;
-
   ExitOnError ExitOnErr;
 
   llvm::Function *readFunction;
   llvm::Function *writeFunction;
-  //  std::vector<llvm::Function *> externalFunctions;
   std::map<std::string, llvm::Function *> externalFunctions;
 };
 
