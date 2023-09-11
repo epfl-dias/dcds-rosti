@@ -21,14 +21,14 @@
 
 #include <benchmark/benchmark.h>
 
-//#include <../../benchmarks/microbenches/counter-based-ds/data-structures/include/un-generated/counter.hpp>
+#include <../../benchmarks/microbenches/counter-based-ds/data-structures/include/un-generated/counter.hpp>
 #include <dcds/util/logging.hpp>
 
 int main(int argc, char** argv) {
-//  LOG(INFO) << "counterBasedDS";
-//  UnGeneratedCounter defaultNSCounter{2, 3};
-//  LOG(INFO) << "[main] init-done";
-//  LOG(INFO) << "-------";
+  LOG(INFO) << "counterBasedDS";
+  UnGeneratedCounter defaultNSCounter{2, 3};
+  LOG(INFO) << "[main] init-done";
+  LOG(INFO) << "-------";
   //  UnGeneratedCounter nSCounter("separated", 5, 2);
   //   LOG(INFO) << "###########";
   //   LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();

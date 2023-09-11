@@ -34,7 +34,7 @@ class UnGeneratedCounter {
   explicit UnGeneratedCounter(counterValueType initialValue = 0, counterValueType step = 1) {
     initialCounterValue = initialValue;
     counterStep = step;
-    // LOG(INFO) << "initializing with default";
+    LOG(INFO) << "initializing with default";
     init("default");
   }
 
@@ -42,7 +42,7 @@ class UnGeneratedCounter {
                               counterValueType step = 1) {
     initialCounterValue = initialValue;
     counterStep = step;
-    // LOG(INFO) << "initializing with ns: " << txn_namespace;
+    LOG(INFO) << "initializing with ns: " << txn_namespace;
     init(txn_namespace);
   }
 

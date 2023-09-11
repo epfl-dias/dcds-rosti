@@ -12,7 +12,7 @@
       portions thereof, and that both notices appear in supporting
       documentation.
 
-      This code is distributed in the hope that it will be useful, but
+      This code is distribu.ted in the hope that it will be useful, but
       WITHOUT ANY WARRANTY; without even the implied warranty of
       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS
       DISCLAIM ANY LIABILITY OF ANY KIND FOR ANY DAMAGES WHATSOEVER
@@ -20,119 +20,104 @@
  */
 
 //
-// Created by prathamesh on 10/7/23.
+// Created by prathamesh on 14/8/23.
 //
 
 #include "dcds/builder/builder.hpp"
-#include "dcds/codegen/codegen.hpp"
 #include "dcds/context/DCDSContext.hpp"
 
-static void createCounter() {
-  // context(enable_multi_threading_flag, allow_dangling_functions_flag);
-  dcds::DCDSContext context(false, false);
+class DCDSCounter {
+ public:
+  DCDSCounter(int counterInitialValue1 = 0) {
+    dcds::DCDSContext context(false, false);
+    dcds::Builder dsBuilder(context, "Counter");
 
-  // dsBuilder(dcds_context, data_structure_name);
-  dcds::Builder dsBuilder(context, "Counter");
+    dsBuilder.addAttribute("counter_value", dcds::INTEGER, counterInitialValue1);
 
-  // TODO: Develop support for specifying default value with types other than int here.
-  // addAttribute(attribute_name, attribute_type, attribute_initial_value);
-  dsBuilder.addAttribute("counter_value", dcds::INTEGER, 2);
+    storageObject = dsBuilder.initializeStorage();
+    storageObjectPtr = reinterpret_cast<void *>(storageObject.get());
+  }
 
-  // createFunction(function_name, function_return_type, function_arguments_type);
-  auto usr_fn = dsBuilder.createFunction("update_and_read_fn", dcds::INTEGER);
-  auto check_fn = dsBuilder.createFunction("check_function");
+  static void initialize() {
+    dcds::DCDSContext context(false, false);
+    dcds::Builder dsBuilder(context, "Counter");
 
-  int64_t initValueCounter = 0;
-  int64_t counterValueWrite = 55;
+    dsBuilder.addAttribute("counter_value", dcds::INTEGER, 0);
 
-  // addTempVar(temp_var_name, temp_var_type, temp_var_initial_value);
-  dsBuilder.addTempVar("counter_value_read_variable", dcds::INTEGER, initValueCounter, usr_fn);
-  dsBuilder.addTempVar("counter_value_write_variable", dcds::INTEGER, counterValueWrite, usr_fn);
+    auto read_fn = dsBuilder.createFunction("read_function", dcds::valueType::INTEGER);
+    auto update_fn = dsBuilder.createFunction("update_function", dcds::valueType::VOID, dcds::valueType::INTEGER);
 
-  dsBuilder.addTempVar("dummy_var1", dcds::INTEGER, 10, usr_fn);
-  dsBuilder.addTempVar("dummy_var2", dcds::INTEGER, 11, usr_fn);
-  dsBuilder.addTempVar("dummy_var3", dcds::INTEGER, 100, usr_fn);
+    dsBuilder.addTempVar("counter_value_read_variable", dcds::valueType::INTEGER, 0, read_fn);
 
-  // createReadStatement(source_attribute_from_where_value_will_be_read, temp_variable_storing_read_value);
-  auto read_statement =
-      dsBuilder.createReadStatement(dsBuilder.getAttribute("counter_value"), "counter_value_read_variable");
+    // TODO: Add assertion to see that the user provides an arg with `addArgVar` if the function expects arguments.
+    dsBuilder.addArgVar("counter_value_update_variable", dcds::valueType::INTEGER, update_fn);
+    dsBuilder.addTempVar("compare_variable", dcds::valueType::INTEGER, 5, update_fn);
+    dsBuilder.addTempVar("temp_read_variable", dcds::valueType::INTEGER, 0, update_fn);
 
-  // TODO: One statement can only be attached to one function atm. This can be solved once frontend support for this is
-  // added, backend is expected to work with minor changes. Relatively easy thing to fix.
-  auto read_statement_for_check_fn =
-      dsBuilder.createReadStatement(dsBuilder.getAttribute("counter_value"), "counter_value_read_variable");
+    auto read_statement =
+        dsBuilder.createReadStatement(dsBuilder.getAttribute("counter_value"), "counter_value_read_variable");
+    auto read_statement2 = dsBuilder.createReadStatement(dsBuilder.getAttribute("counter_value"), "temp_read_variable");
+    auto cond = dcds::ConditionBuilder(dcds::CmpIPredicate::neq, "counter_value_update_variable", "compare_variable");
 
-  // createUpdateStatement(source_attribute_which_will_be_updated, temp_variable_storing_write_value);
-  auto update_statement =
-      dsBuilder.createUpdateStatement(dsBuilder.getAttribute("counter_value"), "counter_value_write_variable");
+    std::vector<std::shared_ptr<dcds::StatementBuilder>> ifStatements, elseStatements;
+    auto ifStatement1 = dsBuilder.createTempVarAddStatement("counter_value_update_variable", "compare_variable",
+                                                            "counter_value_update_variable");
+    auto elseStatement1 = dsBuilder.createTempVarAddStatement(
+        "counter_value_update_variable", "counter_value_update_variable", "counter_value_update_variable");
+    ifStatements.emplace_back(ifStatement1);
+    elseStatements.emplace_back(elseStatement1);
 
-  auto read_statement2 =
-      dsBuilder.createReadStatement(dsBuilder.getAttribute("counter_value"), "counter_value_read_variable");
+    auto cond_statement = dsBuilder.createConditionStatement(cond, ifStatements, elseStatements);
+    auto temp_add_statement = dsBuilder.createTempVarAddStatement("counter_value_update_variable", "temp_read_variable",
+                                                                  "counter_value_update_variable");
+    auto write_statement =
+        dsBuilder.createUpdateStatement(dsBuilder.getAttribute("counter_value"), "counter_value_update_variable");
+    auto return_statement = dsBuilder.createReturnStatement("counter_value_read_variable");
 
-  // createTempVarAddStatement(left_operand, right_operand, result_storing_variable);
-  auto tempVarAddStatement1 = dsBuilder.createTempVarAddStatement("dummy_var1", "dummy_var2", "dummy_var1");
-  auto tempVarAddStatement2 = dsBuilder.createTempVarAddStatement("dummy_var1", "dummy_var2", "dummy_var3");
+    dsBuilder.addStatement(read_statement, read_fn);
+    dsBuilder.addStatement(return_statement, read_fn);
 
-  // ConditionBuilder(condition_predicate, comparison_variable1, comparison_variable2);
-  auto cond = dcds::ConditionBuilder(dcds::CmpIPredicate::neq, "dummy_var1", "dummy_var2");
-  std::vector<std::shared_ptr<dcds::StatementBuilder>> ifResStatements, elseResStatements;
+    dsBuilder.addStatement(read_statement2, update_fn);
+    dsBuilder.addStatement(cond_statement, update_fn);
+    dsBuilder.addStatement(temp_add_statement, update_fn);
+    dsBuilder.addStatement(write_statement, update_fn);
 
-  ifResStatements.emplace_back(tempVarAddStatement1);
-  ifResStatements.emplace_back(tempVarAddStatement2);
-  elseResStatements.emplace_back(tempVarAddStatement2);
+    dsBuilder.addFunction(read_fn);
+    dsBuilder.addFunction(update_fn);
 
-  // createConditionStatement(condition, if_block, else_block);
-  auto conditionStatement = dsBuilder.createConditionStatement(cond, ifResStatements, elseResStatements);
+    visitor = dsBuilder.codegen();
 
-  // createReturnStatement(name_of_temp_variable_to_be_returned);
-  auto return_statement = dsBuilder.createReturnStatement("counter_value_read_variable");
+    built_read_fn = visitor->getBuiltFunctionInt64ReturnType("read_function");
+    built_update_fn = visitor->getBuiltFunctionVoidReturnTypeIntArg1("update_function");
+  }
 
-  // addStatement(statement_shared_ptr, function_shared_ptr);
-  dsBuilder.addStatement(read_statement, usr_fn);
-  dsBuilder.addStatement(update_statement, usr_fn);
-  dsBuilder.addStatement(read_statement2, usr_fn);
-  dsBuilder.addStatement(tempVarAddStatement1, usr_fn);
-  dsBuilder.addStatement(tempVarAddStatement2, usr_fn);
-  dsBuilder.addStatement(conditionStatement, usr_fn);
-  dsBuilder.addStatement(return_statement, usr_fn);
+  auto read() { return built_read_fn(storageObjectPtr); }
 
-  // addFunction(function_shared_ptr);
-  dsBuilder.addFunction(usr_fn);
+  auto update(int64_t *update_value_half) { return built_update_fn(storageObjectPtr, update_value_half); }
 
-  dsBuilder.addStatement(read_statement_for_check_fn, check_fn);
-  dsBuilder.addFunction(check_fn);
+ private:
+  static int64_t (*built_read_fn)(void *);
+  static void (*built_update_fn)(void *, int64_t *);
+  static std::shared_ptr<dcds::Visitor> visitor;
+  std::shared_ptr<dcds::StorageLayer> storageObject;
+  void *storageObjectPtr;
+};
 
-  // Function to automatically initialise storage layer from the user supplied information.
-  auto storageObject = dsBuilder.initializeStorage();
+int64_t (*DCDSCounter::built_read_fn)(void *);
+void (*DCDSCounter::built_update_fn)(void *, int64_t *);
+std::shared_ptr<dcds::Visitor> DCDSCounter::visitor;
 
-  // codegen(builder_object);
-  auto visitor = codegen(dsBuilder);
-  visitor->build();
+int main() {
+  DCDSCounter::initialize();
 
-  // TODO: Develop support for custom user arguments to data structure functions.
-  auto built_fn = visitor->getBuiltFunctionInt64ReturnType("update_and_read_fn");
-  auto storageObjectPtr = reinterpret_cast<void *>(storageObject);
+  DCDSCounter counter1(1);
 
-  // LOG(INFO) << built_fn(storageObjectPtr);
+  int64_t val1 = 7;
+  int64_t val2 = 5;
+
+  LOG(INFO) << counter1.read();
+  counter1.update(&val1);
+  LOG(INFO) << counter1.read();
+  counter1.update(&val2);
+  LOG(INFO) << counter1.read();
 }
-
-int main() { createCounter(); }
-
-// TODO: This is outdated at the moment.
-//// Expected program in C++ realm
-//
-// int counter_value = 2;
-//
-// int update_and_read_fn()
-//{
-//    int counter_value_read_varaiable = 0;
-//    int counter_value_write_variable = 1;
-//
-//    counter_value_read_varaiable = counter_value; // First read statement
-//    counter_value = counter_value_write_variable; // Update/Write statement
-//    counter_value_write_variable = counter_value; // Second read statement
-//
-//    return counter_value_read_varaiable; // Return statement
-//}
-//
-// update_and_read_fn();
