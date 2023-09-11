@@ -10,7 +10,6 @@ target_link_libraries(lru-list-benchmark
         PUBLIC
         LLVM::LLVM
         dcds
-        counter-based-datastructures
         pthread)
 
 target_compile_features(lru-list-benchmark PUBLIC cxx_std_20)

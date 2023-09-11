@@ -10,7 +10,6 @@ target_link_libraries(doubly-linked-list-benchmark
         PUBLIC
         LLVM::LLVM
         dcds
-        counter-based-datastructures
         pthread)
 
 target_compile_features(doubly-linked-list-benchmark PUBLIC cxx_std_20)

@@ -128,3 +128,4 @@ include(clang-tidy)
 
 add_subdirectory(benchmarks)
 add_subdirectory(dcds)
+add_subdirectory(examples)
