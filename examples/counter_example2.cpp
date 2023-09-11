@@ -12,7 +12,7 @@
       portions thereof, and that both notices appear in supporting
       documentation.
 
-      This code is distributed in the hope that it will be useful, but
+      This code is distribu.ted in the hope that it will be useful, but
       WITHOUT ANY WARRANTY; without even the implied warranty of
       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS
       DISCLAIM ANY LIABILITY OF ANY KIND FOR ANY DAMAGES WHATSOEVER
