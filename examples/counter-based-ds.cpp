@@ -21,23 +21,22 @@
 
 #include <benchmark/benchmark.h>
 
+#include <../../benchmarks/microbenches/counter-based-ds/data-structures/include/un-generated/counter.hpp>
 #include <dcds/util/logging.hpp>
 
-#include "un-generated/counter.hpp"
-
 int main(int argc, char** argv) {
-  // LOG(INFO) << "counterBasedDS";
-  UnGeneratedCounter defaultNSCounter{2, 3};
-  // LOG(INFO) << "[main] init-done";
-  // LOG(INFO) << "-------";
-  UnGeneratedCounter nSCounter("separated", 5, 2);
-  // LOG(INFO) << "###########";
-  // LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
-  // LOG(INFO) << "###########";
-  defaultNSCounter.update();
-  // LOG(INFO) << "###########";
-  // LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
+//  LOG(INFO) << "counterBasedDS";
+//  UnGeneratedCounter defaultNSCounter{2, 3};
+//  LOG(INFO) << "[main] init-done";
+//  LOG(INFO) << "-------";
+  //  UnGeneratedCounter nSCounter("separated", 5, 2);
+  //   LOG(INFO) << "###########";
+  //   LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
+  //   LOG(INFO) << "###########";
+  //  defaultNSCounter.update();
+  //   LOG(INFO) << "###########";
+  //   LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
 
-  // LOG(INFO) << "------- DONE";
+  LOG(INFO) << "------- DONE";
   return 0;
 }
