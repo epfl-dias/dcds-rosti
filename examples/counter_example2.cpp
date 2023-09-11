@@ -115,9 +115,9 @@ int main() {
   int64_t val1 = 7;
   int64_t val2 = 5;
 
-  // LOG(INFO) << counter1.read();
+  LOG(INFO) << counter1.read();
   counter1.update(&val1);
-  // LOG(INFO) << counter1.read();
+  LOG(INFO) << counter1.read();
   counter1.update(&val2);
-  // LOG(INFO) << counter1.read();
+  LOG(INFO) << counter1.read();
 }

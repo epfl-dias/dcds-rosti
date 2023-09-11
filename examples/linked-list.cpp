@@ -93,9 +93,7 @@ class DCDSNode {
   auto read() { return built_read_fn(storageObjectPtr); }
   auto read2() { return built_read_fn2(storageObjectPtr); }
 
-  auto write(int64_t *payload, void *next_reference) {
-    built_write_fn(storageObjectPtr, payload, next_reference);
-  }
+  auto write(int64_t *payload, void *next_reference) { built_write_fn(storageObjectPtr, payload, next_reference); }
 
  private:
   static void (*built_write_fn)(void *, int64_t *, void *);
@@ -120,25 +118,25 @@ int main() {
   int64_t val1 = 7;
   int64_t val2 = 44;
 
-  // LOG(INFO) << n1.read();
-  // LOG(INFO) << n1.read2();
+  LOG(INFO) << n1.read();
+  LOG(INFO) << n1.read2();
   n1.write(&val1, &n2);
-  // LOG(INFO) << n1.read();
-  // LOG(INFO) << n1.read2();
-  // LOG(INFO) << &n2;
+  LOG(INFO) << n1.read();
+  LOG(INFO) << n1.read2();
+  LOG(INFO) << &n2;
 
   n2.write(&val2, nullptr);
 
-  // LOG(INFO) << n2.read();
-  // LOG(INFO) << reinterpret_cast<DCDSNode *>(n1.read2())->read();
+  LOG(INFO) << n2.read();
+  LOG(INFO) << reinterpret_cast<DCDSNode *>(n1.read2())->read();
 
   assert(n2.read() == reinterpret_cast<DCDSNode *>(n1.read2())->read());
 
-//  n2.write(&val, &val);
-//  // LOG(INFO) << n2.read();
-//
-//  n1.write(&val, &n2);
+  n2.write(&val1, &val2);
+  LOG(INFO) << n2.read();
 
-//  auto n3 = reinterpret_cast<DCDSNode *>(n1.read2());
-  //  // LOG(INFO) << n3->read();
+  n1.write(&val1, &n2);
+
+  auto n3 = reinterpret_cast<DCDSNode *>(n1.read2());
+  LOG(INFO) << n3->read();
 }

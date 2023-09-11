@@ -144,19 +144,19 @@ int main() {
   int64_t val5 = 2222;
   int64_t val6 = 1111;
 
-  // LOG(INFO) << counter1.read();
-  // LOG(INFO) << counter1.read2();
-  // LOG(INFO) << counter1.read3();
+  LOG(INFO) << counter1.read();
+  LOG(INFO) << counter1.read2();
+  LOG(INFO) << counter1.read3();
   counter1.write(&val1, &val2, &val3);
-  // LOG(INFO) << counter1.read();
-  // LOG(INFO) << counter1.read2();
-  // LOG(INFO) << counter1.read3();
+  LOG(INFO) << counter1.read();
+  LOG(INFO) << counter1.read2();
+  LOG(INFO) << counter1.read3();
 
-  // LOG(INFO) << counter2.read();
-  // LOG(INFO) << counter2.read2();
-  // LOG(INFO) << counter2.read3();
+  LOG(INFO) << counter2.read();
+  LOG(INFO) << counter2.read2();
+  LOG(INFO) << counter2.read3();
   counter2.write(&val4, &val5, &val6);
-  // LOG(INFO) << counter2.read();
-  // LOG(INFO) << counter2.read2();
-  // LOG(INFO) << counter2.read3();
+  LOG(INFO) << counter2.read();
+  LOG(INFO) << counter2.read2();
+  LOG(INFO) << counter2.read3();
 }
