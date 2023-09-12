@@ -27,7 +27,7 @@ class Builder {
   friend class Visitor;
 
  public:
-  explicit Builder(dcds::DCDSContext builderContext, std::string dataStructure_name)
+  explicit Builder(dcds::DCDSContext& builderContext, std::string dataStructure_name)
       : context(builderContext), dataStructureName(std::move(dataStructure_name)) {}
 
   auto getName() { return dataStructureName; }

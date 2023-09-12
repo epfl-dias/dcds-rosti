@@ -108,49 +108,49 @@ class Visitor {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
-    // Open a new context and module.
+    /// Open a new context and module.
     theLLVMContext = std::make_unique<LLVMContext>();
-    theModule = std::make_unique<Module>(dsName, *theLLVMContext);
+    theLLVMModule = std::make_unique<Module>(dsName, *theLLVMContext);
 
-    // Create a new builder for the module.
+    /// Create a new builder for the module.
     llvmBuilder = std::make_unique<IRBuilder<>>(*theLLVMContext);
   }
 
   void initializePassManager() {
-    // Create a new pass manager attached to it.
-    theFPM = std::make_unique<legacy::FunctionPassManager>(theModule.get());
+    /// Create a new pass manager attached to it.
+    theLLVMFPM = std::make_unique<legacy::FunctionPassManager>(theLLVMModule.get());
 
-    // Promote allocas to registers.
-    theFPM->add(createPromoteMemoryToRegisterPass());
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
-    theFPM->add(createInstructionCombiningPass());
-    // Reassociate expressions.
-    theFPM->add(createReassociatePass());
-    // Eliminate Common SubExpressions.
-    theFPM->add(createGVNPass());
-    // Simplify the control flow graph (deleting unreachable blocks, etc).
-    theFPM->add(createCFGSimplificationPass());
+    /// Promote allocas to registers.
+    theLLVMFPM->add(createPromoteMemoryToRegisterPass());
+    /// Do simple "peephole" optimizations and bit-twiddling optzns.
+    theLLVMFPM->add(createInstructionCombiningPass());
+    /// Reassociate expressions.
+    theLLVMFPM->add(createReassociatePass());
+    /// Eliminate Common SubExpressions.
+    theLLVMFPM->add(createGVNPass());
+    /// Simplify the control flow graph (deleting unreachable blocks, etc).
+    theLLVMFPM->add(createCFGSimplificationPass());
 
-    // TODO: Eliminate unnecessary code generation at its source (wherever it makes sense to do so).
-    theFPM->add(createDeadCodeEliminationPass());
+    /// TODO: Eliminate unnecessary code generation at its source (wherever it makes sense to do so).
+    theLLVMFPM->add(createDeadCodeEliminationPass());
 
-    theFPM->doInitialization();
+    theLLVMFPM->doInitialization();
   }
 
   void runPasses() {
-    // TODO: Determine if we really require this function or if all of it is/(can be) automatically done by the JIT.
+    /// TODO: Determine if we really require this function or if all of it is/(can be) automatically done by the JIT.
 
-    // Run the optimizations over all functions in the module being added to
-    // the JIT.
-    for (auto &F : *theModule) theFPM->run(F);
+    /// Run the optimizations over all functions in the module being added to
+    /// the JIT.
+    for (auto &F : *theLLVMModule) theLLVMFPM->run(F);
 
-    theModule->print(llvm::outs(), nullptr);
+    theLLVMModule->print(llvm::outs(), nullptr);
   }
 
   void saveModuleToFile(std::string fileName) {
     std::error_code errorCode;
     llvm::raw_fd_ostream outLL(fileName, errorCode);
-    theModule->print(outLL, nullptr);
+    theLLVMModule->print(outLL, nullptr);
   }
 
   Visitor(auto &dsName_, auto &functions_, auto &attributes_, auto &tempVarsInfo_, auto &funcArgsInfo_,
@@ -178,8 +178,8 @@ class Visitor {
     llvm::Value *readVar, *writeVar, *tempVar1, *tempVar2, *tempVar3;
     switch (statement->stType) {
       case dcds::statementType::READ: {
-        if (tempVarIRMap[statement->refVarName]) {
-          readVar = tempVarIRMap[statement->refVarName];
+        if (temporaryVariableIRMap[statement->refVarName]) {
+          readVar = temporaryVariableIRMap[statement->refVarName];
 
           if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::INTEGER) {
             readVar = llvmBuilder->CreateIntToPtr(readVar, llvm::Type::getInt64PtrTy(*theLLVMContext));
@@ -187,31 +187,32 @@ class Visitor {
           } else if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::RECORD_PTR) {
             readVar = llvmBuilder->CreateBitCast(readVar, llvm::Type::getInt8PtrTy(*theLLVMContext));
           }
-        } else  // Function argument is involved.
+        } else  /// Function argument is involved.
         {
-          readVar = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               statement->refVarName));
+          readVar = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      statement->refVarName));
           readVar = llvmBuilder->CreateBitCast(readVar, llvm::Type::getInt8PtrTy(*theLLVMContext));
         }
 
         if (attributes.find(statement->sourceAttrName) != attributes.end()) {
-          // Read data structure attribute.
+          /// Read data structure attribute.
           auto argIndex = dcds::llvmutil::findInMap(attributes, statement->sourceAttrName);
           auto argIndexValue = llvm::ConstantInt::get(*theLLVMContext, llvm::APInt(64, argIndex));
 
           llvmBuilder->CreateCall(
-              readFunction, {currFn->getArg(0), argIndexValue, readVar,
+              readFunction, {currentFunction->getArg(0), argIndexValue, readVar,
                              dcds::llvmutil::attrTypeMatching(attributes[statement->sourceAttrName], theLLVMContext)});
         } else {
-          // TODO: Throw appropriate error code from C++ standard.
+          /// TODO: Throw appropriate error code from C++ standard.
           std::cout << "Error: Can only read from data structure attributes.\n";
         }
         break;
       }
       case dcds::statementType::UPDATE: {
-        if (tempVarIRMap[statement->refVarName]) {
-          writeVar = tempVarIRMap[statement->refVarName];
+        if (temporaryVariableIRMap[statement->refVarName]) {
+          writeVar = temporaryVariableIRMap[statement->refVarName];
 
           if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::INTEGER) {
             writeVar = llvmBuilder->CreateIntToPtr(writeVar, llvm::Type::getInt64PtrTy(*theLLVMContext));
@@ -219,23 +220,24 @@ class Visitor {
           } else if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::RECORD_PTR) {
             writeVar = llvmBuilder->CreateBitCast(writeVar, llvm::Type::getInt8PtrTy(*theLLVMContext));
           }
-        } else {  // Function argument is involved.
-          writeVar = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               statement->refVarName));
+        } else {  /// Function argument is involved.
+          writeVar = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      statement->refVarName));
           writeVar = llvmBuilder->CreateBitCast(writeVar, llvm::Type::getInt8PtrTy(*theLLVMContext));
         }
 
         if (attributes.find(statement->sourceAttrName) != attributes.end()) {
-          // Modify data structure attribute.
+          /// Modify data structure attribute.
           auto argIndex = dcds::llvmutil::findInMap(attributes, statement->sourceAttrName);
           auto argIndexValue = llvm::ConstantInt::get(*theLLVMContext, llvm::APInt(64, argIndex));
 
           llvmBuilder->CreateCall(
-              writeFunction, {currFn->getArg(0), argIndexValue, writeVar,
+              writeFunction, {currentFunction->getArg(0), argIndexValue, writeVar,
                               dcds::llvmutil::attrTypeMatching(attributes[statement->sourceAttrName], theLLVMContext)});
         } else {
-          // TODO: Throw appropriate error code from C++ standard.
+          /// TODO: Throw appropriate error code from C++ standard.
           std::cout << "Error: Can only write to data structure attributes.\n";
         }
         break;
@@ -243,71 +245,78 @@ class Visitor {
       case dcds::statementType::TEMP_VAR_ADD: {
         llvm::Value *getVal1, *getVal2;
 
-        if (tempVarIRMap[statement->sourceAttrName]) {
+        if (temporaryVariableIRMap[statement->sourceAttrName]) {
           dcds::Attribute tempAttr1(statement->sourceAttrName, dcds::valueType::INTEGER,
                                     std::get<1>(tempVarsInfo[statement->sourceAttrName]));
 
-          getVal1 = tempAttr1.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVarIRMap[statement->sourceAttrName]);
+          getVal1 = tempAttr1.getAttributeCodegen(llvmBuilder, theLLVMContext,
+                                                  temporaryVariableIRMap[statement->sourceAttrName]);
         } else {
           dcds::Attribute tempAttr1(statement->sourceAttrName, dcds::valueType::INTEGER, -1);
 
-          tempVar1 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               statement->sourceAttrName));
+          tempVar1 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      statement->sourceAttrName));
           getVal1 = tempAttr1.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVar1);
         }
 
-        if (tempVarIRMap[statement->refVarName]) {
+        if (temporaryVariableIRMap[statement->refVarName]) {
           dcds::Attribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER,
                                     std::get<1>(tempVarsInfo[statement->refVarName]));
 
-          getVal2 = tempAttr2.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVarIRMap[statement->refVarName]);
+          getVal2 =
+              tempAttr2.getAttributeCodegen(llvmBuilder, theLLVMContext, temporaryVariableIRMap[statement->refVarName]);
         } else {
           dcds::Attribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER, -1);
 
-          tempVar2 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               statement->refVarName));
+          tempVar2 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      statement->refVarName));
           getVal2 = tempAttr2.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVar2);
         }
 
         dcds::Attribute tempAttr3(tempVarsOpResName[statement], dcds::valueType::INTEGER, -1);
         auto addRes = tempAttr3.addTwoVarsCodegen(llvmBuilder, getVal1, getVal2);
 
-        if (tempVarIRMap[tempVarsOpResName[statement]])
-          tempVar3 = tempVarIRMap[tempVarsOpResName[statement]];
+        if (temporaryVariableIRMap[tempVarsOpResName[statement]])
+          tempVar3 = temporaryVariableIRMap[tempVarsOpResName[statement]];
         else
-          tempVar3 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               tempVarsOpResName[statement]));
+          tempVar3 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      tempVarsOpResName[statement]));
 
         tempAttr3.setAttributeCodegen(llvmBuilder, addRes,
-                                      tempVar3);  // Example/Reminder that Attr wrapper is redundant in such cases.
+                                      tempVar3);  /// Example/Reminder that Attr wrapper is redundant in such cases.
         break;
       }
       case dcds::statementType::CONDITIONAL_STATEMENT: {
         llvm::Value *condition = llvm::ConstantInt::get(
-            *theLLVMContext, llvm::APInt(64, 1));  // Dummy value to stop the compiler from complaining now.
+            *theLLVMContext, llvm::APInt(64, 1));  /// Dummy value to stop the compiler from complaining now.
         auto conditionStatement = statementToConditionMap[statement];
-        if (tempVarIRMap[conditionStatement->condition.conditionVariableAttr1Name])
-          tempVar1 = tempVarIRMap[conditionStatement->condition.conditionVariableAttr1Name];
+        if (temporaryVariableIRMap[conditionStatement->condition.conditionVariableAttr1Name])
+          tempVar1 = temporaryVariableIRMap[conditionStatement->condition.conditionVariableAttr1Name];
         else
-          tempVar1 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               conditionStatement->condition.conditionVariableAttr1Name));
+          tempVar1 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      conditionStatement->condition.conditionVariableAttr1Name));
 
-        if (tempVarIRMap[conditionStatement->condition.conditionVariableAttr2Name])
-          tempVar2 = tempVarIRMap[conditionStatement->condition.conditionVariableAttr2Name];
+        if (temporaryVariableIRMap[conditionStatement->condition.conditionVariableAttr2Name])
+          tempVar2 = temporaryVariableIRMap[conditionStatement->condition.conditionVariableAttr2Name];
         else
-          tempVar2 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               conditionStatement->condition.conditionVariableAttr2Name));
+          tempVar2 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      conditionStatement->condition.conditionVariableAttr2Name));
 
         if (conditionStatement->condition.pred == dcds::CmpIPredicate::neq) {
           if (tempVar1->getType()->isIntegerTy()) {
             condition = llvmBuilder->CreateICmpNE(tempVar1, tempVar2, "ifCond");
           } else {
-            // Assume pointers are to be compared.
+            /// Assume pointers are to be compared.
             auto tempVar1Int = llvmBuilder->CreatePtrToInt(tempVar1, llvm::Type::getInt64Ty(*theLLVMContext));
             auto tempVar2Int = llvmBuilder->CreatePtrToInt(tempVar2, llvm::Type::getInt64Ty(*theLLVMContext));
             condition = llvmBuilder->CreateICmpNE(tempVar1Int, tempVar2Int, "ifCond");
@@ -316,17 +325,17 @@ class Visitor {
 
         BasicBlock *thenBB;
         BasicBlock *elseBB;
-        BasicBlock *mergeBB = BasicBlock::Create(*theLLVMContext, "ifcont", currFn);
-        dcds::llvmutil::CreateIfElseBlocks(theLLVMContext, currFn, "then", "else", &thenBB, &elseBB, mergeBB);
+        BasicBlock *mergeBB = BasicBlock::Create(*theLLVMContext, "ifcont", currentFunction);
+        dcds::llvmutil::CreateIfElseBlocks(theLLVMContext, currentFunction, "then", "else", &thenBB, &elseBB, mergeBB);
 
         llvmBuilder->CreateCondBr(condition, thenBB, elseBB);
 
-        // Emit then block.
+        /// Emit then block.
         llvmBuilder->SetInsertPoint(thenBB);
         for (auto singleStatement : conditionStatement->ifResStatements) codegenStatement(singleStatement, thenBB);
         llvmBuilder->CreateBr(mergeBB);
 
-        // Emit else block.
+        /// Emit else block.
         llvmBuilder->SetInsertPoint(elseBB);
         for (auto singleStatement : conditionStatement->elseResStatements) codegenStatement(singleStatement, elseBB);
         llvmBuilder->CreateBr(mergeBB);
@@ -335,12 +344,13 @@ class Visitor {
         break;
       }
       case dcds::statementType::YIELD: {
-        if (tempVarIRMap.find(statement->refVarName) != tempVarIRMap.end())
-          tempVar1 = tempVarIRMap[statement->refVarName];
+        if (temporaryVariableIRMap.find(statement->refVarName) != temporaryVariableIRMap.end())
+          tempVar1 = temporaryVariableIRMap[statement->refVarName];
         else
-          tempVar1 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               statement->refVarName));
+          tempVar1 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      statement->refVarName));
 
         if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::INTEGER) {
           dcds::Attribute tempReturnAttr("tempReturnAttribute", dcds::valueType::INTEGER, 0);
@@ -352,8 +362,8 @@ class Visitor {
         break;
       }
       case dcds::statementType::CALL: {
-        if (tempVarIRMap[externalCallInfo[statement->sourceAttrName][0]]) {
-          tempVar1 = tempVarIRMap[externalCallInfo[statement->sourceAttrName][0]];
+        if (temporaryVariableIRMap[externalCallInfo[statement->sourceAttrName][0]]) {
+          tempVar1 = temporaryVariableIRMap[externalCallInfo[statement->sourceAttrName][0]];
 
           if (std::get<0>(tempVarsInfo[externalCallInfo[statement->sourceAttrName][0]]) == dcds::valueType::INTEGER) {
             tempVar1 = llvmBuilder->CreateIntToPtr(tempVar1, llvm::Type::getInt64PtrTy(*theLLVMContext));
@@ -363,27 +373,29 @@ class Visitor {
             tempVar1 = llvmBuilder->CreateBitCast(tempVar1, llvm::Type::getInt8PtrTy(*theLLVMContext));
           }
         } else {
-          tempVar1 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               externalCallInfo[statement->sourceAttrName][0]));
+          tempVar1 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      externalCallInfo[statement->sourceAttrName][0]));
           tempVar1 = llvmBuilder->CreateBitCast(tempVar1, llvm::Type::getInt8PtrTy(*theLLVMContext));
         }
 
-        if (tempVarIRMap[externalCallInfo[statement->sourceAttrName][1]]) {
-          tempVar2 = tempVarIRMap[externalCallInfo[statement->sourceAttrName][1]];
+        if (temporaryVariableIRMap[externalCallInfo[statement->sourceAttrName][1]]) {
+          tempVar2 = temporaryVariableIRMap[externalCallInfo[statement->sourceAttrName][1]];
 
           if (std::get<0>(tempVarsInfo[externalCallInfo[statement->sourceAttrName][1]]) == dcds::valueType::INTEGER) {
             tempVar2 = llvmBuilder->CreateIntToPtr(tempVar2, llvm::Type::getInt64PtrTy(*theLLVMContext));
             tempVar2 = llvmBuilder->CreateBitCast(tempVar2, llvm::Type::getInt8PtrTy(*theLLVMContext));
           } else if (std::get<0>(tempVarsInfo[externalCallInfo[statement->sourceAttrName][1]]) ==
                      dcds::valueType::RECORD_PTR) {
-            // TODO: Bitcast temporary variables of RECORD_PTR type before mapping them with tempVarIRMap.
+            /// TODO: Bitcast temporary variables of RECORD_PTR type before mapping them with temporaryVariableIRMap.
             tempVar2 = llvmBuilder->CreateBitCast(tempVar2, llvm::Type::getInt8PtrTy(*theLLVMContext));
           }
         } else {
-          tempVar2 = currFn->getArg(
-              1 + dcds::llvmutil::findInVector(funcArgsInfo[functions[static_cast<std::string>(currFn->getName())]],
-                                               externalCallInfo[statement->sourceAttrName][1]));
+          tempVar2 = currentFunction->getArg(
+              1 + dcds::llvmutil::findInVector(
+                      funcArgsInfo[functions[static_cast<std::string>(currentFunction->getName())]],
+                      externalCallInfo[statement->sourceAttrName][1]));
           tempVar2 = llvmBuilder->CreateBitCast(tempVar2, llvm::Type::getInt8PtrTy(*theLLVMContext));
         }
 
@@ -396,41 +408,41 @@ class Visitor {
   void codegenUserFunctions() {
     uint32_t indexVar = 0;
     for (auto it = functions.begin(); it != functions.end(); ++it) {
-      currFn = usrFns[indexVar];
+      currentFunction = userFunctions[indexVar];
       indexVar++;
 
-      // Set insertion point at the beginning of the function.
-      auto block1 = llvm::BasicBlock::Create(*theLLVMContext, "entry", currFn);
+      /// Set insertion point at the beginning of the function.
+      auto block1 = llvm::BasicBlock::Create(*theLLVMContext, "entry", currentFunction);
       llvmBuilder->SetInsertPoint(block1);
 
       for (auto itTempVar = tempVarsInfo.begin(); itTempVar != tempVarsInfo.end(); ++itTempVar) {
         dcds::Attribute tempAttr(itTempVar->first, std::get<0>(itTempVar->second), std::get<1>(itTempVar->second));
-        if (std::get<2>(itTempVar->second)->getName() != currFn->getName()) {
+        if (std::get<2>(itTempVar->second)->getName() != currentFunction->getName()) {
           for (auto itStatement = orderedStatements.begin(); itStatement != orderedStatements.end(); ++itStatement) {
             if (itStatement->second->sourceAttrName == std::get<2>(itTempVar->second)->getName() ||
                 itStatement->second->refVarName == std::get<2>(itTempVar->second)->getName()) {
-              // TODO: Throw appropriate logical error code (from c++ standard).
+              /// TODO: Throw appropriate logical error code (from c++ standard).
               std::cout << "Logical Error: Temporary variable not attached to this function.\n";
               break;
             }
           }
         }
 
-        tempVarIRMap[itTempVar->first] = tempAttr.addAttributeCodegen(theLLVMContext, block1, block1->end());
+        temporaryVariableIRMap[itTempVar->first] = tempAttr.addAttributeCodegen(theLLVMContext, block1, block1->end());
 
         llvm::Value *initVal = llvm::ConstantInt::get(
-            *theLLVMContext, llvm::APInt(64, 0));  // Dummy value to stop compiler from complaining.
+            *theLLVMContext, llvm::APInt(64, 0));  /// Dummy value to stop compiler from complaining.
         if (std::get<0>(itTempVar->second) == dcds::valueType::INTEGER)
           initVal = llvm::ConstantInt::get(*theLLVMContext,
                                            llvm::APInt(64, std::get<int64_t>(std::get<1>(itTempVar->second))));
         else if (std::get<0>(itTempVar->second) == dcds::valueType::RECORD_PTR)
           initVal = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(*theLLVMContext));
 
-        tempAttr.setAttributeCodegen(llvmBuilder, initVal, tempVarIRMap[itTempVar->first]);
+        tempAttr.setAttributeCodegen(llvmBuilder, initVal, temporaryVariableIRMap[itTempVar->first]);
       }
 
       for (auto itStatement = orderedStatements.begin(); itStatement != orderedStatements.end(); ++itStatement) {
-        // Check whether statement belongs to this function
+        /// Check whether statement belongs to this function
         if (itStatement->first.first == it->second) {
           codegenStatement(itStatement->second, block1);
         }
@@ -448,7 +460,7 @@ class Visitor {
                                  llvm::Type::getInt8PtrTy(*theLLVMContext), llvm::Type::getInt64Ty(*theLLVMContext)},
                                 false);
     readFunction = llvm::Function::Create(readFunctionType, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
-                                          readFunctionName, theModule.get());
+                                          readFunctionName, theLLVMModule.get());
 
     auto writeFunctionName = dcds::llvmutil::getFunctionName(reinterpret_cast<void *>(write_data_structure_attribute));
     auto writeFunctionType =
@@ -457,7 +469,7 @@ class Visitor {
                                  llvm::Type::getInt8PtrTy(*theLLVMContext), llvm::Type::getInt64Ty(*theLLVMContext)},
                                 false);
     writeFunction = llvm::Function::Create(writeFunctionType, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
-                                           writeFunctionName, theModule.get());
+                                           writeFunctionName, theLLVMModule.get());
 
     llvm::FunctionType *externalFunctionType;
     for (auto fn : externalCallInfo) {
@@ -466,82 +478,82 @@ class Visitor {
           {llvm::Type::getInt8PtrTy(*theLLVMContext), llvm::Type::getInt8PtrTy(*theLLVMContext)}, false);
       externalFunctions.emplace(
           fn.first, llvm::Function::Create(externalFunctionType, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
-                                           fn.first, theModule.get()));
+                                           fn.first, theLLVMModule.get()));
     }
 
     bool hasAttr = attributes.size();
-    // Generate code for signature of user defined custom functions.
+    /// Generate code for signature of user defined custom functions.
     for (auto it = functions.begin(); it != functions.end(); ++it) {
-      usrFns.push_back(it->second->codegen(theLLVMContext, theModule, hasAttr));
+      userFunctions.push_back(it->second->codegen(theLLVMContext, theLLVMModule, hasAttr));
     }
 
-    // Generate code for user defined custom functions.
+    /// Generate code for user defined custom functions.
     codegenUserFunctions();
 
-    // Save generated module and print it.
+    /// Save generated module and print it.
     saveModuleToFile("./Generated_IR.ll");
   }
 
   void build() {
-    theJIT = ExitOnErr(DCDSJIT::Create());
-    theModule->setDataLayout(theJIT->dataLayout);
-    theModule->setTargetTriple(theJIT->targetMachine->getTargetTriple().str());
+    theLLVMJIT = ExitOnErr(DCDSJIT::Create());
+    theLLVMModule->setDataLayout(theLLVMJIT->dataLayout);
+    theLLVMModule->setTargetTriple(theLLVMJIT->targetMachine->getTargetTriple().str());
 
-    // Create a ResourceTracker to track JIT'd memory allocated to our
-    // anonymous expression -- that way we can free it after executing.
-    auto RT = theJIT->getMainJITDylib().createResourceTracker();
+    /// Create a ResourceTracker to track JIT'd memory allocated to our
+    /// anonymous expression -- that way we can free it after executing.
+    auto RT = theLLVMJIT->getMainJITDylib().createResourceTracker();
 
-    auto TSM = ThreadSafeModule(std::move(theModule), std::move(theLLVMContext));
-    ExitOnErr(theJIT->addModule(std::move(TSM), RT));
+    auto TSM = ThreadSafeModule(std::move(theLLVMModule), std::move(theLLVMContext));
+    ExitOnErr(theLLVMJIT->addModule(std::move(TSM), RT));
   }
 
   auto getBuiltFunctionInt64ReturnType(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<int64_t (*)(void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnType(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidPtrReturnType(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void *(*)(void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeVoidArg1(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeVoidArg2(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, void *, void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeIntArg1(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, int64_t *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeIntArg2(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, int64_t *, int64_t *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeIntArg3(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, int64_t *, int64_t *, int64_t *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeIntArg1VoidPtr1(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, int64_t *, void *)>(rawFunc);
   }
 
   auto getBuiltFunctionVoidReturnTypeIntArg1VoidPtr2(const std::string &functionName) {
-    auto rawFunc = theJIT->getRawAddress(functionName);
+    auto rawFunc = theLLVMJIT->getRawAddress(functionName);
     return reinterpret_cast<void (*)(void *, int64_t *, void *, void *)>(rawFunc);
   }
 
@@ -569,20 +581,31 @@ class Visitor {
   /// Map externally called function with names of its expected arguments
   std::unordered_map<std::string, std::vector<std::string>> externalCallInfo;
 
+  /// LLVM context for the codegen engine
   std::unique_ptr<LLVMContext> theLLVMContext;
-  std::unique_ptr<Module> theModule;
+  /// LLVM module for the codegen engine
+  std::unique_ptr<Module> theLLVMModule;
+  /// LLVM builder for the codegen engine
   std::unique_ptr<IRBuilder<>> llvmBuilder;
-  std::unique_ptr<legacy::FunctionPassManager> theFPM;
-  std::unique_ptr<DCDSJIT> theJIT;
+  /// LLVM function pass manager for the codegen engine
+  std::unique_ptr<legacy::FunctionPassManager> theLLVMFPM;
+  /// LLVM JIT instance for the codegen engine
+  std::unique_ptr<DCDSJIT> theLLVMJIT;
 
-  llvm::Function *currFn;
-  std::vector<llvm::Function *> usrFns;
-  std::vector<llvm::Value *> dsAttrAllocVec;
-  std::unordered_map<std::string, llvm::Value *> tempVarIRMap;
+  /// Keep track of the current function during codegen
+  llvm::Function *currentFunction;
+  /// Vector to store signature for all user functions
+  std::vector<llvm::Function *> userFunctions;
+  /// Map temporary variable name to code generated for it
+  std::unordered_map<std::string, llvm::Value *> temporaryVariableIRMap;
+  /// Exit on error mechanism
   ExitOnError ExitOnErr;
 
+  /// Custom read function to read from storage layer
   llvm::Function *readFunction;
+  /// Custom write function to write in storage layer
   llvm::Function *writeFunction;
+  /// Map user provided external function names to their signatures
   std::map<std::string, llvm::Function *> externalFunctions;
 };
 

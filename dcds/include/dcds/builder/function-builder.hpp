@@ -62,7 +62,7 @@ class FunctionBuilder {
   dcds::valueType getReturnValueType() { return returnValueType; }
   bool getHasArgumentsStatus() { return hasArguments; }
 
-  auto codegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, std::unique_ptr<llvm::Module> &theModule,
+  auto codegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, std::unique_ptr<llvm::Module> &theLLVMModule,
                bool hasAttr) {
     std::vector<llvm::Type *> argTypes;
     llvm::Type *returnType = llvm::Type::getVoidTy(*theLLVMContext);
@@ -82,7 +82,8 @@ class FunctionBuilder {
       returnType = llvm::Type::getInt8PtrTy(*theLLVMContext);
 
     auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
-    auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, theModule.get());
+    auto fn =
+        llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, theLLVMModule.get());
 
     return fn;
   }
