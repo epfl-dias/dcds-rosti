@@ -14,8 +14,7 @@ target_link_libraries_system(play
 target_link_libraries(play
         PUBLIC
         LLVM::LLVM
-        dcds
-        counter-based-datastructures)
+        dcds)
 
 target_compile_features(play PUBLIC cxx_std_20)
 

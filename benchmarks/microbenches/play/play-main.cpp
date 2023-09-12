@@ -29,7 +29,7 @@
 #include <libcuckoo/cuckoohash_map.hh>
 
 int main(int argc, char** argv) {
-  // LOG(INFO) << "Aunn2";
+  LOG(INFO) << "Aunn2";
   llvm::LLVMContext c;
 
   libcuckoo::cuckoohash_map<size_t, size_t> indexPartitions;
