@@ -93,17 +93,23 @@ namespace dcds {
 using namespace llvm;
 
 extern "C" {
+/// Read a data structure attribute from the storage layer
 void read_data_structure_attribute(void *, int64_t, void *, int64_t, void *);
 
+/// Write a data structure attribute in the storage layer
 void write_data_structure_attribute(void *, int64_t, void *, int64_t, void *);
 
+/// Function call to be injected for beginning a transaction
 void *begin_txn(void *);
 
+/// Function call to be injected for ending a transaction
 void end_txn(void *, void *);
 }
 
+/// Class responsible for LLVM IR codegen in DCDS
 class Visitor {
  public:
+  /// Initialize LLVM Module and other infra-related things
   void initializeModule() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -116,13 +122,14 @@ class Visitor {
     llvmBuilder = std::make_unique<IRBuilder<>>(*theLLVMContext);
   }
 
+  /// Initialize LLVM pass manager
   void initializePassManager() {
-    /// Create a new pass manager attached to it.
+    /// Create a new pass manager.
     theLLVMFPM = std::make_unique<legacy::FunctionPassManager>(theLLVMModule.get());
 
     /// Promote allocas to registers.
     theLLVMFPM->add(createPromoteMemoryToRegisterPass());
-    /// Do simple "peephole" optimizations and bit-twiddling optzns.
+    /// Do simple "peephole" optimizations and bit-twiddling optimizations.
     theLLVMFPM->add(createInstructionCombiningPass());
     /// Reassociate expressions.
     theLLVMFPM->add(createReassociatePass());
@@ -137,6 +144,7 @@ class Visitor {
     theLLVMFPM->doInitialization();
   }
 
+  /// Run added passes
   void runPasses() {
     /// TODO: Determine if we really require this function or if all of it is/(can be) automatically done by the JIT.
 
@@ -147,12 +155,23 @@ class Visitor {
     theLLVMModule->print(llvm::outs(), nullptr);
   }
 
+  /// Save generated module to a file
   void saveModuleToFile(std::string fileName) {
     std::error_code errorCode;
     llvm::raw_fd_ostream outLL(fileName, errorCode);
     theLLVMModule->print(outLL, nullptr);
   }
 
+  ///
+  /// \param dsName_                    Name of the data structure
+  /// \param functions_                 User defined DCDS functions
+  /// \param attributes_                User defined data structure attributes
+  /// \param tempVarsInfo_              User defined temporary variables
+  /// \param funcArgsInfo_              User defined function arguments
+  /// \param orderedStatements_         User defined statements for functions
+  /// \param statementToConditionMap_   Map conditional statement representation to its implementation
+  /// \param tempVarsOpResName_         Temporary variables names storing operation results
+  /// \param externalCallInfo_          Info related to external function to be called
   Visitor(auto &dsName_, auto &functions_, auto &attributes_, auto &tempVarsInfo_, auto &funcArgsInfo_,
           auto &orderedStatements_, auto &statementToConditionMap_, auto &tempVarsOpResName_, auto externalCallInfo_)
       : dsName(dsName_),
@@ -168,12 +187,14 @@ class Visitor {
     initializePassManager();
   }
 
+  ///
+  /// \param returnVal  Value to be returned
+  /// \return           Return instruction
   auto addReturnStatement(llvm::Value *returnVal) { return llvmBuilder->CreateRet(returnVal); }
 
-  auto addTwoVars(dcds::valueType ty1, llvm::Value *val1, dcds::valueType ty2, llvm::Value *val2) {
-    return llvmBuilder->CreateAdd(val1, val2);
-  }
-
+  ///
+  /// \param statement  Statement for which code is to be generated
+  /// \param block      Block in which the generated code should be placed
   void codegenStatement(std::shared_ptr<StatementBuilder> statement, llvm::BasicBlock *block) {
     llvm::Value *readVar, *writeVar, *tempVar1, *tempVar2, *tempVar3;
     switch (statement->stType) {
@@ -405,6 +426,7 @@ class Visitor {
     }
   }
 
+  /// Generate code for user defined DCDS functions
   void codegenUserFunctions() {
     uint32_t indexVar = 0;
     for (auto it = functions.begin(); it != functions.end(); ++it) {
@@ -452,6 +474,7 @@ class Visitor {
     }
   }
 
+  /// Generated code for the user defined data structure
   void visit() {
     auto readFunctionName = dcds::llvmutil::getFunctionName(reinterpret_cast<void *>(read_data_structure_attribute));
     auto readFunctionType =
@@ -494,6 +517,7 @@ class Visitor {
     saveModuleToFile("./Generated_IR.ll");
   }
 
+  /// Initialize the JIT instance and build the generated IR
   void build() {
     theLLVMJIT = ExitOnErr(DCDSJIT::Create());
     theLLVMModule->setDataLayout(theLLVMJIT->dataLayout);

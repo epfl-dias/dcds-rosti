@@ -26,20 +26,6 @@
 #ifndef DCDS_CODEGEN_DCDSJIT_HPP
 #define DCDS_CODEGEN_DCDSJIT_HPP
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-//#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-//#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
@@ -49,15 +35,22 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
+#include <dcds/codegen/utils.hpp>
+
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-//#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-#include <dcds/codegen/utils.hpp>
-
+#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
@@ -77,6 +70,7 @@ namespace dcds {
 using namespace llvm;
 using namespace orc;
 
+/// Class for DCDS JIT instance
 class DCDSJIT {
  public:
   static llvm::Expected<std::unique_ptr<DCDSJIT>> Create() {
@@ -126,11 +120,11 @@ class DCDSJIT {
       auto FPM = std::make_unique<legacy::FunctionPassManager>(&M);
 
       // Add some optimizations.
-//      FPM->add(createInstructionCombiningPass());
-//      FPM->add(createReassociatePass());
-//      FPM->add(createGVNPass());
-//      FPM->add(createCFGSimplificationPass());
-//      FPM->add(createDeadCodeEliminationPass());
+      FPM->add(createInstructionCombiningPass());
+      FPM->add(createReassociatePass());
+      FPM->add(createGVNPass());
+      FPM->add(createCFGSimplificationPass());
+      FPM->add(createDeadCodeEliminationPass());
       FPM->doInitialization();
 
       // Run the optimizations over all functions in the module being added to
@@ -146,15 +140,8 @@ class DCDSJIT {
     return reinterpret_cast<void *>(address);
   }
 
-  //  template<typename ReturnType, typename... Arguments>
-  //  auto getAddress(auto fn) {
-  //    return reinterpret_cast<ReturnType (*)(Arguments...)>(getRawAddress("update_and_read_fn"));
-  ////    return reinterpret_cast<int32_t (*)()>(getRawAddress("update_and_read_fn"));
-  //  }
-
   template <typename ReturnType, typename... Arguments>
   auto getAddress(dcds::llvmutil::function_ref<ReturnType, Arguments...> const &fn) {
-    //      return reinterpret_cast<ReturnType (*)(Arguments...)>(getRawAddress(fn.getName()));
     return reinterpret_cast<int32_t (*)()>(getRawAddress(fn.getName()));
   }
 

@@ -184,6 +184,11 @@ class Builder {
     return statement;
   }
 
+  ///
+  /// \param condition            DCDS condition for comparison
+  /// \param ifResStatements      Statements in if block
+  /// \param elseResStatements    Statements in else block
+  /// \return                     DCDS statement representation
   auto createConditionStatement(dcds::ConditionBuilder& condition,
                                 std::vector<std::shared_ptr<StatementBuilder>>& ifResStatements,
                                 std::vector<std::shared_ptr<StatementBuilder>>& elseResStatements) {
@@ -195,37 +200,55 @@ class Builder {
     return conditionStatementIndicator;
   }
 
+  ///
+  /// \param returnVarName    Name of the variable to be returned
+  /// \return                 DCDS statement representation
   auto createReturnStatement(std::string returnVarName) {
     assert(tempVarsInfo.find(returnVarName) != tempVarsInfo.end());
     return std::make_shared<StatementBuilder>(dcds::statementType::YIELD, "", returnVarName);
   }
 
+  ///
+  /// \param functionName    Name of the external function to whom the call must be created
+  /// \param arg1            First argument of the external function
+  /// \param arg2            Second argument of the external function
+  /// \return                DCDS statement representation
   auto createCallStatement2VoidPtrArgs(std::string functionName, std::string arg1, std::string arg2) {
     externalCallInfo.emplace(functionName, std::vector<std::string>{arg1, arg2});
     return std::make_shared<StatementBuilder>(dcds::statementType::CALL, functionName, "");
   }
 
+  ///
+  /// \param statement       DCDS statement which is to be added
+  /// \param function        DCDS function to whom the statement must be added
   void addStatement(const std::shared_ptr<StatementBuilder> statement, std::shared_ptr<FunctionBuilder> function) {
     orderedStatements.emplace(
         std::pair<std::shared_ptr<FunctionBuilder>, uint32_t>{function, ++statementOrder[function]}, statement);
   }
 
  private:
+  /// Map functions to their corresponding statements
   std::map<std::pair<std::shared_ptr<FunctionBuilder>, uint32_t>, std::shared_ptr<StatementBuilder>> orderedStatements;
+  /// Map aliased condition statement to actual condition statement and assosciated blocks
   std::unordered_map<std::shared_ptr<StatementBuilder>, std::shared_ptr<ConditionStatementBuilder>>
       statementToConditionMap;
+  /// Map statements to assosciated temporary variables which are holding results
   std::unordered_map<std::shared_ptr<StatementBuilder>, std::string> tempVarsOpResName;
 
+  /// Map external function name to temporary variable names which are to be supplied as arguments
   std::unordered_map<std::string, std::vector<std::string>> externalCallInfo;
 
-  // Variable used for maintaining statement order inside functions.
+  /// Container used for maintaining statement order inside functions.
   std::unordered_map<std::shared_ptr<FunctionBuilder>, int64_t> statementOrder;
 
- private:
+ private:  /// DCDS context for the builder
   const DCDSContext context;
+  /// Name of the data structure for this builder
   const std::string dataStructureName;
 
  public:
+  ///
+  /// \return Return storage object's pointer specific to the current instance of the data structure
   auto initializeStorage() {
     std::shared_ptr<dcds::StorageLayer> storageObject =
         std::make_shared<dcds::StorageLayer>(dataStructureName + "_ns", this->attributes);
@@ -247,6 +270,8 @@ class Builder {
     return storageObject;
   }
 
+  ///
+  /// \return Visitor object used during the codegen process
   auto codegen() {
     std::shared_ptr<dcds::Visitor> visitor = std::make_shared<dcds::Visitor>(
         dataStructureName, functions, attributes, tempVarsInfo, funcArgsInfo, orderedStatements,
