@@ -40,16 +40,24 @@
 
 namespace dcds {
 
-// ToDo: Remove template as soon as we find a better way to model initial value's type.
-// template <typename initValType>
+/// Class representing a normal attribute in DCDS
 class Attribute {
  public:
+  ///
+  /// \param attribute_name  Name of the attribute to be constructed
+  /// \param attribute_type  Type of the attribute to be constructed
+  /// \param initialValue    Initial value of the attribute to be constructed
   Attribute(std::string attribute_name, dcds::valueType attribute_type, std::variant<int64_t, void *> initialValue)
       : name(std::move(attribute_name)), type(attribute_type), initVal(initialValue) {}
 
   // Transactional Variables.
   // GET/ INSERT/ DELETE/ UPDATE
 
+  ///
+  /// \param theLLVMContext LLVM context from the codegen engine
+  /// \param block          LLVM block in which the attribute should be added
+  /// \param attrPos        Position in the block where the attribute should be added
+  /// \return               Generated IR for attribute allocation
   auto addAttributeCodegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, llvm::BasicBlock *block,
                            llvm::BasicBlock::iterator attrPos) {
     auto allocaBuilder = llvm::IRBuilder<>(block, attrPos);
@@ -63,10 +71,20 @@ class Attribute {
     return allocaBuilder.CreateAlloca(llvm::Type::getVoidTy(*theLLVMContext), nullptr, name);
   }
 
+  ///
+  /// \param llvmBuilder LLVM builder from the codegen engine
+  /// \param val         LLVM value which should be used for setting the attribute
+  /// \param varAlloc    Attribute allocation IR
+  /// \return            Generated store instruction for setting the attribute
   auto setAttributeCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder, llvm::Value *val, llvm::Value *varAlloc) {
     return llvmBuilder->CreateStore(val, varAlloc);
   }
 
+  ///
+  /// \param llvmBuilder     LLVM builder from the codegen engine
+  /// \param theLLVMContext  LLVM context from the codegen engine
+  /// \param val             Generated code for the attribute which should be loaded
+  /// \return                Generated load instruction for getting the attribute
   auto getAttributeCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder,
                            std::unique_ptr<llvm::LLVMContext> &theLLVMContext, llvm::Value *val) {
     if (type == dcds::valueType::INTEGER)
@@ -77,45 +95,25 @@ class Attribute {
     return llvmBuilder->CreateLoad(llvm::Type::getVoidTy(*theLLVMContext), val);
   }
 
+  ///
+  /// \param llvmBuilder LLVM builder from the codegen engine
+  /// \param val1        Generated code for first value to be added
+  /// \param val2        Generated code for second value to be added
+  /// \return            Generated add instruction for the two values
   auto addTwoVarsCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder, llvm::Value *val1, llvm::Value *val2) {
     if (type == dcds::valueType::INTEGER) return llvmBuilder->CreateAdd(val1, val2);
 
     return llvmBuilder->CreateAdd(val1, val2);  // Dummy return for now to stop the compiler from complaining.
   }
 
+  /// Variable for storing attribute name
   const std::string name;
+  /// Variable for storing attribute type
   const dcds::valueType type;
+  /// Variable for storing initial value of the attribute
   std::variant<int64_t, void *> initVal;
 
  private:
 };
-
-//
-// class Uint64T_Attribute{
-//
-//
-//  const dcds::valueType type = valueType::INTEGER;
-//  uint64_t val_;
-//};
-//
-// template <class T>
-// class AttributeCRTP{
-//
-//};
-//
-// class [[nodiscard]] attribute_t : public AttributeCRTP<attribute_t>{
-//
-//};
-//
-
-//
-// class BoolConstant
-//    : public TConstant<bool, BoolType, Constant::ConstantType::BOOL,
-//                       BoolConstant> {
-// public:
-//  using TConstant<bool, BoolType, Constant::ConstantType::BOOL,
-//                  BoolConstant>::TConstant;
-//};
-
 }  // namespace dcds
 #endif  // DCDS_ATTRIBUTE_HPP

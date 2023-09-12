@@ -36,40 +36,55 @@
 #include "llvm/IR/Type.h"
 
 namespace dcds {
+
+/// Class representing a function in DCDS
 class FunctionBuilder {
   friend class Visitor;
 
  public:
-  FunctionBuilder(std::string functionName) : name(std::move(functionName)), doesReturn(false), hasArguments(false) {}
+  ///
+  /// \param functionName Name of the function
+  FunctionBuilder(std::string functionName) : name(std::move(functionName)), hasArguments(false) {}
 
+  ///
+  /// \param functionName Name of the function
+  /// \param returnType Return type of the function
   FunctionBuilder(std::string functionName, dcds::valueType returnType)
-      : name(std::move(functionName)), doesReturn(true), returnValueType(returnType), hasArguments(false) {}
+      : name(std::move(functionName)), returnValueType(returnType), hasArguments(false) {}
 
-  FunctionBuilder(std::string functionName, dcds::valueType returnType, std::same_as<dcds::valueType> auto... args)
-      : name(std::move(functionName)), doesReturn(true), returnValueType(returnType), hasArguments(true) {
-    addArguments(args...);
+  ///
+  /// \param functionName Name of the function
+  /// \param returnType Return type of the function
+  /// \param argsTypes Argument types of the function
+  FunctionBuilder(std::string functionName, dcds::valueType returnType, std::same_as<dcds::valueType> auto... argsTypes)
+      : name(std::move(functionName)), returnValueType(returnType), hasArguments(true) {
+    addArguments(argsTypes...);
   }
 
-  FunctionBuilder(std::string functionName, std::same_as<dcds::valueType> auto... args)
-      : name(std::move(functionName)), doesReturn(false), hasArguments(true) {
-    addArguments(args...);
-  }
-
-  void finalize() { isFinalized = true; }
-  auto isFinal() { return isFinalized; }
+  ///
+  /// \return Function name
   auto getName() { return name; }
-  bool getDoesReturnStatus() { return doesReturn; }
+  ///
+  /// \return Function return value type
   dcds::valueType getReturnValueType() { return returnValueType; }
+  ///
+  /// \return Check if the function has arguments
   bool getHasArgumentsStatus() { return hasArguments; }
 
-  auto codegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, std::unique_ptr<llvm::Module> &theLLVMModule,
-               bool hasAttr) {
+  ///
+  /// \param theLLVMContext LLVM context from the codegen engine
+  /// \param theLLVMModule  LLVM module from the codegen engine
+  /// \param hasAttr        Flag to check if the data structure has attributes, if it has them, take a void pointer as
+  ///                       first argument
+  /// \return               Generated code for the function signature
+  auto codegenFunctionSignature(std::unique_ptr<llvm::LLVMContext> &theLLVMContext,
+                                std::unique_ptr<llvm::Module> &theLLVMModule, bool hasAttr) {
     std::vector<llvm::Type *> argTypes;
     llvm::Type *returnType = llvm::Type::getVoidTy(*theLLVMContext);
 
     if (hasAttr) argTypes.push_back(llvm::Type::getInt8PtrTy(*theLLVMContext));
 
-    for (auto arg : functionArguments) {
+    for (auto arg : functionArgumentsTypes) {
       if (arg == dcds::valueType::INTEGER)
         argTypes.push_back(llvm::Type::getInt64PtrTy(*theLLVMContext));
       else if (arg == dcds::valueType::RECORD_PTR)
@@ -89,21 +104,23 @@ class FunctionBuilder {
   }
 
  private:
-  void addArguments(std::same_as<dcds::valueType> auto &... args) {
-    // const std::size_t num_args = sizeof...(args);
-    for (auto i : {args...}) {
-      functionArguments.emplace_back(i);
+  ///
+  /// \param args  Function argument types which are to be recorded
+  void addArguments(std::same_as<dcds::valueType> auto &... argsTypes) {
+    for (auto i : {argsTypes...}) {
+      functionArgumentsTypes.emplace_back(i);
     }
   }
 
+  /// Record function name
   const std::string name;
-  const bool doesReturn;
+  /// Record function return value type
   dcds::valueType returnValueType = dcds::valueType::VOID;
+  /// Check if the function has arguments
   const bool hasArguments;
 
-  std::vector<dcds::valueType> functionArguments;
-
-  bool isFinalized;
+  /// Record function argument types
+  std::vector<dcds::valueType> functionArgumentsTypes;
 };
 
 }  // namespace dcds

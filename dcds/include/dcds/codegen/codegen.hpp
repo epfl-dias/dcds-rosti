@@ -484,7 +484,7 @@ class Visitor {
     bool hasAttr = attributes.size();
     /// Generate code for signature of user defined custom functions.
     for (auto it = functions.begin(); it != functions.end(); ++it) {
-      userFunctions.push_back(it->second->codegen(theLLVMContext, theLLVMModule, hasAttr));
+      userFunctions.push_back(it->second->codegenFunctionSignature(theLLVMContext, theLLVMModule, hasAttr));
     }
 
     /// Generate code for user defined custom functions.
