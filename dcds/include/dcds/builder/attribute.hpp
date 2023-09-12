@@ -50,48 +50,17 @@ class Attribute {
   // Transactional Variables.
   // GET/ INSERT/ DELETE/ UPDATE
 
-  llvm::GlobalVariable *createGlob(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder,
-                                   std::unique_ptr<llvm::LLVMContext> &theContext,
-                                   std::unique_ptr<llvm::Module> &theModule, std::string Name) {
-    if (this->type == dcds::valueType::INTEGER)
-      theModule->getOrInsertGlobal(Name, llvmBuilder->getInt64Ty());
-    else if (this->type == dcds::valueType::RECORD_PTR)
-      theModule->getOrInsertGlobal(Name, llvmBuilder->getInt8PtrTy());
-
-    //    theModule->getOrInsertGlobal(Name, llvmBuilder->getInt64Ty());
-    llvm::GlobalVariable *gVar = theModule->getNamedGlobal(Name);
-    gVar->setLinkage(llvm::GlobalValue::CommonLinkage);
-
-    if (this->type == dcds::valueType::INTEGER)
-      gVar->setAlignment(static_cast<llvm::MaybeAlign>(alignof(int64_t)));
-    else if (this->type == dcds::valueType::RECORD_PTR)
-      gVar->setAlignment(static_cast<llvm::MaybeAlign>(alignof(void *)));
-
-    if (type == dcds::valueType::INTEGER) {
-      llvm::Constant *initValCodegen = llvm::ConstantInt::get(*theContext, llvm::APInt(64, 0));
-      gVar->setInitializer(initValCodegen);
-    }
-
-    return gVar;
-  }
-
-  auto addGlobalAttributeCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder,
-                                 std::unique_ptr<llvm::LLVMContext> &theContext,
-                                 std::unique_ptr<llvm::Module> &theModule) {
-    return createGlob(llvmBuilder, theContext, theModule, name);
-  }
-
-  auto addAttributeCodegen(std::unique_ptr<llvm::LLVMContext> &theContext, llvm::BasicBlock *block,
+  auto addAttributeCodegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, llvm::BasicBlock *block,
                            llvm::BasicBlock::iterator attrPos) {
     auto allocaBuilder = llvm::IRBuilder<>(block, attrPos);
 
     if (this->type == dcds::valueType::INTEGER)
-      return allocaBuilder.CreateAlloca(llvm::Type::getInt64Ty(*theContext), nullptr, name);
+      return allocaBuilder.CreateAlloca(llvm::Type::getInt64Ty(*theLLVMContext), nullptr, name);
     else if (this->type == dcds::valueType::RECORD_PTR) {
-      return allocaBuilder.CreateAlloca(llvm::Type::getInt8PtrTy(*theContext), nullptr, name);
+      return allocaBuilder.CreateAlloca(llvm::Type::getInt8PtrTy(*theLLVMContext), nullptr, name);
     }
 
-    return allocaBuilder.CreateAlloca(llvm::Type::getVoidTy(*theContext), nullptr, name);
+    return allocaBuilder.CreateAlloca(llvm::Type::getVoidTy(*theLLVMContext), nullptr, name);
   }
 
   auto setAttributeCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder, llvm::Value *val, llvm::Value *varAlloc) {
@@ -99,13 +68,13 @@ class Attribute {
   }
 
   auto getAttributeCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder,
-                           std::unique_ptr<llvm::LLVMContext> &theContext, llvm::Value *val) {
+                           std::unique_ptr<llvm::LLVMContext> &theLLVMContext, llvm::Value *val) {
     if (type == dcds::valueType::INTEGER)
-      return llvmBuilder->CreateLoad(llvm::Type::getInt64Ty(*theContext), val);
+      return llvmBuilder->CreateLoad(llvm::Type::getInt64Ty(*theLLVMContext), val);
     else if (type == dcds::valueType::RECORD_PTR)
-      return llvmBuilder->CreateLoad(llvm::Type::getInt8PtrTy(*theContext), val);
+      return llvmBuilder->CreateLoad(llvm::Type::getInt8PtrTy(*theLLVMContext), val);
 
-    return llvmBuilder->CreateLoad(llvm::Type::getVoidTy(*theContext), val);
+    return llvmBuilder->CreateLoad(llvm::Type::getVoidTy(*theLLVMContext), val);
   }
 
   auto addTwoVarsCodegen(std::unique_ptr<llvm::IRBuilder<>> &llvmBuilder, llvm::Value *val1, llvm::Value *val2) {

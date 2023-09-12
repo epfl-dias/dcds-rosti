@@ -62,23 +62,24 @@ class FunctionBuilder {
   dcds::valueType getReturnValueType() { return returnValueType; }
   bool getHasArgumentsStatus() { return hasArguments; }
 
-  auto codegen(std::unique_ptr<llvm::LLVMContext> &theContext, std::unique_ptr<llvm::Module> &theModule, bool hasAttr) {
+  auto codegen(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, std::unique_ptr<llvm::Module> &theModule,
+               bool hasAttr) {
     std::vector<llvm::Type *> argTypes;
-    llvm::Type *returnType = llvm::Type::getVoidTy(*theContext);
+    llvm::Type *returnType = llvm::Type::getVoidTy(*theLLVMContext);
 
-    if (hasAttr) argTypes.push_back(llvm::Type::getInt8PtrTy(*theContext));
+    if (hasAttr) argTypes.push_back(llvm::Type::getInt8PtrTy(*theLLVMContext));
 
     for (auto arg : functionArguments) {
       if (arg == dcds::valueType::INTEGER)
-        argTypes.push_back(llvm::Type::getInt64PtrTy(*theContext));
+        argTypes.push_back(llvm::Type::getInt64PtrTy(*theLLVMContext));
       else if (arg == dcds::valueType::RECORD_PTR)
-        argTypes.push_back(llvm::Type::getInt8PtrTy(*theContext));
+        argTypes.push_back(llvm::Type::getInt8PtrTy(*theLLVMContext));
     }
 
     if (returnValueType == dcds::valueType::INTEGER)
-      returnType = llvm::Type::getInt64Ty(*theContext);
+      returnType = llvm::Type::getInt64Ty(*theLLVMContext);
     else if (returnValueType == dcds::valueType::RECORD_PTR)
-      returnType = llvm::Type::getInt8PtrTy(*theContext);
+      returnType = llvm::Type::getInt8PtrTy(*theLLVMContext);
 
     auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
     auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, name, theModule.get());

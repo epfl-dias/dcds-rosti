@@ -100,13 +100,13 @@ class Builder {
     // TODO: Add assertion for argument variable validity as well (in all statement creators).
     assert(tempVarsInfo.find(varReadName) != tempVarsInfo.end() ||
            dcds::llvmutil::findInMapOfVectors(funcArgsInfo, varReadName) != -1);
-    return std::make_shared<StatementBuilder>("readStatement", sourceAttr.name, varReadName);
+    return std::make_shared<StatementBuilder>(dcds::statementType::READ, sourceAttr.name, varReadName);
   }
 
   auto createUpdateStatement(dcds::Attribute sourceAttr, std::string varWriteName) {
     assert(tempVarsInfo.find(varWriteName) != tempVarsInfo.end() ||
            dcds::llvmutil::findInMapOfVectors(funcArgsInfo, varWriteName) != -1);
-    return std::make_shared<StatementBuilder>("updateStatement", sourceAttr.name, varWriteName);
+    return std::make_shared<StatementBuilder>(dcds::statementType::UPDATE, sourceAttr.name, varWriteName);
   }
 
   auto createTempVarAddStatement(std::string var1Name, std::string var2Name, std::string resVarName) {
@@ -117,7 +117,7 @@ class Builder {
     assert(tempVarsInfo.find(resVarName) != tempVarsInfo.end() ||
            dcds::llvmutil::findInMapOfVectors(funcArgsInfo, resVarName) != -1);
 
-    auto statement = std::make_shared<StatementBuilder>("tempVarAddStatement", var1Name, var2Name);
+    auto statement = std::make_shared<StatementBuilder>(dcds::statementType::TEMP_VAR_ADD, var1Name, var2Name);
     tempVarsOpResName.emplace(statement, resVarName);
     return statement;
   }
@@ -126,7 +126,7 @@ class Builder {
                                 std::vector<std::shared_ptr<StatementBuilder>>& ifResStatements,
                                 std::vector<std::shared_ptr<StatementBuilder>>& elseResStatements) {
     std::shared_ptr<StatementBuilder> conditionStatementIndicator =
-        std::make_shared<StatementBuilder>("conditionStatementIndicator", "", "");
+        std::make_shared<StatementBuilder>(dcds::statementType::CONDITIONAL_STATEMENT, "", "");
     statementToConditionMap.emplace(conditionStatementIndicator, std::make_shared<ConditionStatementBuilder>(
                                                                      condition, ifResStatements, elseResStatements));
 
@@ -135,12 +135,12 @@ class Builder {
 
   auto createReturnStatement(std::string returnVarName) {
     assert(tempVarsInfo.find(returnVarName) != tempVarsInfo.end());
-    return std::make_shared<StatementBuilder>("returnStatement", "", returnVarName);
+    return std::make_shared<StatementBuilder>(dcds::statementType::YIELD, "", returnVarName);
   }
 
   auto createCallStatement2VoidPtrArgs(std::string functionName, std::string arg1, std::string arg2) {
     externalCallInfo.emplace(functionName, std::vector<std::string>{arg1, arg2});
-    return std::make_shared<StatementBuilder>("callStatement", functionName, "");
+    return std::make_shared<StatementBuilder>(dcds::statementType::CALL, functionName, "");
   }
 
   void addStatement(const std::shared_ptr<StatementBuilder> statement, std::shared_ptr<FunctionBuilder> function) {

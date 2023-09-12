@@ -60,11 +60,11 @@ T unwrap(llvm::Expected<T> value) {
   return std::move(*value);
 }
 
-static void CreateIfElseBlocks(std::unique_ptr<llvm::LLVMContext> &theContext, llvm::Function *fn,
+static void CreateIfElseBlocks(std::unique_ptr<llvm::LLVMContext> &theLLVMContext, llvm::Function *fn,
                                const std::string &ifLabel, const std::string &elseLabel, llvm::BasicBlock **ifBlock,
                                llvm::BasicBlock **elseBlock, llvm::BasicBlock *insertBefore) {
-  *ifBlock = llvm::BasicBlock::Create(*theContext, ifLabel, fn, insertBefore);
-  *elseBlock = llvm::BasicBlock::Create(*theContext, elseLabel, fn, insertBefore);
+  *ifBlock = llvm::BasicBlock::Create(*theLLVMContext, ifLabel, fn, insertBefore);
+  *elseBlock = llvm::BasicBlock::Create(*theLLVMContext, elseLabel, fn, insertBefore);
 }
 
 static std::string getFunctionName(void *f) {
@@ -107,13 +107,14 @@ static int64_t findInMapOfVectors(auto map, std::string elem) {
   return static_cast<int64_t>(-1);
 }
 
-static auto attrTypeMatching(std::shared_ptr<dcds::Attribute> attr, std::unique_ptr<llvm::LLVMContext> &theContext) {
+static auto attrTypeMatching(std::shared_ptr<dcds::Attribute> attr,
+                             std::unique_ptr<llvm::LLVMContext> &theLLVMContext) {
   int64_t val = 0;
   if (std::holds_alternative<int64_t>(attr->initVal))
     val = 0;
   else if (std::holds_alternative<void *>(attr->initVal))
     val = 1;
-  return llvm::ConstantInt::get(*theContext, llvm::APInt(64, val));
+  return llvm::ConstantInt::get(*theLLVMContext, llvm::APInt(64, val));
 }
 
 }  // namespace llvmutil

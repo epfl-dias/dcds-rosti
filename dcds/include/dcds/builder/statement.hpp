@@ -9,16 +9,16 @@
 
 namespace dcds {
 
-enum statementType { READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT };
+enum statementType { READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, CALL };
 
 enum CmpIPredicate { gt, eq, lt, neq };
 
 class StatementBuilder {
  public:
-  explicit StatementBuilder(std::string type, std::string actionVar, std::string refVar)
+  explicit StatementBuilder(dcds::statementType type, std::string actionVar, std::string refVar)
       : stType(type), sourceAttrName(actionVar), refVarName(refVar) {}
 
-  std::string stType;
+  dcds::statementType stType;
   std::string sourceAttrName;
   std::string refVarName;
 };
