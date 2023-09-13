@@ -29,13 +29,13 @@ int main(int argc, char** argv) {
   UnGeneratedCounter defaultNSCounter{2, 3};
   LOG(INFO) << "[main] init-done";
   LOG(INFO) << "-------";
-  //  UnGeneratedCounter nSCounter("separated", 5, 2);
-  //   LOG(INFO) << "###########";
-  //   LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
-  //   LOG(INFO) << "###########";
-  //  defaultNSCounter.update();
-  //   LOG(INFO) << "###########";
-  //   LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
+  UnGeneratedCounter nSCounter("separated", 5, 2);
+  LOG(INFO) << "###########";
+  LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
+  LOG(INFO) << "###########";
+  defaultNSCounter.update();
+  LOG(INFO) << "###########";
+  LOG(INFO) << "Current Counter Value: " << defaultNSCounter.read();
 
   LOG(INFO) << "------- DONE";
   return 0;

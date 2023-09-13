@@ -52,43 +52,43 @@ void UnGeneratedCounter::initTables(const std::string& txn_namespace) {
 }
 
 void UnGeneratedCounter::init(const std::string& txn_namespace) {
-  //   LOG(INFO) << "UnGeneratedCounter::init ns: " << txn_namespace;
-  //  const std::string dsName = txn_namespace + "::" + "UnGeneratedCounter";
-  //  // serializing initialization so that two datastructures do not initialize the tables together.
-  //  static std::mutex initLock;
-  //  std::unique_lock<std::mutex> lk(initLock);
+  LOG(INFO) << "UnGeneratedCounter::init ns: " << txn_namespace;
+  const std::string dsName = txn_namespace + "::" + "UnGeneratedCounter";
+  // serializing initialization so that two datastructures do not initialize the tables together.
+  static std::mutex initLock;
+  std::unique_lock<std::mutex> lk(initLock);
 
-  //  // create table if not exists within the namespace.
-  //  // should initialize the mainRecord
-  //
-  //  auto& tableRegistry = TableRegistry::getInstance();
-  //  txnManager = txn::NamespaceRegistry::getInstance().getOrCreate(txn_namespace);
-  //
-  //  if (!(tableRegistry.exists(dsName))) {
-  //    initTables(txn_namespace);
-  //  }
-  //
-  //  this->counterTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedCounter");
-  //   LOG(INFO) << "counterTable: " << counterTable->name();
-  //
-  //  auto txn = txnManager->beginTransaction(false);
-  //  auto mainTable = tableRegistry.getTable(dsName);
-  //
-  //  struct counter_record_st tmp {
-  //      this->initialCounterValue
-  //  };
-  //
-  //  assert(!(mainRecord.valid()));
-  //  // insert a default record for referencing the data structure
-  //  auto tmpMainRecord = mainTable->insertRecord(txn, &tmp);
-  //  this->mainRecord = tmpMainRecord;
-  //  assert(mainRecord.valid());
-  //   LOG(INFO) << "MainRecord created";
-  //
-  //  txnManager->commitTransaction(txn);
-  //  assert(mainRecord.valid());
-  //
-  //   LOG(INFO) << "Initialization done";
+  // create table if not exists within the namespace.
+  // should initialize the mainRecord
+
+  auto& tableRegistry = TableRegistry::getInstance();
+  txnManager = txn::NamespaceRegistry::getInstance().getOrCreate(txn_namespace);
+
+  if (!(tableRegistry.exists(dsName))) {
+    initTables(txn_namespace);
+  }
+
+  this->counterTable = tableRegistry.getTable(txn_namespace + "::" + "UnGeneratedCounter");
+  LOG(INFO) << "counterTable: " << counterTable->name();
+
+  auto txn = txnManager->beginTransaction(false);
+  auto mainTable = tableRegistry.getTable(dsName);
+
+  struct counter_record_st tmp {
+    this->initialCounterValue
+  };
+
+  assert(!(mainRecord.valid()));
+  // insert a default record for referencing the data structure
+  auto tmpMainRecord = mainTable->insertRecord(txn, &tmp);
+  this->mainRecord = tmpMainRecord;
+  assert(mainRecord.valid());
+  LOG(INFO) << "MainRecord created";
+
+  txnManager->commitTransaction(txn);
+  assert(mainRecord.valid());
+
+  LOG(INFO) << "Initialization done";
 }
 
 counterValueType UnGeneratedCounter::read() {
