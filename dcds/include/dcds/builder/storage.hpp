@@ -19,7 +19,7 @@ class StorageLayer {
   /// \param txn_namespace transaction namespace for transactions
   /// \param attributes_   Data structure attributes for the storage table
   explicit StorageLayer(const std::string &txn_namespace,
-                        std::map<std::string, std::shared_ptr<dcds::Attribute>> attributes_) {
+                        std::map<std::string, std::shared_ptr<dcds::SimpleAttribute>> attributes_) {
     this->attributes = attributes_;
     this->init(txn_namespace);
   }
@@ -50,7 +50,7 @@ class StorageLayer {
   /// Table storing data structure attributes
   std::shared_ptr<dcds::storage::Table> dsTable;
   /// Map attribute names with attributes
-  std::map<std::string, std::shared_ptr<dcds::Attribute>> attributes;
+  std::map<std::string, std::shared_ptr<dcds::SimpleAttribute>> attributes;
 
   ///
   /// \param txnNamespace transaction namespace for the transactions

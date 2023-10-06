@@ -134,6 +134,7 @@ class DCDSJIT {
 
     return std::move(TSM);
   }
+  void dump() { theES->dump(llvm::outs()); }
 
   void *getRawAddress(std::string const &name) {
     auto address = dcds::llvmutil::unwrap(theES->lookup({&mainJD}, mangle(name))).getAddress();

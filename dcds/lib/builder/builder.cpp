@@ -19,7 +19,11 @@
      RESULTING FROM THE USE OF THIS SOFTWARE.
 */
 
-//#include "dcds/builder/builder.hpp"
+#include "dcds/builder/builder.hpp"
+
+#include "dcds/builder/function-builder.hpp"
+#include "dcds/codegen/codegen-v2.hpp"
+#include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 
 namespace dcds {
 
@@ -35,4 +39,102 @@ namespace dcds {
 //   attributes_.emplace_back(attribute_type::RECORD_ID, name);
 // }
 
+static inline void isValidFunctionName(const std::string& functionName) {
+  LOG(INFO) << "[isValidFunctionName]: " + functionName;
+  if (functionName.starts_with("get_") || functionName.starts_with("set_")) {
+    throw dcds::exceptions::dcds_dynamic_exception("Function name starts with a reserved identifier");
+  }
 }
+
+std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& functionName) {
+//  isValidFunctionName(functionName);
+  if (this->functions.contains(functionName)) {
+    throw dcds::exceptions::dcds_dynamic_exception("Function with same name already exists");
+  }
+  auto f = std::make_shared<FunctionBuilder>(this, functionName);
+  this->functions.emplace(functionName, f);
+  return f;
+}
+
+std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& functionName, dcds::valueType returnType) {
+//  isValidFunctionName(functionName);
+  if (this->functions.contains(functionName)) {
+    throw dcds::exceptions::dcds_dynamic_exception("Function with same name already exists");
+  }
+  auto f = std::make_shared<FunctionBuilder>(this, functionName, returnType);
+  this->functions.emplace(functionName, f);
+  return f;
+}
+
+void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
+  // FIXME: make sure that it is a simple type or for one we can actually generate.
+
+  // Generates a function of name: {attribute.type} get_{attribute_name}()
+
+  // sanity-check:
+  assert(this->hasAttribute(attribute->name));
+
+  std::string function_name = "get_" + attribute->name;
+  auto fn = this->createFunction(function_name, attribute->type);
+
+  fn->addTempVariable("tmp", attribute->type);
+  fn->addReadStatement(attribute, "tmp");
+  fn->addReturnStatement("tmp");
+}
+
+void Builder::generateGetter(const std::string& attribute_name) {
+  auto attribute = this->getAttribute(attribute_name);
+  this->generateGetter(attribute);
+}
+
+void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
+  // FIXME: make sure that it is a simple type or for one we can actually generate.
+
+  // Generates a function of name: void set_{attribute_name}(attribute.type)
+
+  // sanity-check:
+  assert(this->hasAttribute(attribute->name));
+
+  std::string function_name = "set_" + attribute->name;
+  auto fn = this->createFunction(function_name);
+  fn->addArgument("val", attribute->type);
+  fn->addUpdateStatement(attribute, "val");
+}
+
+void Builder::generateSetter(const std::string& attribute_name) {
+  auto attribute = this->getAttribute(attribute_name);
+  this->generateSetter(attribute);
+}
+
+
+void Builder::build(){
+
+  // TO BE FIXED LATER
+  //  if(!codegen_engine){
+//    codegen_engine = context->getCodegenEngine();
+//  }
+
+  if(!codegen_engine){
+    codegen_engine = std::make_shared<LLVMCodegen>(*this);
+  }
+
+  codegen_engine->build();
+
+  LOG(INFO) << "[Builder::build()] -- jit-before";
+  codegen_engine->jitCompileAndLoad();
+  LOG(INFO) << "[Builder::build()] -- jit-after";
+
+
+  LOG(INFO) << "[Builder::build()] TestingConstructor";
+  auto *ctr = codegen_engine->getFunction("LL_NODE_TEST_constructor");
+  reinterpret_cast<void *(*)()>(ctr)();
+
+}
+
+
+
+
+
+
+
+}  // namespace dcds

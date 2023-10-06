@@ -26,11 +26,11 @@
 #ifndef DCDS_CODEGEN_UTILS_HPP
 #define DCDS_CODEGEN_UTILS_HPP
 
+#include <dlfcn.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 
-namespace dcds {
-namespace llvmutil {
+namespace dcds::llvmutil {
 template <typename ReturnType, typename... Arguments>
 class function_ref {
   std::string name_;
@@ -107,7 +107,7 @@ static int64_t findInMapOfVectors(auto map, std::string elem) {
   return static_cast<int64_t>(-1);
 }
 
-static auto attrTypeMatching(std::shared_ptr<dcds::Attribute> attr,
+static auto attrTypeMatching(std::shared_ptr<dcds::SimpleAttribute> attr,
                              std::unique_ptr<llvm::LLVMContext> &theLLVMContext) {
   int64_t val = 0;
   if (std::holds_alternative<int64_t>(attr->initVal))
@@ -117,7 +117,6 @@ static auto attrTypeMatching(std::shared_ptr<dcds::Attribute> attr,
   return llvm::ConstantInt::get(*theLLVMContext, llvm::APInt(64, val));
 }
 
-}  // namespace llvmutil
-}  // namespace dcds
+}  // namespace dcds::llvmutil
 
 #endif  // DCDS_CODEGEN_UTILS_HPP

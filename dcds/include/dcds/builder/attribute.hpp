@@ -22,6 +22,7 @@
 #ifndef DCDS_ATTRIBUTE_HPP
 #define DCDS_ATTRIBUTE_HPP
 
+#include <any>
 #include <concepts>
 #include <dcds/common/types.hpp>
 #include <dcds/util/locks/lock.hpp>
@@ -41,14 +42,32 @@
 namespace dcds {
 
 /// Class representing a normal attribute in DCDS
-class Attribute {
+class SimpleAttribute {
  public:
   ///
   /// \param attribute_name  Name of the attribute to be constructed
   /// \param attribute_type  Type of the attribute to be constructed
   /// \param initialValue    Initial value of the attribute to be constructed
-  Attribute(std::string attribute_name, dcds::valueType attribute_type, std::variant<int64_t, void *> initialValue)
-      : name(std::move(attribute_name)), type(attribute_type), initVal(initialValue) {}
+  //  SimpleAttribute(std::string attribute_name, dcds::valueType attribute_type, std::variant<int64_t, void *>
+  //  initialValue)
+  //      : name(std::move(attribute_name)), type(attribute_type), initVal(initialValue) {
+  //    defaultValue
+  //  }
+
+  SimpleAttribute(std::string attribute_name, dcds::valueType attribute_type, std::any default_value)
+      : name(std::move(attribute_name)), type(attribute_type), defaultValue(std::move(default_value)) {}
+  SimpleAttribute(std::string attribute_name, dcds::valueType attribute_type)
+      : name(std::move(attribute_name)), type(attribute_type) {
+    defaultValue.reset();
+  }
+
+  auto getDefaultValue() const {
+    //    if(defaultValue.has_value()){
+    //
+    //    }
+
+    return defaultValue;
+  }
 
   // Transactional Variables.
   // GET/ INSERT/ DELETE/ UPDATE
@@ -112,6 +131,8 @@ class Attribute {
   const dcds::valueType type;
   /// Variable for storing initial value of the attribute
   std::variant<int64_t, void *> initVal;
+
+  std::any defaultValue;
 
  private:
 };

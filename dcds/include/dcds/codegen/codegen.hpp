@@ -267,13 +267,13 @@ class Visitor {
         llvm::Value *getVal1, *getVal2;
 
         if (temporaryVariableIRMap[statement->actionVarName]) {
-          dcds::Attribute tempAttr1(statement->actionVarName, dcds::valueType::INTEGER,
-                                    std::get<1>(tempVarsInfo[statement->actionVarName]));
+          dcds::SimpleAttribute tempAttr1(statement->actionVarName, dcds::valueType::INTEGER,
+                                          std::get<1>(tempVarsInfo[statement->actionVarName]));
 
           getVal1 = tempAttr1.getAttributeCodegen(llvmBuilder, theLLVMContext,
                                                   temporaryVariableIRMap[statement->actionVarName]);
         } else {
-          dcds::Attribute tempAttr1(statement->actionVarName, dcds::valueType::INTEGER, -1);
+          dcds::SimpleAttribute tempAttr1(statement->actionVarName, dcds::valueType::INTEGER, -1);
 
           tempVar1 = currentFunction->getArg(
               1 + dcds::llvmutil::findInVector(
@@ -283,13 +283,13 @@ class Visitor {
         }
 
         if (temporaryVariableIRMap[statement->refVarName]) {
-          dcds::Attribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER,
-                                    std::get<1>(tempVarsInfo[statement->refVarName]));
+          dcds::SimpleAttribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER,
+                                          std::get<1>(tempVarsInfo[statement->refVarName]));
 
           getVal2 =
               tempAttr2.getAttributeCodegen(llvmBuilder, theLLVMContext, temporaryVariableIRMap[statement->refVarName]);
         } else {
-          dcds::Attribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER, -1);
+          dcds::SimpleAttribute tempAttr2(statement->refVarName, dcds::valueType::INTEGER, -1);
 
           tempVar2 = currentFunction->getArg(
               1 + dcds::llvmutil::findInVector(
@@ -298,7 +298,7 @@ class Visitor {
           getVal2 = tempAttr2.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVar2);
         }
 
-        dcds::Attribute tempAttr3(tempVarsOpResName[statement], dcds::valueType::INTEGER, -1);
+        dcds::SimpleAttribute tempAttr3(tempVarsOpResName[statement], dcds::valueType::INTEGER, -1);
         auto addRes = tempAttr3.addTwoVarsCodegen(llvmBuilder, getVal1, getVal2);
 
         if (temporaryVariableIRMap[tempVarsOpResName[statement]])
@@ -374,10 +374,10 @@ class Visitor {
                       statement->refVarName));
 
         if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::INTEGER) {
-          dcds::Attribute tempReturnAttr("tempReturnAttribute", dcds::valueType::INTEGER, 0);
+          dcds::SimpleAttribute tempReturnAttr("tempReturnAttribute", dcds::valueType::INTEGER, 0);
           addReturnStatement(tempReturnAttr.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVar1));
         } else if (std::get<0>(tempVarsInfo[statement->refVarName]) == dcds::valueType::RECORD_PTR) {
-          dcds::Attribute tempReturnAttr("tempReturnAttribute", dcds::valueType::RECORD_PTR, nullptr);
+          dcds::SimpleAttribute tempReturnAttr("tempReturnAttribute", dcds::valueType::RECORD_PTR, nullptr);
           addReturnStatement(tempReturnAttr.getAttributeCodegen(llvmBuilder, theLLVMContext, tempVar1));
         }
         break;
@@ -438,7 +438,8 @@ class Visitor {
       llvmBuilder->SetInsertPoint(block1);
 
       for (auto itTempVar = tempVarsInfo.begin(); itTempVar != tempVarsInfo.end(); ++itTempVar) {
-        dcds::Attribute tempAttr(itTempVar->first, std::get<0>(itTempVar->second), std::get<1>(itTempVar->second));
+        dcds::SimpleAttribute tempAttr(itTempVar->first, std::get<0>(itTempVar->second),
+                                       std::get<1>(itTempVar->second));
         if (std::get<2>(itTempVar->second)->getName() != currentFunction->getName()) {
           for (auto itStatement = orderedStatements.begin(); itStatement != orderedStatements.end(); ++itStatement) {
             if (itStatement->second->actionVarName == std::get<2>(itTempVar->second)->getName() ||
@@ -477,6 +478,8 @@ class Visitor {
   /// Generated code for the user defined data structure
   void visit() {
     auto readFunctionName = dcds::llvmutil::getFunctionName(reinterpret_cast<void *>(read_data_structure_attribute));
+    // void *dsRecord, int64_t attributeIndex, void *readVariable, int64_t attributeTy = -1,
+    //                                    void *txnPtr = nullptr
     auto readFunctionType =
         llvm::FunctionType::get(llvm::Type::getVoidTy(*theLLVMContext),
                                 {llvm::Type::getInt8PtrTy(*theLLVMContext), llvm::Type::getInt64Ty(*theLLVMContext),
@@ -587,7 +590,7 @@ class Visitor {
   /// Map function names with functions
   std::unordered_map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   /// Map attribute names with attributes
-  std::map<std::string, std::shared_ptr<Attribute>> attributes;
+  std::map<std::string, std::shared_ptr<SimpleAttribute>> attributes;
   /// Map temporary variable names with information related to them
   std::unordered_map<std::string,
                      std::tuple<dcds::valueType, std::variant<int64_t, void *>, std::shared_ptr<FunctionBuilder>>>
