@@ -33,7 +33,7 @@ class namespace_not_found : public std::exception {
 };
 
 class duplicate_namespace_key : public std::exception {
-  const char* what() const noexcept override { return "namespace_not_found"; }
+  const char* what() const noexcept override { return "duplicate_namespace_key"; }
 };
 
 }  // namespace dcds::exceptions

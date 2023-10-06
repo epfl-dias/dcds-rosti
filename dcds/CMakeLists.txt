@@ -7,6 +7,9 @@ set(dcds_cxx
         lib/codegen/codegen.cpp
         lib/builder/storage.cpp
 
+        # Common
+        lib/common/exceptions.cpp
+
         # Indexes
         # lib/indexes/art-node.cpp
 
@@ -44,6 +47,7 @@ endif ()
 
 target_link_libraries(dcds
         PUBLIC
+        LLVM::LLVM
         vtune::vtune
         ${CMAKE_DL_LIBS}
         )
