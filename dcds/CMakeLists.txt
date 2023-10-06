@@ -7,6 +7,12 @@ set(dcds_cxx
         lib/codegen/codegen.cpp
         lib/builder/storage.cpp
 
+        # Codegen
+        lib/codegen/llvm-codegen/llvm-codegen.cpp
+        lib/codegen/llvm-codegen/llvm-context.cpp
+        lib/codegen/llvm-codegen/llvm-jit.cpp
+        lib/codegen/llvm-codegen/functions.cpp
+
         # Common
         lib/common/exceptions.cpp
 

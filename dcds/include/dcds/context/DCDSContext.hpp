@@ -19,12 +19,8 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-//
-// Created by prathamesh on 10/7/23.
-//
-
-#ifndef DCDS_DCDSCONTEXT_HPP
-#define DCDS_DCDSCONTEXT_HPP
+#ifndef DCDS_CONTEXT_HPP
+#define DCDS_CONTEXT_HPP
 
 namespace dcds {
 namespace detail {
@@ -47,13 +43,13 @@ class DCDSContextImpl {
 };
 }  // namespace detail
 
-class DCDSContext {
+class DCDSContext : dcds::remove_copy_move {
  public:
-  explicit DCDSContext(bool enable_multi_threading, bool allow_dangling_functions)
+  explicit DCDSContext(bool enable_multi_threading = false, bool allow_dangling_functions = false)
       : contextImpl(detail::DCDSContextImpl(enable_multi_threading, allow_dangling_functions)) {}
 
   detail::DCDSContextImpl contextImpl;
 };
 }  // namespace dcds
 
-#endif  // DCDS_DCDSCONTEXT_HPP
+#endif  // DCDS_CONTEXT_HPP
