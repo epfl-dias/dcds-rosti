@@ -31,7 +31,8 @@ txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
 
 //  LOG(WARNING) << "FIXME: beginTxn does not include in txnTable yet";
 
-  return std::make_shared<Txn>(txnIdGenerator.getTxnTs(), is_read_only);
+//  return std::make_shared<Txn>(txnIdGenerator.getTxnTs(), is_read_only);
+  return new Txn(txnIdGenerator.getTxnTs(), is_read_only);
 }
 
 bool TransactionManager::commitTransaction(txn_ptr_t txn) {

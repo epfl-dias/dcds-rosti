@@ -57,7 +57,7 @@ void dcds::StorageLayer::init(const std::string& txnNamespace) {
 }
 
 void dcds::StorageLayer::read(void* readVariable, uint64_t attributeIndex, void* txnPtr) {
-  auto txn = reinterpret_cast<dcds::txn::txn_ptr_t*>(txnPtr);
+  auto txn = reinterpret_cast<dcds::txn::txn_ptr_t>(txnPtr);
 
   // Can there be a deadlock?
   mainRecord->readWithLatch(
@@ -65,7 +65,7 @@ void dcds::StorageLayer::read(void* readVariable, uint64_t attributeIndex, void*
 }
 
 void dcds::StorageLayer::write(void* writeVariable, uint64_t attributeIndex, void* txnPtr) {
-  auto txn = reinterpret_cast<dcds::txn::txn_ptr_t*>(txnPtr);
+  auto txn = reinterpret_cast<dcds::txn::txn_ptr_t>(txnPtr);
 
   // Can there be a deadlock?
   mainRecord->writeWithLatch([&](dcds::storage::record_metadata_t* dsRc) {

@@ -48,7 +48,8 @@ class SingleVersionRowStore;
 class RecordRefV2 {
  public:
   RecordRefV2() : record_metadata_ptr() {}
-  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
+  RecordRefV2(uintptr_t unsafe_raw_address) : record_metadata_ptr(unsafe_raw_address) {}
+//  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
 
   //  RecordRefV2 &operator=(RecordRefV2 const &other) = default;
   //  RecordRefV2 &operator=(RecordRefV2 &&other) = default;
@@ -59,6 +60,8 @@ class RecordRefV2 {
   bool valid() { return (record_metadata_ptr.operator->() != nullptr); }
 
   void print() { record_metadata_ptr.print(); }
+
+  uintptr_t getBase() { return record_metadata_ptr.getPtr(); }
 
   std::shared_ptr<Table> getTable();
 
@@ -140,11 +143,12 @@ class Table {
   auto name() { return this->table_name; }
   auto id() const { return this->table_id; }
 
-  record_reference_t getNullReference() const { return record_reference_t{this->table_id}; }
+  // record_reference_t getNullReference() const { return record_reference_t{}; }
 
-  virtual record_reference_t insertRecord(const std::shared_ptr<txn::Txn> &txn, const void *data) = 0;
+  virtual record_reference_t insertRecord(const txn::Txn &txn, const void *data) = 0;
+  virtual record_reference_t insertRecord(txn::Txn *txn, const void *data) = 0;
 
-  virtual void updateAttribute(std::shared_ptr<txn::Txn> &txn, record_metadata_t *, void *value,
+  virtual void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value,
                                uint attribute_idx) = 0;
 
   // Another possible issue is packing of recordMetaData?
@@ -165,12 +169,12 @@ class Table {
   virtual void *getRecordData(record_metadata_t *rc) = 0;
 
   virtual record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) = 0;
-  virtual void updateRefTypeData(std::shared_ptr<txn::Txn> &, record_metadata_t *, record_reference_t &value,
+  virtual void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value,
                                  uint attribute_idx) = 0;
 
-  //  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, uint attribute_idx);
-  virtual void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
-  virtual void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, uint attribute_idx) = 0;
+  //  virtual void getAttribute(txn::Txn &, record_metadata_t *rc, uint attribute_idx);
+  virtual void getData(txn::Txn &, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
+  virtual void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx) = 0;
 
   virtual size_t size() = 0;
   virtual size_t capacity() = 0;
@@ -213,18 +217,20 @@ class SingleVersionRowStore : public Table {
  public:
   record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
   // record_reference_t
-  void updateRefTypeData(std::shared_ptr<txn::Txn> &, record_metadata_t *, record_reference_t &value,
+  void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value,
                          uint attribute_idx) override;
 
   inline void *getRecordData(record_metadata_t *rc) override {
     return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t));
   }
 
-  record_reference_t insertRecord(const std::shared_ptr<txn::Txn> &txn, const void *data) override;
-  void updateAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *, void *value, uint attribute_idx) override;
+  record_reference_t insertRecord(const txn::Txn &txn, const void *data) override;
+  record_reference_t insertRecord(txn::Txn *txn, const void *data) override;
 
-  void getData(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, size_t offset, size_t len) override;
-  void getAttribute(std::shared_ptr<txn::Txn> &, record_metadata_t *rc, void *dst, uint attribute_idx) override;
+  void updateAttribute(txn::Txn &, record_metadata_t *, void *value, uint attribute_idx) override;
+
+  void getData(txn::Txn &, record_metadata_t *rc, void *dst, size_t offset, size_t len) override;
+  void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx) override;
 
  public:
   size_t size() override { return records_data.size(); }
