@@ -27,7 +27,7 @@
 #include <iostream>
 #include <utility>
 
-using counterValueType = size_t;
+using counterValueType = int64_t;
 
 class UnGeneratedCounter {
  public:
@@ -46,8 +46,9 @@ class UnGeneratedCounter {
     init(txn_namespace);
   }
 
-  counterValueType read();  // read the current counter value
-  void update();            // update the counter value by counterStep
+  counterValueType read();                     // read the current counter value
+  void update();                               // update the counter value by counterStep
+  void write(counterValueType writeVariable);  // write custom value to counter
 
  private:
   std::shared_ptr<dcds::txn::TransactionManager> txnManager;

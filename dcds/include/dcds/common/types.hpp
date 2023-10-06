@@ -9,7 +9,8 @@
 
 namespace dcds {
 
-enum valueType { INTEGER, FLOAT, DATE, RECORD_ID, CHAR, RECORD_PTR };
+// NOTE: VOID is strictly a return type.
+enum valueType { INTEGER, FLOAT, DATE, RECORD_ID, CHAR, RECORD_PTR, VOID };
 
 // How to store VARCHAR? separate dictionary or std::string and ptr?
 

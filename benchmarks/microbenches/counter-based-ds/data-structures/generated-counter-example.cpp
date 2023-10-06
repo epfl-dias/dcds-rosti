@@ -21,9 +21,8 @@
 
 #include <benchmark/benchmark.h>
 
+#include <../../benchmarks/microbenches/counter-based-ds/data-structures/include/un-generated/counter.hpp>
 #include <dcds/util/logging.hpp>
-
-#include "un-generated/counter.hpp"
 
 int main(int argc, char** argv) {
   LOG(INFO) << "counterBasedDS";

@@ -31,11 +31,11 @@ using queueValueType = size_t;
 class UnGeneratedQueue {
  public:
   explicit UnGeneratedQueue() {
-    LOG(INFO) << "initializing with default";
+    // LOG(INFO) << "initializing with default";
     init("default");
   }
   explicit UnGeneratedQueue(const std::string& txn_namespace) {
-    LOG(INFO) << "initializing with ns: " << txn_namespace;
+    // LOG(INFO) << "initializing with ns: " << txn_namespace;
     init(txn_namespace);
   }
 

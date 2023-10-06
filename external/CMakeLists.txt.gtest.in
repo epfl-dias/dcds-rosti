@@ -9,4 +9,6 @@ FetchContent_Declare(
 # (If we were being proper this would be a patch
   GIT_TAG           origin/v1.13.x)
 
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
 FetchContent_MakeAvailable(googletest-download)
