@@ -96,6 +96,9 @@ string(STRIP "${COMPILER_FLAGS} -fvisibility-inlines-hidden" COMPILER_FLAGS)
 
 string(STRIP "${COMPILER_FLAGS} -O3" COMPILER_FLAGS)
 
+string(STRIP "${COMPILER_FLAGS} -gdwarf-4 -g" COMPILER_FLAGS)
+
+
 #-----------------------------------------------------------------------
 # Add the compiler flags
 string(STRIP "${CMAKE_CXX_FLAGS} ${COMPILER_FLAGS}" CMAKE_CXX_FLAGS)
