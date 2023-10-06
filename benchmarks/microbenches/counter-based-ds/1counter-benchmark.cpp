@@ -11,7 +11,7 @@ class DCDSCounter {
  public:
   DCDSCounter(int counterInitialValue1 = 0) {
     dcds::DCDSContext context(false, false);
-    dcds::Builder dsBuilder(context, "Counter");
+    dcds::Builder dsBuilder("Counter");
 
     dsBuilder.addAttribute("counter_value", dcds::INTEGER, counterInitialValue1);
 
@@ -20,8 +20,7 @@ class DCDSCounter {
   }
 
   static void initialize() {
-    dcds::DCDSContext context(false, false);
-    dcds::Builder dsBuilder(context, "Counter");
+    dcds::Builder dsBuilder("Counter");
 
     dsBuilder.addAttribute("counter_value", dcds::INTEGER, 0);
 
