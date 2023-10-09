@@ -54,7 +54,6 @@ endif ()
 target_link_libraries(dcds
         PUBLIC
         LLVM::LLVM
-        vtune::vtune
         ${CMAKE_DL_LIBS}
         )
 

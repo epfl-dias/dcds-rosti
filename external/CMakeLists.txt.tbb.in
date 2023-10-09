@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.11.4)
+
+include(FetchContent)
+FetchContent_Declare(
+        tbb-download
+        GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+        GIT_TAG       v2021.10.0)
+
+FetchContent_MakeAvailable(tbb-download)
