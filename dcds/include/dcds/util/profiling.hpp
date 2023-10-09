@@ -31,7 +31,10 @@
 #if __has_include("ittnotify.h")
 #include <ittnotify.h>
 #else
-#define __itt_event() ((void)0)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-macro-identifier"
+#define __itt_event void*
+#pragma clang diagnostic pop
 #endif
 
 namespace dcds::profiling {

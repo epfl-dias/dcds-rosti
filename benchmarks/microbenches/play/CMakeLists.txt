@@ -9,6 +9,8 @@ target_link_libraries_system(play
         benchmark::benchmark
         absl::log
         cuckoo::cuckoo
+        tbbmalloc
+        tbbmalloc_proxy
         )
 
 target_link_libraries(play
