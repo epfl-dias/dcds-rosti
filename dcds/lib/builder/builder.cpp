@@ -24,6 +24,7 @@
 #include "dcds/builder/function-builder.hpp"
 #include "dcds/codegen/codegen-v2.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
+#include "dcds/exporter/jit-container.hpp"
 
 namespace dcds {
 
@@ -47,7 +48,7 @@ static inline void isValidFunctionName(const std::string& functionName) {
 }
 
 std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& functionName) {
-//  isValidFunctionName(functionName);
+  //  isValidFunctionName(functionName);
   if (this->functions.contains(functionName)) {
     throw dcds::exceptions::dcds_dynamic_exception("Function with same name already exists");
   }
@@ -57,7 +58,7 @@ std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& func
 }
 
 std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& functionName, dcds::valueType returnType) {
-//  isValidFunctionName(functionName);
+  //  isValidFunctionName(functionName);
   if (this->functions.contains(functionName)) {
     throw dcds::exceptions::dcds_dynamic_exception("Function with same name already exists");
   }
@@ -99,6 +100,7 @@ void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
   auto fn = this->createFunction(function_name);
   fn->addArgument("val", attribute->type);
   fn->addUpdateStatement(attribute, "val");
+  fn->addReturnVoidStatement();
 }
 
 void Builder::generateSetter(const std::string& attribute_name) {
@@ -106,15 +108,17 @@ void Builder::generateSetter(const std::string& attribute_name) {
   this->generateSetter(attribute);
 }
 
-
-void Builder::build(){
+void Builder::build() {
+  if (is_jit_generated) {
+    throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
+  }
 
   // TO BE FIXED LATER
   //  if(!codegen_engine){
-//    codegen_engine = context->getCodegenEngine();
-//  }
+  //    codegen_engine = context->getCodegenEngine();
+  //  }
 
-  if(!codegen_engine){
+  if (!codegen_engine) {
     codegen_engine = std::make_shared<LLVMCodegen>(*this);
   }
 
@@ -124,17 +128,21 @@ void Builder::build(){
   codegen_engine->jitCompileAndLoad();
   LOG(INFO) << "[Builder::build()] -- jit-after";
 
-
-  LOG(INFO) << "[Builder::build()] TestingConstructor";
-  auto *ctr = codegen_engine->getFunction("LL_NODE_TEST_constructor");
-  reinterpret_cast<void *(*)()>(ctr)();
-
+  this->is_jit_generated = true;
 }
 
+JitContainer* Builder::createInstance() {
+  if (!is_jit_generated) {
+    throw dcds::exceptions::dcds_dynamic_exception("Data structure is not built yet");
+  }
 
+  LOG(INFO) << "[Builder::createInstance] creating instance";
+  auto* ds_constructor = codegen_engine->getFunction(this->getName() + "_constructor");
+  auto* ds_instance = reinterpret_cast<void* (*)()>(ds_constructor)();
+  auto* ins = reinterpret_cast<JitContainer*>(ds_instance);
+  ins->setCodegenEngine(this->codegen_engine);
 
-
-
-
+  return ins;
+}
 
 }  // namespace dcds

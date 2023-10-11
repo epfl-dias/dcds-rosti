@@ -34,17 +34,29 @@ class CodegenV2 {
   virtual void runOptimizationPasses() = 0;
 
   virtual void printIR() = 0;
-  virtual void saveToFile(const std::string &filename) = 0;
+  virtual void saveToFile(const std::string& filename) = 0;
 
   virtual void* getFunction(const std::string& name) = 0;
+  virtual void* getFunctionPrefixed(const std::string& name) = 0;
 
+  inline auto& getAvailableFunctions() {
+    assert(is_jit_done);
+    return available_jit_functions;
+  }
+  inline const jit_function_t* getJitFunction(const std::string& name) {
+    assert(is_jit_done);
+    return available_jit_functions[name];
+  }
 
+  virtual ~CodegenV2();
 
  protected:
-  explicit CodegenV2(dcds::Builder &_builder) : builder(_builder) {}
+  explicit CodegenV2(dcds::Builder& _builder) : builder(_builder) {}
 
  protected:
-  dcds::Builder &builder;
+  dcds::Builder& builder;
+  std::map<std::string, jit_function_t*> available_jit_functions;
+  bool is_jit_done = false;
 };
 
 }  // namespace dcds

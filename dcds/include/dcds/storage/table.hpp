@@ -49,7 +49,7 @@ class RecordRefV2 {
  public:
   RecordRefV2() : record_metadata_ptr() {}
   RecordRefV2(uintptr_t unsafe_raw_address) : record_metadata_ptr(unsafe_raw_address) {}
-//  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
+  //  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
 
   //  RecordRefV2 &operator=(RecordRefV2 const &other) = default;
   //  RecordRefV2 &operator=(RecordRefV2 &&other) = default;
@@ -148,8 +148,7 @@ class Table {
   virtual record_reference_t insertRecord(const txn::Txn &txn, const void *data) = 0;
   virtual record_reference_t insertRecord(txn::Txn *txn, const void *data) = 0;
 
-  virtual void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value,
-                               uint attribute_idx) = 0;
+  virtual void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value, uint attribute_idx) = 0;
 
   // Another possible issue is packing of recordMetaData?
   //  RecordReference insertRecord(const txn::Txn &txn, const void *data);
@@ -169,8 +168,7 @@ class Table {
   virtual void *getRecordData(record_metadata_t *rc) = 0;
 
   virtual record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) = 0;
-  virtual void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value,
-                                 uint attribute_idx) = 0;
+  virtual void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) = 0;
 
   //  virtual void getAttribute(txn::Txn &, record_metadata_t *rc, uint attribute_idx);
   virtual void getData(txn::Txn &, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
@@ -217,8 +215,7 @@ class SingleVersionRowStore : public Table {
  public:
   record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
   // record_reference_t
-  void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value,
-                         uint attribute_idx) override;
+  void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) override;
 
   inline void *getRecordData(record_metadata_t *rc) override {
     return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t));

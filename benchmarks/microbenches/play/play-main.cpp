@@ -27,6 +27,7 @@
 #include <dcds/builder/builder.hpp>
 #include <dcds/builder/function-builder.hpp>
 #include <dcds/context/DCDSContext.hpp>
+#include <dcds/exporter/jit-container.hpp>
 #include <dcds/util/logging.hpp>
 #include <dcds/util/profiling.hpp>
 #include <iostream>
@@ -35,18 +36,18 @@
 static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder) {
   // FIXME: create addAttribute without initial value also.
 
-  auto payloadAttribute = builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+  auto payloadAttribute = builder->addAttribute("payload", dcds::INTEGER, UINT64_C(50));
   auto nextAttribute = builder->addAttribute("next", dcds::RECORD_PTR, nullptr);
 
   LOG(INFO) << "here-1";
   builder->generateGetter(payloadAttribute);  // get_payload
-  LOG(INFO) << "here-2";
+                                              //  LOG(INFO) << "here-2";
   builder->generateSetter(payloadAttribute);  // set_payload
 
-  LOG(INFO) << "here-3";
-  builder->generateGetter(nextAttribute);  // get_next
-  LOG(INFO) << "here-4";
-  builder->generateSetter(nextAttribute);  // set_next
+  //  LOG(INFO) << "here-3";
+  //  builder->generateGetter(nextAttribute);  // get_next
+  //  LOG(INFO) << "here-4";
+  //  builder->generateSetter(nextAttribute);  // set_next
 
   return true;
 }
@@ -125,6 +126,13 @@ static void generateNode() {
   LOG(INFO) << "generateNode -- build-before";
   builder->build();
   LOG(INFO) << "generateNode -- build-after";
+
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+
+  auto res = instance->op("get_payload");
+  instance->op("set_payload", 10);
+  instance->op("get_payload");
 }
 
 int main(int argc, char** argv) {

@@ -6,6 +6,7 @@
 #define DCDS_STATEMENT_HPP
 
 #include <dcds/builder/attribute.hpp>
+#include <utility>
 
 namespace dcds {
 
@@ -25,7 +26,7 @@ class StatementBuilder {
   /// \param refVar     Variable name which will be used as reference for the action on
   ///                   actionVar (will store read/write value). Not a hard specification for all statements
   explicit StatementBuilder(dcds::statementType type, std::string actionVar, std::string refVar)
-      : stType(type), actionVarName(actionVar), refVarName(refVar) {}
+      : stType(type), actionVarName(std::move(actionVar)), refVarName(std::move(refVar)) {}
 
   /// Type of the statement
   dcds::statementType stType;
@@ -34,6 +35,15 @@ class StatementBuilder {
   /// Variable name which will be used as reference for the action on action variable (will store read/write value).
   /// Not a hard specification for all statements
   std::string refVarName;
+};
+
+class UpdateStatementBuilder : public StatementBuilder {
+ public:
+  explicit UpdateStatementBuilder(dcds::statementType type, const std::string& destination, const std::string& source,
+                                  VAR_SOURCE_TYPE sourceType)
+      : StatementBuilder(type, destination, source), source_type(sourceType) {}
+
+  const VAR_SOURCE_TYPE source_type;
 };
 
 /// Class to represent conditional statements in DCDS

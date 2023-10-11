@@ -42,7 +42,6 @@ namespace dcds {
 class CodegenV2;
 class LLVMCodegen;
 
-/// Class representing a function in DCDS
 class FunctionBuilder {
   friend class Visitor;
   friend class CodegenV2;
@@ -62,62 +61,57 @@ class FunctionBuilder {
     // TODO: function name should not start with get_/set_
   }
 
-  ///
-  /// \param name      Name of the argument variable to be added
-  /// \param varType      Type of the argument variable to be added
-  void addArgument(const std::string &name, dcds::valueType varType) {
-    // TODO: duplicate argument does not exists.
-    this->function_arguments.emplace_back(name, varType);
-  }
-
-  auto getArguments() { return function_arguments; }
-  bool getHasArgumentsStatus() { return !function_arguments.empty(); }
-  bool hasArgument(std::string arg) {
-    return (std::find_if(function_arguments.begin(), function_arguments.end(),
-                         [&](std::pair<std::string, dcds::valueType> i) { return i.first == arg; }) !=
-            std::end(function_arguments));
-  }
-
-  // addTempVariable
-
-  //  template<typename K>
-  //  void addTempVariable(const std::string &name, dcds::valueType varType, K initialValue){
-  //
-  //  }
-
-  void addTempVariable(const std::string &name, dcds::valueType varType) {
-    if ((this->builder->hasAttribute(name))) {
-      throw dcds::exceptions::dcds_dynamic_exception("Variable name already used by data structure attribute: " + name);
-    }
-
-    if (this->temp_variables.contains(name)) {
-      throw dcds::exceptions::dcds_dynamic_exception("Variable name already used by another temporary variable: " +
-                                                     name);
-    }
-    temp_variables.emplace(name, std::make_tuple(varType, nullptr));
-  }
-
-  // FIXME: have some sort of generic value container then we can put it here.
-  //  void addTempVariable(const std::string &name, dcds::valueType varType, std::variant<int64_t, void *> initVal) {
-  //    // FIXME: value type, instead of std::variants
-  //    //  optional init value
-  //
-  //    // FIXME: make sure this temp variable name does not conflict with any other attribute name,
-  //    //  or temporary variable or function arguments!
-  //
-  //    if (!(this->builder->hasAttribute(name))) {
-  //      throw dcds::exceptions::dcds_dynamic_exception("Variable name already used by data structure attribute");
-  //    }
-  //
-  //    if (this->temp_variables.contains(name)) {
-  //      throw dcds::exceptions::dcds_dynamic_exception("Variable name already used by another temporary variable");
-  //    }
-  //
-  //    temp_variables.emplace(name, std::tuple<dcds::valueType, std::variant<int64_t, void *>>{varType, initVal});
-  //  }
-
   auto getName() { return _name; }
   auto getReturnValueType() { return returnValueType; }
+
+  // --------------------------------------
+  // Function Arguments
+  // --------------------------------------
+ private:
+  auto findArgument(const std::string &arg) const {
+    return std::find_if(function_arguments.begin(), function_arguments.end(),
+                        [&](const std::pair<std::string, dcds::valueType> &i) { return i.first == arg; });
+  }
+
+ public:
+  void addArgument(const std::string &name, dcds::valueType varType) {
+    isValidVarAddition(name);
+    this->function_arguments.emplace_back(name, varType);
+  }
+  auto getArguments() const { return function_arguments; }
+  bool hasArguments() const { return !function_arguments.empty(); }
+  bool hasArgument(const std::string &arg) const { return (findArgument(arg) != std::end(function_arguments)); }
+  auto getArgumentIndex(const std::string &arg) const {
+    assert(hasArgument(arg));
+    return std::distance(function_arguments.begin(), findArgument(arg));
+  }
+
+  // --------------------------------------
+
+  // --------------------------------------
+  // Temporary Variables
+  // --------------------------------------
+
+  void addTempVariable(const std::string &name, dcds::valueType varType) { addTempVariable(name, varType, {}); }
+  void addTempVariable(const std::string &name, dcds::valueType varType, const std::any &initial_value) {
+    isValidVarAddition(name);
+    temp_variables.emplace(name, std::make_tuple(varType, initial_value));
+  }
+
+  auto getTempVariable(const std::string &name) {
+    if (!(this->temp_variables.contains(name))) {
+      throw dcds::exceptions::dcds_dynamic_exception("Temporary variable does not exists: " + name);
+    }
+    return temp_variables[name];
+  }
+  bool hasTempVariable(const std::string &name) { return temp_variables.contains(name); }
+  bool hasSameTypeTempVariable(const std::string &name, dcds::valueType varType) {
+    if (!(this->temp_variables.contains(name))) {
+      throw dcds::exceptions::dcds_dynamic_exception("Temporary variable does not exists: " + name);
+    }
+    return temp_variables[name].first == varType;
+  }
+  // --------------------------------------
 
   ///
   /// \param theLLVMContext LLVM context from the codegen engine
@@ -141,7 +135,6 @@ class FunctionBuilder {
         }
 
         case FLOAT:
-        case DATE:
         case RECORD_ID:
         case CHAR:
         case VOID:
@@ -152,17 +145,12 @@ class FunctionBuilder {
     }
 
     switch (returnValueType) {
-      case INTEGER: {
+      case INTEGER:
+      case RECORD_PTR: {
         returnType = llvm::Type::getInt64Ty(*theLLVMContext);
         break;
       }
-      case RECORD_PTR: {
-        returnType = llvm::Type::getInt8PtrTy(*theLLVMContext);
-        break;
-      }
-
       case FLOAT:
-      case DATE:
       case RECORD_ID:
       case CHAR:
       case VOID:
@@ -181,6 +169,7 @@ class FunctionBuilder {
   auto addReadStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &destination) {
     // Ideally this should return a valueType or something operate-able so the user knows what is the return type?
 
+    // NOTE: Source will always be DS-attribute, and destination will be a temporary variable always.
     if (!(this->builder->hasAttribute(attribute))) {
       throw dcds::exceptions::dcds_dynamic_exception("Attribute not registered in the data structure");
     }
@@ -194,6 +183,8 @@ class FunctionBuilder {
   }
 
   auto addUpdateStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &source) {
+    // NOTE: Destination will always be DS-attribute, and source can be either temporary variable or function argument.
+
     if (!(this->builder->hasAttribute(attribute))) {
       throw dcds::exceptions::dcds_dynamic_exception("Attribute not registered in the data structure");
     }
@@ -202,7 +193,10 @@ class FunctionBuilder {
       throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced source variable referenced: " +
                                                      source);
     }
-    auto s = std::make_shared<StatementBuilder>(dcds::statementType::UPDATE, attribute->name, source);
+
+    auto sourceType = temp_variables.contains(source) ? VAR_SOURCE_TYPE::TEMPORARY_VARIABLE : FUNCTION_ARGUMENT;
+
+    auto s = std::make_shared<UpdateStatementBuilder>(dcds::statementType::UPDATE, attribute->name, source, sourceType);
     statements.push_back(s);
     return s;
   }
@@ -223,6 +217,12 @@ class FunctionBuilder {
     return rs;
   }
 
+  auto addReturnVoidStatement() {
+    auto rs = std::make_shared<StatementBuilder>(dcds::statementType::YIELD, "", "");
+    statements.push_back(rs);
+    return rs;
+  }
+
   //  auto addInsertStatement(){
   //    // what type of insert? insert cannot happen i think, only construct can happen which will call insert.
   //  }
@@ -236,9 +236,24 @@ class FunctionBuilder {
     LOG(INFO) << "\t# of statements: " << statements.size();
   }
 
-  auto isAlwaysInline() { return _is_always_inline; }
+  [[nodiscard]] auto isAlwaysInline() const { return _is_always_inline; }
 
   void setAlwaysInline() { _is_always_inline = true; }
+
+ private:
+  void isValidVarAddition(const std::string &name) {
+    if (this->hasArgument(name)) {
+      throw dcds::exceptions::dcds_dynamic_exception("Argument with the same name already exists: " + name);
+    }
+
+    if (this->temp_variables.contains(name)) {
+      throw dcds::exceptions::dcds_dynamic_exception("Temporary variable with the name same already exists: " + name);
+    }
+
+    if ((this->builder->hasAttribute(name))) {
+      throw dcds::exceptions::dcds_dynamic_exception("Data structure attribute with same name already exists: " + name);
+    }
+  }
 
  private:
   dcds::Builder *builder;  // convert to shared_ptr
@@ -247,7 +262,7 @@ class FunctionBuilder {
   dcds::valueType returnValueType;
   std::vector<std::pair<std::string, dcds::valueType>> function_arguments;
 
-  std::unordered_map<std::string, std::tuple<dcds::valueType, void *>> temp_variables;
+  std::unordered_map<std::string, std::pair<dcds::valueType, std::any>> temp_variables;
 
   std::deque<std::shared_ptr<StatementBuilder>> statements;
 

@@ -10,8 +10,7 @@
 #include <dcds/builder/statement.hpp>
 #include <dcds/builder/storage.hpp>
 // #include <dcds/codegen/codegen.hpp>
-#include <dcds/common/types.hpp>
-#include <dcds/context/DCDSContext.hpp>
+
 #include <deque>
 #include <iostream>
 #include <map>
@@ -22,6 +21,8 @@
 #include <vector>
 
 #include "dcds/common/exceptions/exception.hpp"
+#include "dcds/common/types.hpp"
+#include "dcds/context/DCDSContext.hpp"
 
 namespace dcds {
 
@@ -29,6 +30,7 @@ namespace dcds {
 class FunctionBuilder;
 class CodegenV2;
 class LLVMCodegen;
+class JitContainer;
 
 /// DCDS Frontend class
 class Builder {
@@ -110,11 +112,15 @@ class Builder {
   /// \param attribute_name    Name of the attribute to be returned
   /// \return                  DCDS attributes representation
   auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
+  auto getAttributeIndex(const std::string& attribute_name) {
+    assert(attributes.contains(attribute_name) && "how come index for un-registered attribute");
+    return std::distance(std::begin(attributes), attributes.find(attribute_name));
+  }
 
   ///
   /// \param name       Name of the attribute to be added to the data structure
   /// \param attrType   Type of the attribute to be added to the data structure
-  auto addAttribute(const std::string& name, dcds::valueType attrType, std::any default_value) {
+  auto addAttribute(const std::string& name, dcds::valueType attrType, const std::any& default_value) {
     auto pt = std::make_shared<dcds::SimpleAttribute>(name, attrType, default_value);
     attributes.emplace(name, pt);
     return pt;
@@ -260,15 +266,16 @@ class Builder {
     return 0;
   }
 
-  // TODO: Devise a generic method to store and provide JITed Data Structure functions from this layer itself. Ideally,
-  // the user should not be dealing with dcds::Visitor directly.
-
   // CODEGEN
  public:
   void build();
+  JitContainer* createInstance();
 
  private:
   std::shared_ptr<CodegenV2> codegen_engine;
+
+ private:
+  bool is_jit_generated = false;
 };
 
 }  // namespace dcds

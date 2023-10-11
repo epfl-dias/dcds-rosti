@@ -33,8 +33,8 @@
 // TransactionTable
 namespace dcds::txn {
 
-//using txn_ptr_t = std::shared_ptr<Txn>;
-using txn_ptr_t = Txn*;
+// using txn_ptr_t = std::shared_ptr<Txn>;
+using txn_ptr_t = Txn *;
 
 class TransactionManager {
  public:

@@ -30,6 +30,10 @@
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <iostream>
+
+#include "dcds/builder/attribute.hpp"
+
 namespace dcds::llvmutil {
 template <typename ReturnType, typename... Arguments>
 class function_ref {
@@ -107,7 +111,7 @@ static int64_t findInMapOfVectors(auto map, std::string elem) {
   return static_cast<int64_t>(-1);
 }
 
-static auto attrTypeMatching(std::shared_ptr<dcds::SimpleAttribute> attr,
+static auto attrTypeMatching(std::shared_ptr<::dcds::SimpleAttribute> attr,
                              std::unique_ptr<llvm::LLVMContext> &theLLVMContext) {
   int64_t val = 0;
   if (std::holds_alternative<int64_t>(attr->initVal))

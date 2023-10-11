@@ -21,6 +21,11 @@
 
 #include "dcds/codegen/llvm-codegen/functions.hpp"
 
+#include "dcds/exporter/jit-container.hpp"
+#include "dcds/storage/table-registry.hpp"
+#include "dcds/transaction/transaction-manager.hpp"
+#include "dcds/transaction/transaction-namespaces.hpp"
+
 int printc(char* X) {
   printf("[printc:] Generated code -- char read: %c\n", X[0]);
   return 0;
@@ -30,6 +35,10 @@ int prints(char* X) {
   printf("[prints:] Generated code -- string read: %s\n", X);
   return 0;
 }
+
+void printPtr(void* X) { LOG(INFO) << "[prints:] Generated code -- ptr read: " << X; }
+
+void printUInt64(uint64_t X) { LOG(INFO) << "[prints:] Generated code -- uint64_t read: " << X; }
 
 void* getTableRegistry() {
   auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
@@ -62,7 +71,6 @@ void* c4(char* attributeNames) {
 
 void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], char* attributeNames[],
                            int num_attributes) {
-
   static std::mutex create_table_m;
 
   // create a static lock here so that everything is safer.
@@ -72,26 +80,25 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   LOG(INFO) << "[createTablesInternal]: num_attributes: " << num_attributes;
   LOG(INFO) << "[createTablesInternal]: table_name: " << table_name;
   for (auto i = 0; i < num_attributes; i++) {
-    LOG(INFO) << "[createTablesInternal]: attributeTypes["<<i<<"]: " << attributeTypes[i];
+    LOG(INFO) << "[createTablesInternal]: attributeTypes[" << i << "]: " << attributeTypes[i];
   }
 
   LOG(INFO) << reinterpret_cast<void*>(attributeNames);
-  auto *x = reinterpret_cast<void*>(attributeNames);
+  auto* x = reinterpret_cast<void*>(attributeNames);
   LOG(INFO) << reinterpret_cast<char*>(x);
-  LOG(INFO) << reinterpret_cast<char*>(x)+5;
+  LOG(INFO) << reinterpret_cast<char*>(x) + 5;
 
   // HACK: as we are getting pointer to first character of first attribute instead of ptr.
-  auto *startPtr = reinterpret_cast<char*>(x);;
+  auto* startPtr = reinterpret_cast<char*>(x);
+
   std::vector<std::string> actual_attr_names;
   actual_attr_names.reserve(num_attributes);
   for (auto i = 0; i < num_attributes; i++) {
     auto sln = strlen(startPtr);
-    LOG(INFO) << "[createTablesInternal]: attributeNames["<<i<<"]: " << startPtr;
+    LOG(INFO) << "[createTablesInternal]: attributeNames[" << i << "]: " << startPtr;
     actual_attr_names.emplace_back(startPtr);
-    startPtr += sln+1;
+    startPtr += sln + 1;
   }
-
-
 
   for (auto i = 0; i < num_attributes; i++) {
     auto type = attributeTypes[i];
@@ -108,13 +115,12 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
     columns.emplace_back(name, type, sizeVar);
   }
 
-
   // CRITICAL SECTION: so that if two DS instances are getting initialized together,
   // we don't create the same table twice.
-  dcds::storage::Table *ret_table_ptr = nullptr;
+  dcds::storage::Table* ret_table_ptr;
   {
     std::unique_lock<std::mutex> lk(create_table_m);
-    if(tableRegistry.exists(table_name)){
+    if (tableRegistry.exists(table_name)) {
       auto tableSharedPtr = tableRegistry.getTable(table_name);
       ret_table_ptr = tableSharedPtr.get();
     } else {
@@ -124,7 +130,6 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
 
     assert(ret_table_ptr);
   }
-
 
   LOG(INFO) << "[createTablesInternal] DONE: " << ret_table_ptr;
   return ret_table_ptr;
@@ -137,7 +142,7 @@ void* getTxnManager(const char* txn_namespace) {
   return x.get();
 }
 
-void* getTable(char* table_name) {
+void* getTable(const char* table_name) {
   auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
   return tableRegistry.getTable(table_name).get();
 }
@@ -150,31 +155,77 @@ void* beginTxn(void* txnManager) {
 }
 
 bool commitTxn(void* txnManager, void* txnPtr) {
-  LOG(INFO) << "commitTxn: args:" << txnManager << " | " << txnPtr;
-  auto x = static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
-  LOG(INFO) << "commitTxn: " << x ;
+  LOG(INFO) << "commitTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
+  auto x =
+      static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
+  LOG(INFO) << "commitTxn: " << x;
   return x;
 }
 
 uintptr_t insertMainRecord(void* table, void* txn, void* data) {
-  LOG(INFO) << "insertMainRecord: args:" << table << " | " << txn << " | " << data;
+  LOG(INFO) << "insertMainRecord: args: " << table << " | " << txn << " | " << data;
 
   struct __attribute__((packed)) test_st {
-    uint8_t * next;
+    uint8_t* next;
     uint64_t payload;
   };
-
-  test_st *s = reinterpret_cast<test_st *>(data);
-
-  LOG(INFO) << "value1: " << s->next;
-  LOG(INFO) << "value2: " << s->payload;
-
-  LOG(INFO) << "0.0: " << &(s->next);
-  LOG(INFO) << "0: " << &(s->payload);
-  LOG(INFO) << "1: " << reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(data)+sizeof(void*));
-
 
   auto x = static_cast<dcds::storage::Table*>(table)->insertRecord(static_cast<dcds::txn::Txn*>(txn), data);
   LOG(INFO) << "insertMainRecord: " << x.getBase();
   return x.getBase();
+}
+
+void* createDsContainer(void* txnManager, void* storageTable, uintptr_t data) {
+  return dcds::JitContainer::create(txnManager, storageTable, data);
+}
+
+void table_read_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txnPtr, void* dst,
+                          size_t attributeIdx) {
+  auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  auto storageTable = reinterpret_cast<dcds::storage::Table*>(_storageTable);
+  auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
+
+  // required args:
+  // - mainRecord,
+  // - table,
+  // - txn,
+  // - txnManager also? I don't think so but take it optionally
+  // -dst
+  // -attributeIdx (what about reading it all?)(does our attribute index and ordering in struct matches?)
+
+  //  void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx);
+  LOG(INFO) << "getAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
+  storageTable->getAttribute(*txn, mainRecord.operator->(), dst, attributeIdx);
+
+  // with-latch:
+  //  mainRecord->readWithLatch([&](dcds::storage::record_metadata_t* rc) {
+  //    storageTable->getAttribute(*txn, rc, dst, attributeIdx);
+  //  });
+}
+
+void table_write_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txnPtr, void* src,
+                           uint attributeIdx) {
+  auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  auto storageTable = reinterpret_cast<dcds::storage::Table*>(_storageTable);
+  auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
+
+  // required args:
+  // - mainRecord,
+  // - table,
+  // - txn,
+  // - txnManager also? I don't think so but take it optionally
+  // -dst
+  // -attributeIdx (what about reading it all?)(does our attribute index and ordering in struct matches?)
+
+  //  void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value, uint attribute_idx);
+  LOG(INFO) << "updateAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
+  LOG(INFO) << "src val: " << *(reinterpret_cast<uint64_t*>(src));
+  storageTable->updateAttribute(*txn, mainRecord.operator->(), src, attributeIdx);
+
+  // with-latch:
+  //  mainRecord->writeWithLatch([&](dcds::storage::record_metadata_t* dsRc) {
+  //    dsTable->updateAttribute(*txn, dsRc, writeVariable, attributeIndex);
+  //  });
 }

@@ -8,6 +8,7 @@ set(dcds_cxx
         lib/builder/storage.cpp
 
         # Codegen
+        lib/codegen/codegen-v2.cpp
         lib/codegen/llvm-codegen/llvm-codegen.cpp
         lib/codegen/llvm-codegen/llvm-context.cpp
         lib/codegen/llvm-codegen/llvm-jit.cpp

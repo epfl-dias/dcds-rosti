@@ -106,10 +106,17 @@ class LLVMCodegenContext {
   [[nodiscard]] llvm::ConstantInt *createInt64(size_t val) const;
   [[nodiscard]] llvm::ConstantInt *createInt64(int64_t val) const;
   [[nodiscard]] llvm::ConstantInt *createSizeT(size_t val) const;
+  [[nodiscard]] llvm::ConstantInt *createUintptr(uintptr_t val) const;
   [[nodiscard]] llvm::ConstantInt *createTrue() const;
   [[nodiscard]] llvm::ConstantInt *createFalse() const;
   [[nodiscard]] llvm::IntegerType *createSizeType() const;
   [[nodiscard]] llvm::Value *createStringConstant(const std::string &value, const std::string &var_name) const;
+
+  llvm::StructType *getVaListStructType();
+  llvm::Value *createVaListStart();
+  void createVaListEnd(llvm::Value *va_list_ptr);
+  llvm::Value *getVAArg(llvm::Value *va_list_ptr, llvm::Type *type);
+  std::vector<llvm::Value *> getVAArgs(llvm::Value *va_list_ptr, std::vector<llvm::Type *> types);
 
   virtual size_t getSizeOf(llvm::Type *type) const;
   virtual size_t getSizeOf(llvm::Value *val) const;
@@ -167,6 +174,8 @@ class LLVMCodegenContext {
 
   /*virtual*/ llvm::Value *gen_call(llvm::Function *func, std::initializer_list<llvm::Value *> args);
 
+  /*virtual*/ llvm::Value *gen_call(llvm::Function *func, std::vector<llvm::Value *> args);
+
   template <typename, typename = void>
   static constexpr bool is_type_complete_v = false;
 
@@ -221,6 +230,9 @@ class LLVMCodegenContext {
 
  protected:
   std::map<std::string, llvm::Function *> availableFunctions;
+
+ private:
+  llvm::StructType *variadicArgs_vaList_struct_t = nullptr;
 };
 
 #endif  // DCDS_LLVM_CONTEXT_HPP

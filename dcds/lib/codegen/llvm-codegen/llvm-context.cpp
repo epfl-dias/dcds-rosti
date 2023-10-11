@@ -61,6 +61,12 @@ void LLVMCodegenContext::registerAllFunctions() {
   // int prints(char *X);
   registerFunction("prints", int32_type, {char_ptr_type});
 
+  // void printPtr(void* X);
+  registerFunction("printPtr", void_type, {void_ptr_type});
+
+  // void printUInt64(uint64_t* X);
+  registerFunction("printUInt64", void_type, {int64_type});
+
   //  void* createTablesInternal(char* table_name, const dcds::valueType attributeTypes[], char* attributeNames[],
   //                             int num_attributes)
 
@@ -164,6 +170,52 @@ llvm::Value *LLVMCodegenContext::createStringConstant(const std::string &value, 
   //  return allocaString;
 }
 
+llvm::StructType *LLVMCodegenContext::getVaListStructType() {
+  if (variadicArgs_vaList_struct_t == nullptr) {
+    static_assert(
+        sizeof(std::va_list) == 24,
+        "variadic list (va_list) is platform dependent, and mismatches current implementation of x86_64 only.");
+    // NOTE: the other one should be merely a ptr in a struct, but not sure until experiment on such a machine.
+    //  reference: https://llvm.org/docs/LangRef.html#int-varargs
+
+    auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
+    auto i32Type = IntegerType::getInt32Ty(getLLVMContext());
+    // auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
+
+    variadicArgs_vaList_struct_t =
+        StructType::create(getLLVMContext(), {i32Type, i32Type, ptrType, ptrType}, "struct.va_list", false);
+  }
+
+  return variadicArgs_vaList_struct_t;
+}
+
+llvm::Value *LLVMCodegenContext::createVaListStart() {
+  llvm::AllocaInst *structAlloca =
+      getBuilder()->CreateAlloca(this->getVaListStructType(), ConstantInt::get(getLLVMContext(), APInt(32, 1)));
+  auto *ValuePtr = getBuilder()->CreateBitOrPointerCast(structAlloca, IntegerType::getInt8PtrTy(getLLVMContext()));
+  llvm::Function *vaStartFunc = llvm::Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::vastart);
+  getBuilder()->CreateCall(vaStartFunc, {ValuePtr});
+  return ValuePtr;
+}
+
+void LLVMCodegenContext::createVaListEnd(llvm::Value *va_list_ptr) {
+  llvm::Function *vaEndFunc = llvm::Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::vaend);
+  getBuilder()->CreateCall(vaEndFunc, {va_list_ptr});
+}
+
+llvm::Value *LLVMCodegenContext::getVAArg(llvm::Value *va_list_ptr, llvm::Type *type) {
+  return getBuilder()->CreateVAArg(va_list_ptr, type);
+}
+
+std::vector<llvm::Value *> LLVMCodegenContext::getVAArgs(llvm::Value *va_list_ptr, std::vector<llvm::Type *> types) {
+  std::vector<llvm::Value *> ret;
+  const auto builder = getBuilder();
+  for (const auto &t : types) {
+    ret.push_back(builder->CreateVAArg(va_list_ptr, t));
+  }
+  return ret;
+}
+
 Value *LLVMCodegenContext::CastPtrToLlvmPtr(PointerType *type, const void *ptr) const {
   Constant *const_int = createInt64((uint64_t)ptr);
   Value *llvmPtr = ConstantExpr::getIntToPtr(const_int, type);
@@ -201,6 +253,10 @@ ConstantInt *LLVMCodegenContext::createInt64(size_t val) const {
 }
 
 ConstantInt *LLVMCodegenContext::createInt64(int64_t val) const {
+  return ConstantInt::get(getLLVMContext(), APInt(64, val));
+}
+
+ConstantInt *LLVMCodegenContext::createUintptr(uintptr_t val) const {
   return ConstantInt::get(getLLVMContext(), APInt(64, val));
 }
 
@@ -371,6 +427,10 @@ llvm::Function *LLVMCodegenContext::getFunction(const std::string &funcName) con
 }
 
 llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::initializer_list<llvm::Value *> args) {
+  return getBuilder()->CreateCall(f, args);
+}
+
+llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::vector<llvm::Value *> args) {
   return getBuilder()->CreateCall(f, args);
 }
 
