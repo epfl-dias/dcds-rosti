@@ -113,7 +113,12 @@ void Builder::build() {
     throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
   }
 
-  // TO BE FIXED LATER
+  LOG(INFO) << "Generating " << this->getName() << " data structure";
+  LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
+
+  // FIXME: for composed types, this should cascade also.
+
+  // FIXME:
   //  if(!codegen_engine){
   //    codegen_engine = context->getCodegenEngine();
   //  }

@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "dcds/builder/attribute.hpp"
+#include "dcds/builder/hints/builder-hints.hpp"
 #include "dcds/builder/statement.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
@@ -172,27 +173,37 @@ class Builder {
     return registered_subtypes[name];
   }
 
+  // CODEGEN
+ public:
+  void build();
+  JitContainer* createInstance();
+
+  void addHint(hints::BuilderHints hint) {
+    switch (hint) {
+      case hints::SINGLE_THREADED:
+        is_multi_threaded = false;
+        break;
+      case hints::MULTI_THREADED:
+        is_multi_threaded = true;
+        break;
+    }
+  }
+
+ private:
+  std::shared_ptr<DCDSContext> context;
+  const std::string dataStructureName;
+
  private:
   std::map<std::string, std::shared_ptr<SimpleAttribute>> attributes;
   std::unordered_map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   std::map<std::string, std::shared_ptr<Builder>> registered_subtypes;
 
  private:
-  /// DCDS context for the builder
-  std::shared_ptr<DCDSContext> context;
-  /// Name of the data structure for this builder
-  const std::string dataStructureName;
-
-  // CODEGEN
- public:
-  void build();
-  JitContainer* createInstance();
-
- private:
+  bool is_jit_generated = false;
   std::shared_ptr<Codegen> codegen_engine;
 
  private:
-  bool is_jit_generated = false;
+  bool is_multi_threaded = true;
 };
 
 }  // namespace dcds

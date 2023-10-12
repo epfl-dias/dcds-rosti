@@ -235,11 +235,19 @@ void LLVMCodegen::buildOneFunction(std::shared_ptr<FunctionBuilder> &fb) {
   auto txnManager = fn_outer->getArg(0);
   auto storageTable = fn_outer->getArg(1);
   auto mainRecord = fn_outer->getArg(2);
-  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_outer->getArg(0)});
+  Value *txnPtr;
+
+  if (builder.is_multi_threaded) {
+    txnPtr = this->gen_call(beginTxn, {fn_outer->getArg(0)});
+  } else {
+    // FIXME: possible issue because in storage, if it takes txn by reference, or even if it tries to do something, it
+    //  may cause issue. we need to either propagate this to storage also, or have storage functions oblivious to txn.
+    txnPtr = llvm::ConstantPointerNull::get(ptrType);
+  }
 
   // create call to inner_function here.
   // start from 3, as 0-2 are already taken.
-  std::vector<llvm::Value *> inner_args{txnManager, storageTable, mainRecord, fn_res_beginTxn};
+  std::vector<llvm::Value *> inner_args{txnManager, storageTable, mainRecord, txnPtr};
   for (auto i = 3; i < fn_outer->arg_size(); i++) {
     inner_args.push_back(fn_outer->getArg(i));
   }
@@ -247,7 +255,9 @@ void LLVMCodegen::buildOneFunction(std::shared_ptr<FunctionBuilder> &fb) {
   auto inner_ret = getBuilder()->CreateCall(fn_inner, inner_args);
 
   // ###### Commit Txn
-  this->gen_call(commitTxn, {txnManager, fn_res_beginTxn});
+  if (builder.is_multi_threaded) {
+    this->gen_call(commitTxn, {txnManager, txnPtr});
+  }
 
   if (fn_inner->getReturnType()->getTypeID() == llvm::Type::getVoidTy(getLLVMContext())->getTypeID()) {
     getBuilder()->CreateRetVoid();
@@ -268,9 +278,9 @@ void LLVMCodegen::buildOneFunction(std::shared_ptr<FunctionBuilder> &fb) {
   this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
 
   // Optimizations:
-  //    easy: if an attribute is only accessed in a single function across DS, then you dont need CC either on that one.
-  //    hard: if the group-sequence of attribute is common across all functions,
-  //    then encapsulate them as a single CC-variable.
+  //   easy: if an attribute is only accessed in a single function across DS, then you don't need CC either on that one.
+  //   hard: if the group-sequence of attribute is common across all functions,
+  //   then encapsulate them as a single CC-variable.
 
   // rw_set = fb->getReadWriteSet();
   // CcBuilder::injectCC(rw_set)
@@ -403,22 +413,6 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
                                                   const std::string &name_prefix, const std::string &name_suffix) {
   std::vector<llvm::Type *> argTypes(pre_args);
   llvm::Type *returnType;
-
-  // NOTE: hardcode first argument: to be the mainStructPtr (pseudo this)
-  //  argTypes.push_back(PointerType::get(dsContainerStructType, 0));
-
-  //  struct dcds_jit_container_t {
-  //    // txnManager, table, mainRecord
-  //    dcds::txn::TransactionManager *txnManager;
-  //    dcds::storage::Table *storageTable;
-  //    uintptr_t mainRecord;  // can it be directly record_reference_t?
-  //  };
-  // Happens in pre-args now.
-  //  auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
-  //  auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
-  //  argTypes.push_back(ptrType);      // txnManager*
-  //  argTypes.push_back(ptrType);      // table*
-  //  argTypes.push_back(uintPtrType);  // mainRecord
 
   for (const auto &arg : fb->function_arguments) {
     argTypes.push_back(toLLVMType(getLLVMContext(), arg.second));

@@ -117,12 +117,14 @@ static void generateLinkedList() {
   // TODO: how do we ensure the initial value provide is legal for the given type.
   builder.addAttribute("head", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
 
-  //builder.codegen();
+  // builder.codegen();
 }
 
 static void generateNode() {
   auto builder = std::make_shared<dcds::Builder>("LL_NODE_TEST");
   generateLinkedListNode(builder);
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
   LOG(INFO) << "generateNode -- build-before";
   builder->build();
   LOG(INFO) << "generateNode -- build-after";
