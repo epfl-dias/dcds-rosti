@@ -117,7 +117,7 @@ static void generateLinkedList() {
   // TODO: how do we ensure the initial value provide is legal for the given type.
   builder.addAttribute("head", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
 
-  builder.codegen();
+  //builder.codegen();
 }
 
 static void generateNode() {

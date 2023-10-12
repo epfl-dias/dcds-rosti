@@ -19,49 +19,8 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-//
-// Created by prathamesh on 4/8/23.
-//
+#include "dcds/codegen/codegen.hpp"
 
-#include <dcds/builder/storage.hpp>
-#include <dcds/codegen/codegen.hpp>
+using namespace dcds;
 
-extern "C" {
-void read_data_structure_attribute(void *dsRecord, int64_t attributeIndex, void *readVariable, int64_t attributeTy = -1,
-                                   void *txnPtr = nullptr) {
-  auto dsRecordContainer = reinterpret_cast<dcds::StorageLayer *>(dsRecord);
-
-  if (attributeTy == 0) {
-    auto readVariableContainer = reinterpret_cast<int64_t *>(readVariable);
-    dsRecordContainer->read(readVariableContainer, attributeIndex, txnPtr);
-  } else if (attributeTy == 1) {
-    // read void ptr
-    dsRecordContainer->read(readVariable, attributeIndex, txnPtr);
-  }
-}
-
-void write_data_structure_attribute(void *dsRecord, int64_t attributeIndex, void *writeVariable,
-                                    int64_t attributeTy = -1, void *txnPtr = nullptr) {
-  auto dsRecordContainer = reinterpret_cast<dcds::StorageLayer *>(dsRecord);
-
-  if (attributeTy == 0) {
-    auto writeVariableContainer = reinterpret_cast<int64_t *>(writeVariable);
-    dsRecordContainer->write(writeVariableContainer, attributeIndex, txnPtr);
-  } else if (attributeTy == 1) {
-    // write void ptr
-    dsRecordContainer->write(&writeVariable, attributeIndex, txnPtr);
-  }
-}
-
-void *begin_txn(void *dsRecord) {
-  auto dsRecordContainer = reinterpret_cast<dcds::StorageLayer *>(dsRecord);
-
-  return dsRecordContainer->beginTxn();
-}
-
-void end_txn(void *dsRecord, void *txn) {
-  auto dsRecordContainer = reinterpret_cast<dcds::StorageLayer *>(dsRecord);
-
-  dsRecordContainer->commitTxn(txn);
-}
-}
+Codegen::~Codegen() { LOG(INFO) << "Destructing ~CodegenV2"; }

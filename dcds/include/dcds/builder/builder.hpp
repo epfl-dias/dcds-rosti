@@ -1,16 +1,28 @@
-//
-// Created by Aunn Raza on 18.04.23.
-//
+/*
+                              Copyright (c) 2023.
+          Data Intensive Applications and Systems Laboratory (DIAS)
+                  École Polytechnique Fédérale de Lausanne
+
+                              All Rights Reserved.
+
+      Permission to use, copy, modify and distribute this software and
+      its documentation is hereby granted, provided that both the
+      copyright notice and this permission notice appear in all copies of
+      the software, derivative works or modified versions, and any
+      portions thereof, and that both notices appear in supporting
+      documentation.
+
+      This code is distributed in the hope that it will be useful, but
+      WITHOUT ANY WARRANTY; without even the implied warranty of
+      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS
+      DISCLAIM ANY LIABILITY OF ANY KIND FOR ANY DAMAGES WHATSOEVER
+      RESULTING FROM THE USE OF THIS SOFTWARE.
+ */
 
 #ifndef DCDS_BUILDER_HPP
 #define DCDS_BUILDER_HPP
 
 #include <cassert>
-#include <dcds/builder/attribute.hpp>
-#include <dcds/builder/statement.hpp>
-#include <dcds/builder/storage.hpp>
-// #include <dcds/codegen/codegen.hpp>
-
 #include <deque>
 #include <iostream>
 #include <map>
@@ -20,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include "dcds/builder/attribute.hpp"
+#include "dcds/builder/statement.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/context/DCDSContext.hpp"
@@ -28,15 +42,13 @@ namespace dcds {
 
 // forward declaration
 class FunctionBuilder;
-class CodegenV2;
+class Codegen;
 class LLVMCodegen;
 class JitContainer;
 
 /// DCDS Frontend class
 class Builder {
-  friend class Visitor;
-
-  friend class CodegenV2;
+  friend class Codegen;
   friend class LLVMCodegen;
 
  public:
@@ -103,9 +115,6 @@ class Builder {
   //  auto getFunction(std::string functionName) { return *functions[functionName]; }
 
  private:
-  /// Map function names with their representation in DCDS
-  std::unordered_map<std::string, std::shared_ptr<FunctionBuilder>> functions;
-
   // Utilities to include attributes to the data structure
  public:
   ///
@@ -125,9 +134,7 @@ class Builder {
     attributes.emplace(name, pt);
     return pt;
   }
-
   bool hasAttribute(const std::string& name) { return attributes.contains(name); }
-
   bool hasAttribute(const std::shared_ptr<dcds::SimpleAttribute>& attribute) {
     return this->hasAttribute(attribute->name);
   }
@@ -148,7 +155,6 @@ class Builder {
     registered_subtypes.emplace(name, nt);
     return nt;
   }
-
   std::shared_ptr<Builder> registerType(std::shared_ptr<Builder> other) {
     if (registered_subtypes.contains(other->getName())) {
       throw dcds::exceptions::dcds_dynamic_exception("Type name already exists");
@@ -159,7 +165,6 @@ class Builder {
     registered_subtypes.emplace(nt->getName(), nt);
     return other;
   }
-
   auto getType(const std::string& name) {
     if (!(registered_subtypes.contains(name))) {
       throw dcds::exceptions::dcds_dynamic_exception("Unknown/Unregistered type: " + name);
@@ -168,103 +173,15 @@ class Builder {
   }
 
  private:
-  // Modelling attributes as strict int64_t/void* for now.
-  /// Map attribute names to their representation in DCDS
   std::map<std::string, std::shared_ptr<SimpleAttribute>> attributes;
-
+  std::unordered_map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   std::map<std::string, std::shared_ptr<Builder>> registered_subtypes;
 
- public:
-  ///
-  /// \param condition            DCDS condition for comparison
-  /// \param ifResStatements      Statements in if block
-  /// \param elseResStatements    Statements in else block
-  /// \return                     DCDS statement representation
-  auto createConditionStatement(dcds::ConditionBuilder& condition,
-                                std::vector<std::shared_ptr<StatementBuilder>>& ifResStatements,
-                                std::vector<std::shared_ptr<StatementBuilder>>& elseResStatements) {
-    std::shared_ptr<StatementBuilder> conditionStatementIndicator =
-        std::make_shared<StatementBuilder>(dcds::statementType::CONDITIONAL_STATEMENT, "", "");
-    statementToConditionMap.emplace(conditionStatementIndicator, std::make_shared<ConditionStatementBuilder>(
-                                                                     condition, ifResStatements, elseResStatements));
-
-    return conditionStatementIndicator;
-  }
-
-  ///
-  /// \param functionName    Name of the external function to whom the call must be created
-  /// \param arg1            First argument of the external function
-  /// \param arg2            Second argument of the external function
-  /// \return                DCDS statement representation
-  auto createCallStatement2VoidPtrArgs(std::string functionName, std::string arg1, std::string arg2) {
-    externalCallInfo.emplace(functionName, std::vector<std::string>{arg1, arg2});
-    return std::make_shared<StatementBuilder>(dcds::statementType::CALL, functionName, "");
-  }
-
-  ///
-  /// \param statement       DCDS statement which is to be added
-  /// \param function        DCDS function to whom the statement must be added
-  //  void addStatement(const std::shared_ptr<StatementBuilder> statement, std::shared_ptr<FunctionBuilder> function) {
-  //    orderedStatements.emplace(
-  //        std::pair<std::shared_ptr<FunctionBuilder>, uint32_t>{function, ++statementOrder[function]}, statement);
-  //  }
-
  private:
-  /// Map functions to their corresponding statements
-  std::map<std::pair<std::shared_ptr<FunctionBuilder>, uint32_t>, std::shared_ptr<StatementBuilder>> orderedStatements;
-  /// Map aliased condition statement to actual condition statement and assosciated blocks
-  std::unordered_map<std::shared_ptr<StatementBuilder>, std::shared_ptr<ConditionStatementBuilder>>
-      statementToConditionMap;
-  /// Map statements to assosciated temporary variables which are holding results
-  std::unordered_map<std::shared_ptr<StatementBuilder>, std::string> tempVarsOpResName;
-
-  /// Map external function name to temporary variable names which are to be supplied as arguments
-  std::unordered_map<std::string, std::vector<std::string>> externalCallInfo;
-
-  /// Container used for maintaining statement order inside functions.
-  std::unordered_map<std::shared_ptr<FunctionBuilder>, int64_t> statementOrder;
-
- private:  /// DCDS context for the builder
+  /// DCDS context for the builder
   std::shared_ptr<DCDSContext> context;
   /// Name of the data structure for this builder
   const std::string dataStructureName;
-
- public:
-  ///
-  /// \return Return storage object's pointer specific to the current instance of the data structure
-  auto initializeStorage() {
-    std::shared_ptr<dcds::StorageLayer> storageObject =
-        std::make_shared<dcds::StorageLayer>(dataStructureName + "_ns", this->attributes);
-
-    // Initialize data structure attribute with default value. Can this be done from inside the storage layer
-    // constructor?
-    uint64_t indexVar = 0;
-    for (auto attribute : this->attributes) {
-      auto txnPtr = storageObject->beginTxn();
-      if (std::holds_alternative<int64_t>(attribute.second->initVal))
-        storageObject->write(&std::get<int64_t>(attribute.second->initVal), indexVar, txnPtr);
-      else if (std::holds_alternative<void*>(attribute.second->initVal))
-        storageObject->write(&std::get<void*>(attribute.second->initVal), indexVar, txnPtr);
-      storageObject->commitTxn(txnPtr);
-
-      ++indexVar;
-    }
-
-    return storageObject;
-  }
-
-  ///
-  /// \return Visitor object used during the codegen process
-  auto codegen() {
-    //    std::shared_ptr<dcds::Visitor> visitor = std::make_shared<dcds::Visitor>(
-    //        dataStructureName, functions, attributes, tempVarsInfo, funcArgsInfo, orderedStatements,
-    //        statementToConditionMap, tempVarsOpResName, externalCallInfo);
-    //    visitor->visit();
-    //    visitor->runPasses();
-    //    visitor->build();
-
-    return 0;
-  }
 
   // CODEGEN
  public:
@@ -272,7 +189,7 @@ class Builder {
   JitContainer* createInstance();
 
  private:
-  std::shared_ptr<CodegenV2> codegen_engine;
+  std::shared_ptr<Codegen> codegen_engine;
 
  private:
   bool is_jit_generated = false;

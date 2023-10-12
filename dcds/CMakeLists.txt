@@ -4,11 +4,9 @@ set(dcds_cxx
 
         # Builder
         lib/builder/builder.cpp
-        lib/codegen/codegen.cpp
-        lib/builder/storage.cpp
 
         # Codegen
-        lib/codegen/codegen-v2.cpp
+        lib/codegen/codegen.cpp
         lib/codegen/llvm-codegen/llvm-codegen.cpp
         lib/codegen/llvm-codegen/llvm-context.cpp
         lib/codegen/llvm-codegen/llvm-jit.cpp
@@ -29,7 +27,7 @@ set(dcds_cxx
 
         # Util
         lib/util/profiling.cpp
-        include/dcds/context/DCDSContext.hpp lib/codegen/codegen.cpp include/dcds/builder/storage.hpp lib/builder/storage.cpp)
+)
 
 add_library(dcds SHARED
         ${dcds_cxx}

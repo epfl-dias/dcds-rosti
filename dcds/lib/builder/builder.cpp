@@ -22,7 +22,7 @@
 #include "dcds/builder/builder.hpp"
 
 #include "dcds/builder/function-builder.hpp"
-#include "dcds/codegen/codegen-v2.hpp"
+#include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 #include "dcds/exporter/jit-container.hpp"
 

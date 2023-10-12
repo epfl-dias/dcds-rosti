@@ -22,6 +22,10 @@
 #ifndef DCDS_CONTEXT_HPP
 #define DCDS_CONTEXT_HPP
 
+#include <iostream>
+
+#include "dcds/util/erase-constructor-idioms.hpp"
+
 namespace dcds {
 namespace detail {
 class DCDSContextImpl {
@@ -29,8 +33,8 @@ class DCDSContextImpl {
   explicit DCDSContextImpl(bool enable_multi_threading, bool allow_dangling_functions)
       : enableMultithreading(enable_multi_threading), allowDanglingFunctions(allow_dangling_functions) {}
 
-  bool getMultiThreadingStatus() { return enableMultithreading; }
-  bool getDanglingFunctionsStatus() { return allowDanglingFunctions; }
+  bool getMultiThreadingStatus() const { return enableMultithreading; }
+  bool getDanglingFunctionsStatus() const { return allowDanglingFunctions; }
 
   // Add locking utilities for individual operations here
   // Even add transaction manager and related table stuff here?

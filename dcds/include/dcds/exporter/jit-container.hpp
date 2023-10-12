@@ -22,7 +22,7 @@
 #ifndef DCDS_JIT_CONTAINER_HPP
 #define DCDS_JIT_CONTAINER_HPP
 
-#include "dcds/codegen/codegen-v2.hpp"
+#include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/functions.hpp"
 #include "dcds/storage/table-registry.hpp"
 #include "dcds/transaction/transaction.hpp"
@@ -55,7 +55,7 @@ class JitContainer {
     LOG(INFO) << "mainRecord: " << this->_container->mainRecord;
   }
 
-  void setCodegenEngine(std::shared_ptr<CodegenV2> codegenEngine) { codegen_engine = codegenEngine; }
+  void setCodegenEngine(std::shared_ptr<Codegen> codegenEngine) { codegen_engine = codegenEngine; }
 
  public:
   //  template <typename R, typename... Args>
@@ -67,6 +67,7 @@ class JitContainer {
   std::any op(const std::string &op_name, Args... args) {
     LOG(INFO) << "OP CALLED: " << op_name;
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
+    // FIXME: verify if the number of args is same as the args required for the function.
     switch (fn->returnType) {
       case INTEGER:
       case RECORD_PTR: {
@@ -110,7 +111,7 @@ class JitContainer {
 
  private:
   dcds_jit_container_t *_container;
-  std::shared_ptr<CodegenV2> codegen_engine;
+  std::shared_ptr<Codegen> codegen_engine;
 
   friend class Builder;
   friend void * ::createDsContainer(void *, void *, uintptr_t);

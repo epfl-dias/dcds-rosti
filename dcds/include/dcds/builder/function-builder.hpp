@@ -32,19 +32,15 @@
 #include "dcds/builder/builder.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
 
 namespace dcds {
 
-class CodegenV2;
+class Codegen;
 class LLVMCodegen;
 
 class FunctionBuilder {
   friend class Visitor;
-  friend class CodegenV2;
+  friend class Codegen;
   friend class LLVMCodegen;
 
  public:
@@ -68,7 +64,7 @@ class FunctionBuilder {
   // Function Arguments
   // --------------------------------------
  private:
-  auto findArgument(const std::string &arg) const {
+  [[nodiscard]] auto findArgument(const std::string &arg) const {
     return std::find_if(function_arguments.begin(), function_arguments.end(),
                         [&](const std::pair<std::string, dcds::valueType> &i) { return i.first == arg; });
   }
@@ -78,10 +74,12 @@ class FunctionBuilder {
     isValidVarAddition(name);
     this->function_arguments.emplace_back(name, varType);
   }
-  auto getArguments() const { return function_arguments; }
-  bool hasArguments() const { return !function_arguments.empty(); }
-  bool hasArgument(const std::string &arg) const { return (findArgument(arg) != std::end(function_arguments)); }
-  auto getArgumentIndex(const std::string &arg) const {
+  [[nodiscard]] auto getArguments() const { return function_arguments; }
+  [[nodiscard]] bool hasArguments() const { return !function_arguments.empty(); }
+  [[nodiscard]] bool hasArgument(const std::string &arg) const {
+    return (findArgument(arg) != std::end(function_arguments));
+  }
+  [[nodiscard]] auto getArgumentIndex(const std::string &arg) const {
     assert(hasArgument(arg));
     return std::distance(function_arguments.begin(), findArgument(arg));
   }
@@ -112,59 +110,6 @@ class FunctionBuilder {
     return temp_variables[name].first == varType;
   }
   // --------------------------------------
-
-  ///
-  /// \param theLLVMContext LLVM context from the codegen engine
-  /// \param theLLVMModule  LLVM module from the codegen engine
-  /// \param hasAttr        Flag to check if the data structure has attributes, if it has them, take a void pointer as
-  ///                       first argument
-  /// \return               Generated code for the function signature
-  auto codegenFunctionSignature(std::unique_ptr<llvm::LLVMContext> &theLLVMContext,
-                                std::unique_ptr<llvm::Module> &theLLVMModule, bool hasAttr) {
-    std::vector<llvm::Type *> argTypes;
-    llvm::Type *returnType = llvm::Type::getVoidTy(*theLLVMContext);
-
-    if (hasAttr) argTypes.push_back(llvm::Type::getInt8PtrTy(*theLLVMContext));
-
-    for (const auto &arg : function_arguments) {
-      switch (arg.second) {
-        case INTEGER:
-        case RECORD_PTR: {
-          argTypes.push_back(llvm::Type::getInt64PtrTy(*theLLVMContext));
-          break;
-        }
-
-        case FLOAT:
-        case RECORD_ID:
-        case CHAR:
-        case VOID:
-        default:
-          assert(false && "valueTypeNotSupportedYet");
-          break;
-      }
-    }
-
-    switch (returnValueType) {
-      case INTEGER:
-      case RECORD_PTR: {
-        returnType = llvm::Type::getInt64Ty(*theLLVMContext);
-        break;
-      }
-      case FLOAT:
-      case RECORD_ID:
-      case CHAR:
-      case VOID:
-      default:
-        assert(false && "returnValueTypeNotSupportedYet");
-        break;
-    }
-
-    auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
-    auto fn =
-        llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, _name, theLLVMModule.get());
-
-    return fn;
-  }
 
   auto addReadStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &destination) {
     // Ideally this should return a valueType or something operate-able so the user knows what is the return type?

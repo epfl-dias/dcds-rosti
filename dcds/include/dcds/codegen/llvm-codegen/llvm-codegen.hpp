@@ -55,8 +55,7 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
-#include "dcds/codegen/DCDSJIT.hpp"
-#include "dcds/codegen/codegen-v2.hpp"
+#include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-context.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-jit.hpp"
 #include "dcds/exporter/code-exporter.hpp"
@@ -64,7 +63,7 @@
 namespace dcds {
 using namespace llvm;
 
-class LLVMCodegen : public CodegenV2, public LLVMCodegenContext {
+class LLVMCodegen : public Codegen, public LLVMCodegenContext {
  public:
   explicit LLVMCodegen(Builder &builder);
   ~LLVMCodegen() override {

@@ -22,7 +22,6 @@
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 
 #include <llvm/IR/Instructions.h>
-#include <stdarg.h>
 
 #include "dcds/builder/function-builder.hpp"
 #include "dcds/codegen/llvm-codegen/functions.hpp"
@@ -67,7 +66,7 @@ void LLVMCodegen::initializeLLVMModule(const std::string &name) {
   llvmBuilder = std::make_unique<IRBuilder<>>(*theLLVMContext);
 }
 
-LLVMCodegen::LLVMCodegen(Builder &builder) : CodegenV2(builder), LLVMCodegenContext(builder.getName()) {
+LLVMCodegen::LLVMCodegen(Builder &builder) : Codegen(builder), LLVMCodegenContext(builder.getName()) {
   initializeLLVMModule(builder.getName());
   initializePassManager();
   this->registerAllFunctions();
