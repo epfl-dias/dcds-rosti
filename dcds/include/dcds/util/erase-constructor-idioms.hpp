@@ -46,7 +46,7 @@ class remove_copy_move;
 // class remove_move_assignment;
 
 class remove_copy {
- private:
+ public:
   remove_copy(const remove_copy &) = delete;
   remove_copy &operator=(const remove_copy &) = delete;
 
@@ -57,7 +57,7 @@ class remove_copy {
 };
 
 class remove_move {
- private:
+ public:
   remove_move(remove_move &&) = delete;
   remove_move &operator=(remove_move &&) = delete;
 
@@ -68,7 +68,7 @@ class remove_move {
 };
 
 class remove_copy_move {
- private:
+ public:
   remove_copy_move(const remove_copy_move &) = delete;
   remove_copy_move &operator=(const remove_copy_move &) = delete;
   remove_copy_move(remove_copy_move &&) = delete;

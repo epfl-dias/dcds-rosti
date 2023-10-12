@@ -48,7 +48,7 @@ class LLVMCodegen;
 class JitContainer;
 
 /// DCDS Frontend class
-class Builder {
+class Builder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;
 
@@ -161,9 +161,7 @@ class Builder {
       throw dcds::exceptions::dcds_dynamic_exception("Type name already exists");
     }
 
-    auto nt = std::make_shared<Builder>(*other);
-    nt->context = this->context;
-    registered_subtypes.emplace(nt->getName(), nt);
+    registered_subtypes.emplace(other->getName(), other);
     return other;
   }
   auto getType(const std::string& name) {
@@ -188,6 +186,8 @@ class Builder {
         break;
     }
   }
+
+  std::shared_ptr<Builder> clone(std::string name);
 
  private:
   std::shared_ptr<DCDSContext> context;

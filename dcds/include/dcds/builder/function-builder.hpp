@@ -38,10 +38,10 @@ namespace dcds {
 class Codegen;
 class LLVMCodegen;
 
-class FunctionBuilder {
-  friend class Visitor;
+class FunctionBuilder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;
+  friend class Builder;
 
  public:
   ///
@@ -186,6 +186,17 @@ class FunctionBuilder {
   void setAlwaysInline() { _is_always_inline = true; }
 
  private:
+  std::shared_ptr<FunctionBuilder> cloneShared(dcds::Builder *ds_builder) {
+    auto f = std::make_shared<FunctionBuilder>(ds_builder, this->_name, this->returnValueType);
+    f->function_arguments = this->function_arguments;
+    f->temp_variables = this->temp_variables;
+    for (auto &s : this->statements) {
+      f->statements.emplace_back(std::make_shared<StatementBuilder>(*s));
+    }
+    return f;
+  }
+
+ private:
   void isValidVarAddition(const std::string &name) {
     if (this->hasArgument(name)) {
       throw dcds::exceptions::dcds_dynamic_exception("Argument with the same name already exists: " + name);
@@ -203,12 +214,10 @@ class FunctionBuilder {
  private:
   dcds::Builder *builder;  // convert to shared_ptr
   const std::string _name;
+  const dcds::valueType returnValueType;
 
-  dcds::valueType returnValueType;
   std::vector<std::pair<std::string, dcds::valueType>> function_arguments;
-
   std::unordered_map<std::string, std::pair<dcds::valueType, std::any>> temp_variables;
-
   std::deque<std::shared_ptr<StatementBuilder>> statements;
 
   bool _is_always_inline = false;

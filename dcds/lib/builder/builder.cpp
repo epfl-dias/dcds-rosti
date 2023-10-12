@@ -21,6 +21,8 @@
 
 #include "dcds/builder/builder.hpp"
 
+#include <utility>
+
 #include "dcds/builder/function-builder.hpp"
 #include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
@@ -148,6 +150,24 @@ JitContainer* Builder::createInstance() {
   ins->setCodegenEngine(this->codegen_engine);
 
   return ins;
+}
+
+std::shared_ptr<Builder> Builder::clone(std::string name) {
+  auto tmp = std::make_shared<dcds::Builder>(this->context, std::move(name));
+
+  for (auto& a : attributes) {
+    tmp->attributes.emplace(a.first, std::make_shared<SimpleAttribute>(*(a.second)));
+  }
+
+  for (auto& rt : registered_subtypes) {
+    tmp->registered_subtypes.emplace(rt.first, rt.second);
+  }
+
+  for (auto& f : functions) {
+    tmp->functions.emplace(f.first, f.second->cloneShared(tmp.get()));
+  }
+
+  return tmp;
 }
 
 }  // namespace dcds
