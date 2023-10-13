@@ -77,13 +77,8 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
     LOG(INFO) << "[createTablesInternal]: attributeTypes[" << i << "]: " << attributeTypes[i];
   }
 
-  LOG(INFO) << reinterpret_cast<void*>(attributeNames);
-  auto* x = reinterpret_cast<void*>(attributeNames);
-  LOG(INFO) << reinterpret_cast<char*>(x);
-  LOG(INFO) << reinterpret_cast<char*>(x) + 5;
-
   // HACK: as we are getting pointer to first character of first attribute instead of ptr.
-  auto* startPtr = reinterpret_cast<char*>(x);
+  auto* startPtr = reinterpret_cast<char*>(attributeNames);
 
   std::vector<std::string> actual_attr_names;
   actual_attr_names.reserve(num_attributes);
@@ -137,7 +132,7 @@ void* getTxnManager(const char* txn_namespace) {
 void* getTable(const char* table_name) { return dcds::storage::TableRegistry::getInstance().getTable(table_name); }
 
 void* beginTxn(void* txnManager) {
-  LOG(INFO) << "beginTxn: args:" << txnManager;
+  LOG(INFO) << "beginTxn: args: " << txnManager;
   auto txnPtr = static_cast<dcds::txn::TransactionManager*>(txnManager)->beginTransaction(false);
   LOG(INFO) << "beginTxn ret: " << txnPtr;
   return txnPtr;
@@ -147,7 +142,7 @@ bool commitTxn(void* txnManager, void* txnPtr) {
   LOG(INFO) << "commitTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
   auto x =
       static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
-  LOG(INFO) << "commitTxn: " << x;
+  LOG(INFO) << "commitTxn: ret: " << x;
   return x;
 }
 
@@ -155,8 +150,8 @@ uintptr_t insertMainRecord(void* table, void* txn, void* data) {
   LOG(INFO) << "insertMainRecord: args: " << table << " | " << txn << " | " << data;
 
   auto x = static_cast<dcds::storage::Table*>(table)->insertRecord(static_cast<dcds::txn::Txn*>(txn), data);
-  LOG(INFO) << "insertMainRecord: " << x.getBase();
-  LOG(INFO) << "[insertMainRecord] x.getTable(): " << x.getTable()->name();
+  LOG(INFO) << "insertMainRecord: ret: " << x.getBase();
+  // LOG(INFO) << "[insertMainRecord] x.getTable(): " << x.getTable()->name();
 
   return x.getBase();
 }

@@ -111,7 +111,7 @@ void Builder::generateSetter(const std::string& attribute_name) {
 }
 
 void Builder::build_no_jit() {
-  LOG(INFO) << "Generating " << this->getName() << " data structure";
+  LOG(INFO) << "Generating \"" << this->getName() << "\" data structure";
   LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
 
   // FIXME: for composed types, this should cascade also.

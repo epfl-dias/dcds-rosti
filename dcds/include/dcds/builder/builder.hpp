@@ -71,18 +71,13 @@ class Builder : remove_copy {
   /// \return DCDS context for this builder
   auto getContext() { return context; }
 
-  ///
-  /// \param functionName  Name of the function to be created
-  /// \return              DCDS function representation
-  std::shared_ptr<FunctionBuilder> createFunction(const std::string& functionName);
-
-  ///
-  /// \param functionName  Name of the function to be created
-  /// \param returnType    Return type of the function to be created
-  /// \return              DCDS function representation
-  std::shared_ptr<FunctionBuilder> createFunction(const std::string& functionName, dcds::valueType returnType);
-
-  //  void createCallStatement(tmpHead, "set_next", newNode)
+  std::shared_ptr<FunctionBuilder> createFunction(const std::string& function_name);
+  std::shared_ptr<FunctionBuilder> createFunction(const std::string& function_name, dcds::valueType return_type);
+  bool hasFunction(const std::string& function_name) { return this->functions.contains(function_name); }
+  auto getFunction(const std::string& function_name) {
+    assert(hasFunction(function_name));
+    return this->functions[function_name];
+  }
 
   ///
   /// \param functionName  Name of the function to be created

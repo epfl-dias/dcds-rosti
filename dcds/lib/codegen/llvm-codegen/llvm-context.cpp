@@ -362,7 +362,7 @@ void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm
   //  auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
   //  auto fn =llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, fb->_name,
   //  theLLVMModule.get()); fn->addFnAttr(llvm::Attribute::AlwaysInline);
-  LOG(INFO) << "registerFunction: ver2: " << function_name;
+  LOG(INFO) << "[LLVMCodegenContext] registerFunction: ver2: " << function_name;
 
   assert(returnType);
 
@@ -381,7 +381,7 @@ void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm
 
 void LLVMCodegenContext::registerFunction(const std::string &func, std::initializer_list<llvm::Value *> args,
                                           llvm::Type *ret) {
-  LOG(INFO) << "registerFunction: ver1: " << func;
+  LOG(INFO) << "[LLVMCodegenContext] registerFunction: ver1: " << func;
 
   std::vector<llvm::Type *> v;
   v.reserve(args.size());
@@ -405,11 +405,11 @@ llvm::Function *LLVMCodegenContext::getFunction(const std::string &funcName) con
   return it->second;
 }
 
-llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::initializer_list<llvm::Value *> args) {
+llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::initializer_list<llvm::Value *> args) const {
   return getBuilder()->CreateCall(f, args);
 }
 
-llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::vector<llvm::Value *> args) {
+llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, const std::vector<llvm::Value *> &args) const {
   return getBuilder()->CreateCall(f, args);
 }
 
@@ -419,12 +419,11 @@ llvm::Value *LLVMCodegenContext::gen_call(const std::string &func, std::initiali
   try {
     f = getFunction(func);
     assert(f);
-    LOG(INFO) << "Found function: " << func;
-    for (const auto &arg : args) {
-      LOG(INFO) << "argDump[1]";
-      arg->getType()->dump();
-    }
-
+    //    LOG(INFO) << "Found function: " << func;
+    //    for (const auto &arg : args) {
+    //      LOG(INFO) << "argDump[1]";
+    //      arg->getType()->dump();
+    //    }
     assert(!ret || ret == f->getReturnType());
   } catch (std::runtime_error &) {
     LOG(INFO) << "[LLVMCodegenContext][gen_call] "
@@ -434,8 +433,8 @@ llvm::Value *LLVMCodegenContext::gen_call(const std::string &func, std::initiali
     v.reserve(args.size());
     for (const auto &arg : args) {
       v.emplace_back(arg->getType());
-      LOG(INFO) << "argDump[2]";
-      arg->getType()->dump();
+      //      LOG(INFO) << "argDump[2]";
+      //      arg->getType()->dump();
     }
     auto FT = llvm::FunctionType::get(ret, v, false);
 

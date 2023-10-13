@@ -57,21 +57,9 @@ static void addFront(std::shared_ptr<dcds::Builder>& builder) {
   auto fn = builder->createFunction("front", dcds::valueType::INTEGER);
   fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
   fn->addReadStatement(builder->getAttribute("head"), "tmp_head");
-
-  // I have the head (RECORD_PTR), of the type NODE (i know if because i coded it, somewhere in the code i can find it
-  // during codegen also, thats not the issue) How to call an operation on the sub-type, as the top-level JIT exports
-  // (available functions) for top-level DS. we have function in symbol table though.
-  auto nodeType = builder->getRegisteredType("LL_NODE");
-
   fn->addLogStatement("log from inside addFront");
   fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
-  fn->addMethodCall(nodeType, "tmp_head", "get_payload", "tmp_payload_ret");
-  // fn->addFunctionCall("tmp_head", "get_payload", "tmp_payload_ret");
-  //  (reference_variable of record_ptr, function_name, ...args)
-  //  (reference_variable of record_ptr, function_name, returnValueDestinationTemporaryVariable,
-  //  ...args{ofTypeTemporaryVariable/FuncARg})
-
-  // INVALID: as we want to return integer, but for compile sake, putting tmp_head:RECORD_PTR
+  fn->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
   fn->addReturnStatement("tmp_payload_ret");
 }
 

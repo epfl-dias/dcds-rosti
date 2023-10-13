@@ -580,7 +580,7 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
   std::vector<llvm::Type *> struct_vars;
   for (const auto &a : builder->attributes) {
     // simpleType to type, else have a ptr to it.
-    LOG(INFO) << a.first;
+    LOG(INFO) << "attr: " << a.first;
     struct_vars.push_back(toLLVMType(getLLVMContext(), a.second->type));
   }
 
@@ -588,17 +588,17 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
 }
 
 Value *LLVMCodegen::initializeDsContainerStruct(Value *txnManager, Value *storageTable, Value *mainRecord) {
-  LOG(INFO) << "dsContainerStructType: " << dsContainerStructType->getName().data();
+  //  LOG(INFO) << "dsContainerStructType: " << dsContainerStructType->getName().data();
   Value *structValue = llvm::UndefValue::get(dsContainerStructType);
-  LOG(INFO) << "dsContainerStructType--1";
+  // LOG(INFO) << "dsContainerStructType--1";
 
   // txnManager, table, mainRecord
   structValue = getBuilder()->CreateInsertValue(structValue, txnManager, {0});
-  LOG(INFO) << "dsContainerStructType--2";
+  // LOG(INFO) << "dsContainerStructType--2";
   structValue = getBuilder()->CreateInsertValue(structValue, storageTable, {1});
-  LOG(INFO) << "dsContainerStructType--3";
+  // LOG(INFO) << "dsContainerStructType--3";
   structValue = getBuilder()->CreateInsertValue(structValue, mainRecord, {2});
-  LOG(INFO) << "dsContainerStructType--4";
+  // LOG(INFO) << "dsContainerStructType--4";
 
   llvm::AllocaInst *structPtr = getBuilder()->CreateAlloca(dsContainerStructType);
   getBuilder()->CreateStore(structValue, structPtr);
@@ -647,8 +647,8 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
         break;
     }
 
-    LOG(INFO) << "CreateInsertValue";
-    fieldValue->dump();
+    // LOG(INFO) << "CreateInsertValue";
+    // fieldValue->dump();
     structValue = irBuilder->CreateInsertValue(structValue, fieldValue, {i});
 
     // fixme: they should be simple type.
@@ -658,9 +658,9 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     i++;
   }
 
-  structValue->dump();
-  structValue->getType()->dump();
-  LOG(INFO) << "Done";
+  // structValue->dump();
+  // structValue->getType()->dump();
+  // LOG(INFO) << "Done";
 
   llvm::AllocaInst *structPtr = irBuilder->CreateAlloca(dsRecordValueStructType);
   irBuilder->CreateStore(structValue, structPtr);
@@ -736,7 +736,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   std::string namespace_prefix = "default_namespace";
   // FIXME: do we need namespace prefix on the table name? i dont think so. check and confirm!
   std::string table_name = namespace_prefix + "_" + builder.getName();
-  LOG(INFO) << "table_name: " << table_name;
+  LOG(INFO) << "[LLVMCodegen][buildConstructor] table_name: " << table_name;
 
   auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
   auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
@@ -785,33 +785,19 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   phiNode->addIncoming(elseValue, elseBlock);
   llvm::Value *tablePtrValue = phiNode;
 
-  LOG(INFO) << "8";
-  this->createPrintString("tablePtrValue Got done");
-
   // Begin Txn
   Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
-  this->createPrintString("fn_res_beginTxn done");
+  // this->createPrintString("fn_res_beginTxn done");
 
-  LOG(INFO) << "9";
   // insert a record in table here.
   llvm::Value *defaultInsValues = this->initializeDsValueStructDefault(builder);
-  LOG(INFO) << "9.4";
-  this->createPrintString("defaultInsValues done");
-  LOG(INFO) << "9.5";
-  tablePtrValue->dump();
-  fn_res_beginTxn->dump();
-  defaultInsValues->dump();
-  LOG(INFO) << "9.6";
   Value *fn_res_insertMainRecord = this->gen_call(insertMainRecord, {tablePtrValue, fn_res_beginTxn, defaultInsValues});
 
-  LOG(INFO) << "10";
   // Commit Txn
   this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
-  LOG(INFO) << "11";
 
   //--
   llvm::Value *returnDs = this->gen_call(createDsContainer, {fn_res_getTxnManger, fn_res_insertMainRecord});
-  LOG(INFO) << "12";
 
   //  this->createPrintString("returning now:");
   //  this->gen_call(printPtr, {returnDs});

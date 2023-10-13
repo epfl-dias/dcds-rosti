@@ -193,8 +193,6 @@ class FunctionBuilder : remove_copy {
   auto addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
                      const std::string &function_name, const std::string &return_destination_variable,
                      std::same_as<std::string> auto... args) {
-    // FIXME: a lot of type-check, validity checks, etc.
-
     valueType referenceVarType;
     if (hasTempVariable(reference_variable)) {
       auto var = getTempVariable(reference_variable);
@@ -209,22 +207,52 @@ class FunctionBuilder : remove_copy {
     if (referenceVarType != RECORD_PTR) {
       throw dcds::exceptions::dcds_invalid_type_exception("Reference variable is not of type RECORD_PTR ");
     }
-    // FIXME: how to check if the record_ptr is of the correct type! it can be done for temporary variables, but what
-    //  about function arguments.
-    // FIXME: Additionally, we need to know so that we can check if the appropriate function exists in that type!
+    // FIXME: how to check if the record_ptr is of the correct type, that is, object_type!
+
+    if (!object_type->hasFunction(function_name)) {
+      throw dcds::exceptions::dcds_dynamic_exception("Function (" + function_name +
+                                                     ") does not exists in the type: " + object_type->getName());
+    }
+
+    const auto &expected_args = object_type->getFunction(function_name)->getArguments();
+    std::vector<std::string> arg_list;
+    // filter out for the empty.
+    for (const std::string &a : {args...}) {
+      if (!(a.empty())) {
+        arg_list.emplace_back(a);
+      }
+    }
+
+    if (arg_list.size() != expected_args.size()) {
+      throw dcds::exceptions::dcds_dynamic_exception(
+          "number of function arguments does not matched expected number of arguments by the target function."
+          " expected: " +
+          std::to_string(object_type->getFunction(function_name)->getArguments().size()) +
+          " provided: " + std::to_string(arg_list.size()));
+    }
 
     std::vector<std::pair<std::string, dcds::VAR_SOURCE_TYPE>> arg_variables;
-    for (const std::string &arg_name : {args...}) {
+    auto i = 0;
+    for (const std::string &arg_name : arg_list) {
       if (!arg_name.empty()) {
         if (temp_variables.contains(arg_name)) {
+          if (expected_args[i].second != temp_variables[arg_name].first) {
+            throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for argument " + arg_name);
+          }
+
           arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE);
         } else if (hasArgument(arg_name)) {
+          if (expected_args[i].second != findArgument(arg_name)->second) {
+            throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for argument " + arg_name);
+          }
+
           arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
         } else {
           throw dcds::exceptions::dcds_dynamic_exception(
-              "Method call argument is neither a temporary variable, nor a function argument: " + arg_name);
+              "Argument is neither a temporary variable, nor a function argument: " + arg_name);
         }
       }
+      i++;
     }
 
     auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name,
@@ -244,7 +272,7 @@ class FunctionBuilder : remove_copy {
     return rs;
   }
 
-  void debug_print() {
+  void dump() {
     LOG(INFO) << "Function : " << this->_name;
     LOG(INFO) << "\tfunction_arguments:";
     for (const auto &arg : function_arguments) {

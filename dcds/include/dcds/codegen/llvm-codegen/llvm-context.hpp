@@ -172,9 +172,9 @@ class LLVMCodegenContext {
   /*virtual*/ llvm::Value *gen_call(const std::string &func, std::initializer_list<llvm::Value *> args,
                                     llvm::Type *ret = nullptr);
 
-  /*virtual*/ llvm::Value *gen_call(llvm::Function *func, std::initializer_list<llvm::Value *> args);
+  /*virtual*/ llvm::Value *gen_call(llvm::Function *func, std::initializer_list<llvm::Value *> args) const;
 
-  /*virtual*/ llvm::Value *gen_call(llvm::Function *func, std::vector<llvm::Value *> args);
+  /*virtual*/ llvm::Value *gen_call(llvm::Function *func, const std::vector<llvm::Value *> &args) const;
 
   template <typename, typename = void>
   static constexpr bool is_type_complete_v = false;
