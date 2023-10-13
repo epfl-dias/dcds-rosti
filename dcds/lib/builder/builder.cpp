@@ -110,11 +110,7 @@ void Builder::generateSetter(const std::string& attribute_name) {
   this->generateSetter(attribute);
 }
 
-void Builder::build() {
-  if (is_jit_generated) {
-    throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
-  }
-
+void Builder::build_no_jit() {
   LOG(INFO) << "Generating " << this->getName() << " data structure";
   LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
 
@@ -125,11 +121,30 @@ void Builder::build() {
   //    codegen_engine = context->getCodegenEngine();
   //  }
 
-  if (!codegen_engine) {
-    codegen_engine = std::make_shared<LLVMCodegen>(*this);
+  if (!registered_subtypes.empty()) {
+    LOG(INFO) << "Building sub-types first";
+    // if there are registered subtypes, should be built them separate, or as you go?
+    for (auto& rt : registered_subtypes) {
+      rt.second->context = context;
+      assert(rt.second.get());
+      codegen_engine->build(rt.second.get());
+    }
   }
 
-  codegen_engine->build();
+  codegen_engine->build(this);
+}
+
+void Builder::build() {
+  if (is_jit_generated) {
+    throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
+  }
+
+  if (!codegen_engine) {
+    codegen_engine = std::make_shared<LLVMCodegen>(this);
+  }
+
+  this->build_no_jit();
+  //  codegen_engine->build(this);
 
   LOG(INFO) << "[Builder::build()] -- jit-before";
   codegen_engine->jitCompileAndLoad();
@@ -145,10 +160,11 @@ JitContainer* Builder::createInstance() {
 
   LOG(INFO) << "[Builder::createInstance] creating instance";
   auto* ds_constructor = codegen_engine->getFunction(this->getName() + "_constructor");
-  auto* ds_instance = reinterpret_cast<void* (*)()>(ds_constructor)();
-  auto* ins = reinterpret_cast<JitContainer*>(ds_instance);
-  ins->setCodegenEngine(this->codegen_engine);
 
+  auto* ds_instance = reinterpret_cast<void* (*)()>(ds_constructor)();
+  //  auto* ins = reinterpret_cast<JitContainer*>(ds_instance);
+  auto* ins = new JitContainer(reinterpret_cast<dcds::JitContainer::dcds_jit_container_t*>(ds_instance));
+  ins->setCodegenEngine(this->codegen_engine);
   return ins;
 }
 

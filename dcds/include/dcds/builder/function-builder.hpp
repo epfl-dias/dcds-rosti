@@ -96,6 +96,10 @@ class FunctionBuilder : remove_copy {
     temp_variables.emplace(name, std::make_tuple(varType, initial_value));
   }
 
+  //  void addTempVariable(const std::string &name, std::shared_ptr<SimpleAttribute> &attributeTypeRef) {
+  //    addTempVariable(name, varType, {});
+  //  }
+
   auto getTempVariable(const std::string &name) {
     if (!(this->temp_variables.contains(name))) {
       throw dcds::exceptions::dcds_dynamic_exception("Temporary variable does not exists: " + name);
@@ -122,7 +126,7 @@ class FunctionBuilder : remove_copy {
       throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced source variable referenced: " +
                                                      destination);
     }
-    auto s = std::make_shared<StatementBuilder>(dcds::statementType::READ, attribute->name, destination);
+    auto s = std::make_shared<Statement>(dcds::statementType::READ, attribute->name, destination);
     statements.push_back(s);
     return s;
   }
@@ -141,14 +145,12 @@ class FunctionBuilder : remove_copy {
 
     auto sourceType = temp_variables.contains(source) ? VAR_SOURCE_TYPE::TEMPORARY_VARIABLE : FUNCTION_ARGUMENT;
 
-    auto s = std::make_shared<UpdateStatementBuilder>(dcds::statementType::UPDATE, attribute->name, source, sourceType);
+    auto s = std::make_shared<UpdateStatement>(attribute->name, source, sourceType);
     statements.push_back(s);
     return s;
   }
 
   auto addReturnStatement(const std::string &name) {
-    // TODO: make sure the variable name, and the return type matches!
-
     // The reference variable should be a temporary variable.
     // what about the case of returning a constant?
 
@@ -157,20 +159,90 @@ class FunctionBuilder : remove_copy {
                                                      name);
     }
 
-    auto rs = std::make_shared<StatementBuilder>(dcds::statementType::YIELD, "", name);
+    if (temp_variables[name].first != returnValueType) {
+      throw dcds::exceptions::dcds_invalid_type_exception(
+          "Return type mismatch between return variable and declared return type");
+    }
+
+    auto rs = std::make_shared<Statement>(dcds::statementType::YIELD, "", name);
     statements.push_back(rs);
     return rs;
   }
 
   auto addReturnVoidStatement() {
-    auto rs = std::make_shared<StatementBuilder>(dcds::statementType::YIELD, "", "");
+    auto rs = std::make_shared<Statement>(dcds::statementType::YIELD, "", "");
     statements.push_back(rs);
     return rs;
   }
 
-  //  auto addInsertStatement(){
-  //    // what type of insert? insert cannot happen i think, only construct can happen which will call insert.
-  //  }
+  auto addInsertStatement(const std::string &registered_type_name, const std::string &variable_name) {
+    assert(builder->hasRegisteredType(registered_type_name));
+
+    this->addTempVariable(variable_name, dcds::valueType::RECORD_PTR);
+    // this would call the constructor of the registered_type,
+    // and then assigns the returned record_reference to the variable name,
+
+    auto rs = std::make_shared<InsertStatement>(registered_type_name, variable_name);
+    statements.push_back(rs);
+    return rs;
+  }
+
+  // (reference_variable of record_ptr, function_name, ...args)
+  // (reference_variable of record_ptr, function_name, returnValueDestinationTemporaryVariable,
+  // ...args{ofTypeTemporaryVariable/FuncARg})
+  auto addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
+                     const std::string &function_name, const std::string &return_destination_variable,
+                     std::same_as<std::string> auto... args) {
+    // FIXME: a lot of type-check, validity checks, etc.
+
+    valueType referenceVarType;
+    if (hasTempVariable(reference_variable)) {
+      auto var = getTempVariable(reference_variable);
+      referenceVarType = var.first;
+    } else if (hasArgument(reference_variable)) {
+      referenceVarType = findArgument(reference_variable)->second;
+    } else {
+      throw dcds::exceptions::dcds_dynamic_exception("Reference variable does not exists in the scope: " +
+                                                     reference_variable);
+    }
+
+    if (referenceVarType != RECORD_PTR) {
+      throw dcds::exceptions::dcds_invalid_type_exception("Reference variable is not of type RECORD_PTR ");
+    }
+    // FIXME: how to check if the record_ptr is of the correct type! it can be done for temporary variables, but what
+    //  about function arguments.
+    // FIXME: Additionally, we need to know so that we can check if the appropriate function exists in that type!
+
+    std::vector<std::pair<std::string, dcds::VAR_SOURCE_TYPE>> arg_variables;
+    for (const std::string &arg_name : {args...}) {
+      if (!arg_name.empty()) {
+        if (temp_variables.contains(arg_name)) {
+          arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE);
+        } else if (hasArgument(arg_name)) {
+          arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
+        } else {
+          throw dcds::exceptions::dcds_dynamic_exception(
+              "Method call argument is neither a temporary variable, nor a function argument: " + arg_name);
+        }
+      }
+    }
+
+    auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name,
+                                                    return_destination_variable, std::move(arg_variables));
+    statements.push_back(rs);
+    return rs;
+  }
+
+  auto addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
+                     const std::string &function_name, const std::string &return_destination_variable) {
+    return addMethodCall(object_type, reference_variable, function_name, return_destination_variable, std::string{""});
+  }
+
+  auto addLogStatement(const std::string &log_string) {
+    auto rs = std::make_shared<LogStringStatement>(log_string);
+    statements.push_back(rs);
+    return rs;
+  }
 
   void debug_print() {
     LOG(INFO) << "Function : " << this->_name;
@@ -191,7 +263,7 @@ class FunctionBuilder : remove_copy {
     f->function_arguments = this->function_arguments;
     f->temp_variables = this->temp_variables;
     for (auto &s : this->statements) {
-      f->statements.emplace_back(std::make_shared<StatementBuilder>(*s));
+      f->statements.emplace_back(std::make_shared<Statement>(*s));
     }
     return f;
   }
@@ -218,7 +290,7 @@ class FunctionBuilder : remove_copy {
 
   std::vector<std::pair<std::string, dcds::valueType>> function_arguments;
   std::unordered_map<std::string, std::pair<dcds::valueType, std::any>> temp_variables;
-  std::deque<std::shared_ptr<StatementBuilder>> statements;
+  std::deque<std::shared_ptr<Statement>> statements;
 
   bool _is_always_inline = false;
 };

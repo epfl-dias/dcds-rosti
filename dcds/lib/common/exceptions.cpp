@@ -26,3 +26,8 @@ using namespace dcds::exceptions;
 dcds_dynamic_exception::dcds_dynamic_exception(std::string msg) : msg_(std::make_shared<std::string>(std::move(msg))) {}
 
 const char* dcds_dynamic_exception::what() const noexcept { return msg_->c_str(); }
+
+dcds_invalid_type_exception::dcds_invalid_type_exception(std::string msg)
+    : msg_(std::make_shared<std::string>(std::move(msg))) {}
+
+const char* dcds_invalid_type_exception::what() const noexcept { return msg_->c_str(); }

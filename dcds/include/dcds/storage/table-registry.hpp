@@ -51,19 +51,18 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
   // or what about having single vs multiple txnManager? we store it in schema or table class a reference to what txnMgr
   // to use.
 
-  std::shared_ptr<Table> getTable(table_id_t tableId);
-  std::shared_ptr<Table> getTable(const std::string& name);
+  Table* getTable(table_id_t tableId);
+  Table* getTable(const std::string& name);
 
   //  void registerTable();
   //  void unregisterTable();
 
-  std::shared_ptr<Table> createTable(const std::string& name, const std::vector<AttributeDef>& columns,
-                                     bool multi_version = false);
+  Table* createTable(const std::string& name, const std::vector<AttributeDef>& columns, bool multi_version = false);
   void dropTable();  // how to drop if it is a sharedPtr, someone might be holding reference to it?
 
  private:
   std::shared_mutex registry_lk;
-  std::map<table_id_t, std::shared_ptr<Table>> tables{};
+  std::map<table_id_t, Table*> tables{};
   std::map<std::string, table_id_t> table_name_map{};
 
   std::atomic<table_id_t> table_id_generator;
@@ -71,7 +70,7 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
  private:
   ~TableRegistry() {
     // also clear up the tables if remaining.
-    // LOG(INFO) << "TableRegistry::~TableRegistry()";
+    LOG(INFO) << "TableRegistry::~TableRegistry()";
   }
   TableRegistry() = default;
 };

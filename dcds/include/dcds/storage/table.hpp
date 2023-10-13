@@ -45,10 +45,10 @@ using record_metadata_t = txn::cc::RecordMetaData_SingleVersion;
 class Table;
 class SingleVersionRowStore;
 
-class RecordRefV2 {
+class RecordReference {
  public:
-  RecordRefV2() : record_metadata_ptr() {}
-  RecordRefV2(uintptr_t unsafe_raw_address) : record_metadata_ptr(unsafe_raw_address) {}
+  RecordReference() : record_metadata_ptr() {}
+  explicit RecordReference(uintptr_t unsafe_raw_address) : record_metadata_ptr(unsafe_raw_address) {}
   //  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
 
   //  RecordRefV2 &operator=(RecordRefV2 const &other) = default;
@@ -59,19 +59,19 @@ class RecordRefV2 {
 
   bool valid() { return (record_metadata_ptr.operator->() != nullptr); }
 
-  void print() { record_metadata_ptr.print(); }
+  void dump() { record_metadata_ptr.dump(); }
 
   uintptr_t getBase() { return record_metadata_ptr.getPtr(); }
 
-  std::shared_ptr<Table> getTable();
+  Table *getTable();
 
  private:
   static_assert(sizeof(table_id_t) == packed_ptr_t::DATA_SZ_MAX,
                 "Invalid size of table_id_t to be used with packed_ptr_t");
 
-  explicit RecordRefV2(table_id_t tableId, record_metadata_t *rc)
+  explicit RecordReference(table_id_t tableId, record_metadata_t *rc)
       : record_metadata_ptr(reinterpret_cast<uintptr_t>(rc), tableId) {}
-  explicit RecordRefV2(record_metadata_t *rc) : record_metadata_ptr(reinterpret_cast<uintptr_t>(rc)) {}
+  explicit RecordReference(record_metadata_t *rc) : record_metadata_ptr(reinterpret_cast<uintptr_t>(rc)) {}
 
  private:
   packed_ptr_t record_metadata_ptr;
@@ -80,26 +80,7 @@ class RecordRefV2 {
   friend class SingleVersionRowStore;
 };
 
-class RecordRefV1 {
- public:
-  explicit RecordRefV1() : record_metadata(nullptr), data(nullptr) {}
-  RecordRefV1 &operator=(RecordRefV1 const &other) = default;
-  //  RecordRef &operator=(RecordRef &&other) = default;
-
-  bool isNull() { return (this->record_metadata == nullptr); }
-  auto operator->() { return record_metadata; }
-
- private:
-  explicit RecordRefV1(record_metadata_t *rcm_, void *data_) : record_metadata(rcm_), data(data_) {}
-
- private:
-  record_metadata_t *record_metadata;
-  void *data;
-
-  friend class Table;
-};
-
-using record_reference_t = RecordRefV2;
+using record_reference_t = RecordReference;
 
 // class RecordReference {
 //  public:
@@ -145,9 +126,7 @@ class Table {
 
   // record_reference_t getNullReference() const { return record_reference_t{}; }
 
-  virtual record_reference_t insertRecord(const txn::Txn &txn, const void *data) = 0;
   virtual record_reference_t insertRecord(txn::Txn *txn, const void *data) = 0;
-
   virtual void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value, uint attribute_idx) = 0;
 
   // Another possible issue is packing of recordMetaData?
@@ -221,7 +200,6 @@ class SingleVersionRowStore : public Table {
     return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t));
   }
 
-  record_reference_t insertRecord(const txn::Txn &txn, const void *data) override;
   record_reference_t insertRecord(txn::Txn *txn, const void *data) override;
 
   void updateAttribute(txn::Txn &, record_metadata_t *, void *value, uint attribute_idx) override;

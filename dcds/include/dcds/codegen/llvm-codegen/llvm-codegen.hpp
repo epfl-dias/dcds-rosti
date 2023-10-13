@@ -65,7 +65,7 @@ using namespace llvm;
 
 class LLVMCodegen : public Codegen, public LLVMCodegenContext {
  public:
-  explicit LLVMCodegen(Builder &builder);
+  explicit LLVMCodegen(dcds::Builder *builder);
   ~LLVMCodegen() override {
     LOG(WARNING) << "[LLVMCodegen] Destructor";
     theLLVMFPM->doFinalization();
@@ -77,7 +77,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
     this->availableFunctions.clear();
   }
 
-  void build() override;
+  void build(dcds::Builder *builder) override;
   void saveToFile(const std::string &filename) override;
   void jitCompileAndLoad() override;
 
@@ -94,8 +94,10 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   [[nodiscard]] llvm::Module *getModule() const override;
   [[nodiscard]] llvm::IRBuilder<> *getBuilder() const override;
 
-  llvm::Function *wrapFunctionVariadicArgs(llvm::Function *inner_function, std::vector<llvm::Type *> position_args,
-                                           std::vector<llvm::Type *> expected_vargs, std::string wrapped_function_name);
+  llvm::Function *wrapFunctionVariadicArgs(llvm::Function *inner_function,
+                                           const std::vector<llvm::Type *> &position_args,
+                                           const std::vector<llvm::Type *> &expected_vargs,
+                                           std::string wrapped_function_name);
 
  private:
   void initializeLLVMModule(const std::string &name);
@@ -103,29 +105,31 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
 
   void codegenHelloWorld();
 
-  void createDsContainerStruct();
+  void createDsContainerStruct(dcds::Builder *builder);
   Value *initializeDsContainerStruct(Value *txnManager, Value *storageTable, Value *mainRecord);
 
-  void createDsStructType();
-  Value *initializeDsValueStructDefault();
+  void createDsStructType(dcds::Builder *builder);
+  Value *initializeDsValueStructDefault(dcds::Builder &builder);
 
-  void buildConstructor();
+  void buildConstructor(dcds::Builder &builder);
   void buildDestructor();
-  void buildFunctions();
-  void buildOneFunction(std::shared_ptr<FunctionBuilder> &fb);
-  void buildFunctionDictionary();
+  void buildFunctions(dcds::Builder *builder);
+  void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
+  void buildFunctionDictionary(dcds::Builder &builder);
 
-  llvm::Function *buildInitTablesFn(llvm::Value *table_name);
+  llvm::Function *buildInitTablesFn(dcds::Builder &builder, llvm::Value *table_name);
   llvm::Function *genFunctionSignature(std::shared_ptr<FunctionBuilder> &fb,
                                        const std::vector<llvm::Type *> &pre_args = {},
                                        const std::string &name_prefix = "", const std::string &name_suffix = "");
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
-  void buildStatement(std::shared_ptr<StatementBuilder> &sb, std::shared_ptr<FunctionBuilder> &fb, llvm::Function *fn,
-                      llvm::BasicBlock *basicBlock, std::map<std::string, llvm::Value *> &tempVariableMap);
+  void buildStatement(dcds::Builder *builder, std::shared_ptr<Statement> &sb, std::shared_ptr<FunctionBuilder> &fb,
+                      llvm::Function *fn, llvm::BasicBlock *basicBlock,
+                      std::map<std::string, llvm::Value *> &tempVariableMap);
 
  private:
-  std::vector<llvm::Function *> userFunctions;
+  //  std::vector<llvm::Function *> userFunctions;
+  std::map<std::string, llvm::Function *> userFunctions;
   std::unordered_map<std::string, llvm::Value *> temporaryVariableIRMap;
 
  private:

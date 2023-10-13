@@ -36,6 +36,16 @@ class dcds_dynamic_exception : public std::exception {
   [[nodiscard]] const char* what() const noexcept override;
 };
 
+class dcds_invalid_type_exception : public std::exception {
+  // shared_ptr as exceptions are not allowed to throw during copy
+  std::shared_ptr<std::string> msg_;
+
+ public:
+  explicit dcds_invalid_type_exception(std::string msg);
+
+  [[nodiscard]] const char* what() const noexcept override;
+};
+
 }  // namespace dcds::exceptions
 
 #endif  // DCDS_EXCEPTION_HPP

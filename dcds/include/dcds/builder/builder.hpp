@@ -115,21 +115,19 @@ class Builder : remove_copy {
   /// \return              DCDS function representation
   //  auto getFunction(std::string functionName) { return *functions[functionName]; }
 
- private:
-  // Utilities to include attributes to the data structure
  public:
-  ///
-  /// \param attribute_name    Name of the attribute to be returned
-  /// \return                  DCDS attributes representation
   auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
   auto getAttributeIndex(const std::string& attribute_name) {
     assert(attributes.contains(attribute_name) && "how come index for un-registered attribute");
     return std::distance(std::begin(attributes), attributes.find(attribute_name));
   }
 
-  ///
-  /// \param name       Name of the attribute to be added to the data structure
-  /// \param attrType   Type of the attribute to be added to the data structure
+  auto addAttributePointerType(const std::string& name, const std::string& type) {
+    if (!(registered_subtypes.contains(name))) {
+      throw dcds::exceptions::dcds_dynamic_exception("Unknown/Unregistered type: " + type);
+    }
+  }
+
   auto addAttribute(const std::string& name, dcds::valueType attrType, const std::any& default_value) {
     auto pt = std::make_shared<dcds::SimpleAttribute>(name, attrType, default_value);
     attributes.emplace(name, pt);
@@ -164,16 +162,18 @@ class Builder : remove_copy {
     registered_subtypes.emplace(other->getName(), other);
     return other;
   }
-  auto getType(const std::string& name) {
+  auto getRegisteredType(const std::string& name) {
     if (!(registered_subtypes.contains(name))) {
       throw dcds::exceptions::dcds_dynamic_exception("Unknown/Unregistered type: " + name);
     }
     return registered_subtypes[name];
   }
+  bool hasRegisteredType(const std::string& name) { return registered_subtypes.contains(name); }
 
   // CODEGEN
  public:
   void build();
+  void build_no_jit();
   JitContainer* createInstance();
 
   void addHint(hints::BuilderHints hint) {

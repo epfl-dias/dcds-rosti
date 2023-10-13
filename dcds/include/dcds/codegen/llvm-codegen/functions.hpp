@@ -54,11 +54,12 @@ extern "C" void printPtr(void* X);
 extern "C" void printUInt64(uint64_t X);
 
 // TODO: make always inline when registering.
-extern "C" void* createDsContainer(void* txnManager, void* storageTable, uintptr_t data);
+extern "C" void* createDsContainer(void* txnManager, uintptr_t data);
+extern "C" uintptr_t extractRecordFromDsContainer(void* container);
 
-extern "C" void table_read_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txn,
-                                     void* dst, size_t attributeIdx);
-extern "C" void table_write_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txnPtr,
-                                      void* src, uint attributeIdx);
+extern "C" void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, void* txn, void* dst,
+                                     size_t attributeIdx);
+extern "C" void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* src,
+                                      uint attributeIdx);
 
 #endif  // DCDS_FUNCTIONS_HPP

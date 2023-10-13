@@ -27,28 +27,22 @@
 #include "dcds/transaction/transaction-namespaces.hpp"
 
 int printc(char* X) {
-  printf("[printc:] Generated code -- char read: %c\n", X[0]);
+  printf("[printc:] %c\n", X[0]);
   return 0;
 }
 
 int prints(char* X) {
-  printf("[prints:] Generated code -- string read: %s\n", X);
+  printf("[prints:] %s\n", X);
   return 0;
 }
 
-void printPtr(void* X) { LOG(INFO) << "[prints:] Generated code -- ptr read: " << X; }
+void printPtr(void* X) { LOG(INFO) << "[printPtr:] " << X; }
 
-void printUInt64(uint64_t X) { LOG(INFO) << "[prints:] Generated code -- uint64_t read: " << X; }
+void printUInt64(uint64_t X) { LOG(INFO) << "[printUInt64:] " << X; }
 
-void* getTableRegistry() {
-  auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
-  return &tableRegistry;
-}
+void* getTableRegistry() { return &(dcds::storage::TableRegistry::getInstance()); }
 
-uint doesTableExists(const char* table_name) {
-  auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
-  return tableRegistry.exists(table_name);
-}
+uint doesTableExists(const char* table_name) { return dcds::storage::TableRegistry::getInstance().exists(table_name); }
 
 void* c1(char* table_name) {
   LOG(INFO) << "C1";
@@ -121,11 +115,9 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   {
     std::unique_lock<std::mutex> lk(create_table_m);
     if (tableRegistry.exists(table_name)) {
-      auto tableSharedPtr = tableRegistry.getTable(table_name);
-      ret_table_ptr = tableSharedPtr.get();
+      ret_table_ptr = tableRegistry.getTable(table_name);
     } else {
-      auto createdTable = tableRegistry.createTable(table_name, columns);
-      ret_table_ptr = createdTable.get();
+      ret_table_ptr = tableRegistry.createTable(table_name, columns);
     }
 
     assert(ret_table_ptr);
@@ -142,10 +134,7 @@ void* getTxnManager(const char* txn_namespace) {
   return x.get();
 }
 
-void* getTable(const char* table_name) {
-  auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
-  return tableRegistry.getTable(table_name).get();
-}
+void* getTable(const char* table_name) { return dcds::storage::TableRegistry::getInstance().getTable(table_name); }
 
 void* beginTxn(void* txnManager) {
   LOG(INFO) << "beginTxn: args:" << txnManager;
@@ -165,25 +154,34 @@ bool commitTxn(void* txnManager, void* txnPtr) {
 uintptr_t insertMainRecord(void* table, void* txn, void* data) {
   LOG(INFO) << "insertMainRecord: args: " << table << " | " << txn << " | " << data;
 
-  struct __attribute__((packed)) test_st {
-    uint8_t* next;
-    uint64_t payload;
-  };
-
   auto x = static_cast<dcds::storage::Table*>(table)->insertRecord(static_cast<dcds::txn::Txn*>(txn), data);
   LOG(INFO) << "insertMainRecord: " << x.getBase();
+  LOG(INFO) << "[insertMainRecord] x.getTable(): " << x.getTable()->name();
+
   return x.getBase();
 }
 
-void* createDsContainer(void* txnManager, void* storageTable, uintptr_t data) {
-  return dcds::JitContainer::create(txnManager, storageTable, data);
+void* createDsContainer(void* txnManager, uintptr_t data) {
+  //  this should return dcds_jit_container_t only. not the full thing in my opinion.
+  //  return dcds::JitContainer::create(txnManager, storageTable, data);
+
+  auto container_ptr = new dcds::JitContainer::dcds_jit_container_t();
+  container_ptr->mainRecord = data;
+  container_ptr->txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(txnManager);
+
+  return container_ptr;
 }
 
-void table_read_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txnPtr, void* dst,
-                          size_t attributeIdx) {
+uintptr_t extractRecordFromDsContainer(void* container) {
+  auto c = static_cast<dcds::JitContainer::dcds_jit_container_t*>(container);
+  return c->mainRecord;
+}
+
+void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* dst, size_t attributeIdx) {
   auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
-  auto storageTable = reinterpret_cast<dcds::storage::Table*>(_storageTable);
   auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  LOG(INFO) << "[table_read_attribute] mainRecordActual: " << _mainRecord;
+  auto storageTable = mainRecord.getTable();
   auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
   // required args:
@@ -204,11 +202,10 @@ void table_read_attribute(void* _txnManager, void* _storageTable, uintptr_t _mai
   //  });
 }
 
-void table_write_attribute(void* _txnManager, void* _storageTable, uintptr_t _mainRecord, void* txnPtr, void* src,
-                           uint attributeIdx) {
+void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* src, uint attributeIdx) {
   auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
-  auto storageTable = reinterpret_cast<dcds::storage::Table*>(_storageTable);
   auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto storageTable = mainRecord.getTable();
   auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
   // required args:

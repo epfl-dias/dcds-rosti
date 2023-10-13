@@ -114,9 +114,9 @@ class LLVMCodegenContext {
 
   llvm::StructType *getVaListStructType();
   llvm::Value *createVaListStart();
-  void createVaListEnd(llvm::Value *va_list_ptr);
-  llvm::Value *getVAArg(llvm::Value *va_list_ptr, llvm::Type *type);
-  std::vector<llvm::Value *> getVAArgs(llvm::Value *va_list_ptr, std::vector<llvm::Type *> types);
+  void createVaListEnd(llvm::Value *va_list_ptr) const;
+  llvm::Value *getVAArg(llvm::Value *va_list_ptr, llvm::Type *type) const;
+  std::vector<llvm::Value *> getVAArgs(llvm::Value *va_list_ptr, const std::vector<llvm::Type *> &types) const;
 
   virtual size_t getSizeOf(llvm::Type *type) const;
   virtual size_t getSizeOf(llvm::Value *val) const;

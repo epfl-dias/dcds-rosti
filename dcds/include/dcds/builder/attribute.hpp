@@ -35,14 +35,29 @@
 
 namespace dcds {
 
-/// Class representing a normal attribute in DCDS
-class SimpleAttribute {
- public:
-  SimpleAttribute(std::string attribute_name, dcds::valueType attribute_type, std::any default_value)
-      : name(std::move(attribute_name)), type(attribute_type), defaultValue(std::move(default_value)) {}
+enum ATTRIBUTE_TYPE_CATEGORY {
+  SIMPLE,
+  COMPOSITE_POINTER, /* enables 1-N relation */
+  COMPOSITE          /* 1-1 relation, contained within */
+};
 
-  SimpleAttribute(std::string attribute_name, dcds::valueType attribute_type)
-      : name(std::move(attribute_name)), type(attribute_type) {}
+class Attribute {
+ protected:
+  Attribute(std::string _name, dcds::valueType _type, ATTRIBUTE_TYPE_CATEGORY _type_category)
+      : name(std::move(_name)), type(_type), type_category(_type_category) {}
+
+ public:
+  const std::string name;
+  const dcds::valueType type;
+  const ATTRIBUTE_TYPE_CATEGORY type_category;
+};
+
+class SimpleAttribute : public Attribute {
+ public:
+  SimpleAttribute(std::string _name, dcds::valueType _type) : SimpleAttribute(std::move(_name), _type, {}) {}
+
+  SimpleAttribute(std::string _name, dcds::valueType _type, std::any default_value)
+      : Attribute(std::move(_name), _type, ATTRIBUTE_TYPE_CATEGORY::SIMPLE), defaultValue(std::move(default_value)) {}
 
   [[nodiscard]] auto getDefaultValue() const {
     assert(defaultValue.has_value());
@@ -52,8 +67,6 @@ class SimpleAttribute {
   [[nodiscard]] bool hasDefaultValue() const { return defaultValue.has_value(); }
 
  public:
-  const std::string name;
-  const dcds::valueType type;
   const std::any defaultValue;
 };
 }  // namespace dcds

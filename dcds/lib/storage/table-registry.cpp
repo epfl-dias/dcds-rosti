@@ -32,8 +32,8 @@ bool TableRegistry::exists(const std::string &name) {
   return table_name_map.contains(name);
 }
 
-std::shared_ptr<Table> TableRegistry::createTable(const std::string &name, const std::vector<AttributeDef> &columns,
-                                                  bool multi_version) {
+Table *TableRegistry::createTable(const std::string &name, const std::vector<AttributeDef> &columns,
+                                  bool multi_version) {
   size_t record_size = 0;
   for (const auto &c : columns) {
     // LOG(INFO) << "size: " << c.getName() << " - " << c.getSize();
@@ -50,13 +50,13 @@ std::shared_ptr<Table> TableRegistry::createTable(const std::string &name, const
   if (multi_version) {
     throw std::runtime_error("unimplemented MV");
   } else {
-    auto tablePtr = std::make_shared<SingleVersionRowStore>(tableId, name, record_size, columns);
+    auto tablePtr = new SingleVersionRowStore(tableId, name, record_size, columns);
     tables.emplace(tableId, tablePtr);
     return tablePtr;
   }
 }
 
-std::shared_ptr<Table> TableRegistry::getTable(table_id_t tableId) {
+Table *TableRegistry::getTable(table_id_t tableId) {
   std::shared_lock<std::shared_mutex> lk(this->registry_lk);
   if (tables.contains(tableId)) {
     return tables.at(tableId);
@@ -64,7 +64,7 @@ std::shared_ptr<Table> TableRegistry::getTable(table_id_t tableId) {
     return {};
   }
 }
-std::shared_ptr<Table> TableRegistry::getTable(const std::string &name) {
+Table *TableRegistry::getTable(const std::string &name) {
   std::shared_lock<std::shared_mutex> lk(this->registry_lk);
   if (table_name_map.contains(name)) {
     // LOG(INFO) << "Table does exists " << name << " || " << tables.at(table_name_map.at(name))->name();

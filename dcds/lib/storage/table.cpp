@@ -27,7 +27,7 @@
 
 using namespace dcds::storage;
 
-std::shared_ptr<Table> RecordRefV2::getTable() {
+Table* RecordReference::getTable() {
   return TableRegistry::getInstance().getTable(static_cast<table_id_t>(record_metadata_ptr.getData()));
 }
 
@@ -65,11 +65,6 @@ void* SingleVersionRowStore::allocateRecordMemory() const {
   return malloc(record_size);
 }
 void SingleVersionRowStore::freeRecordMemory(void* mem) { free(mem); }
-
-record_reference_t SingleVersionRowStore::insertRecord(const txn::Txn& txn, const void* data) {
-  //  return this->insertRecord(&txn, data);
-  return {};
-}
 
 record_reference_t SingleVersionRowStore::insertRecord(dcds::txn::Txn* txn, const void* data) {
   assert(txn);

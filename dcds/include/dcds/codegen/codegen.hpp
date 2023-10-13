@@ -28,7 +28,7 @@ namespace dcds {
 
 class Codegen {
  public:
-  virtual void build() = 0;
+  virtual void build(dcds::Builder* _builder) = 0;
   virtual void jitCompileAndLoad() = 0;
   virtual void runOptimizationPasses() = 0;
 
@@ -50,10 +50,10 @@ class Codegen {
   virtual ~Codegen();
 
  protected:
-  explicit Codegen(dcds::Builder& _builder) : builder(_builder) {}
+  explicit Codegen(dcds::Builder* _builder) : top_level_builder(_builder) {}
 
  protected:
-  dcds::Builder& builder;
+  dcds::Builder* top_level_builder;
   std::map<std::string, jit_function_t*> available_jit_functions;
   bool is_jit_done = false;
 };

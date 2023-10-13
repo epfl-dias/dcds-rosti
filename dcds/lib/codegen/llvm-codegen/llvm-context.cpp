@@ -32,7 +32,9 @@ using namespace llvm;
 
 const char *LLVMCodegenContext::getName() const { return (new std::string{getModule()->getName().str()})->c_str(); }
 
-LLVMCodegenContext::LLVMCodegenContext(std::string moduleName) : moduleName(std::move(moduleName)) {}
+LLVMCodegenContext::LLVMCodegenContext(std::string moduleName) : moduleName(std::move(moduleName)) {
+  LOG(INFO) << "[LLVMCodegenContext] constructor: " << this->moduleName;
+}
 
 void LLVMCodegenContext::registerAllFunctions() {
   LLVMContext &ctx = getModule()->getContext();
@@ -54,10 +56,11 @@ void LLVMCodegenContext::registerAllFunctions() {
   [[maybe_unused]] PointerType *char_ptr_type = PointerType::get(int8_type, 0);
   [[maybe_unused]] PointerType *int32_ptr_type = PointerType::get(int32_type, 0);
 
-  size_t i = 0;
-  LOG(INFO) << i++;
+  // Function registrations:
+
   // int printc(char *X);
   registerFunction("printc", int32_type, {char_ptr_type});
+
   // int prints(char *X);
   registerFunction("prints", int32_type, {char_ptr_type});
 
@@ -69,53 +72,15 @@ void LLVMCodegenContext::registerAllFunctions() {
 
   //  void* createTablesInternal(char* table_name, const dcds::valueType attributeTypes[], char* attributeNames[],
   //                             int num_attributes)
-
   registerFunction("createTablesInternal", void_ptr_type, {char_ptr_type, int32_ptr_type, char_ptr_type, int32_type});
 
-  registerFunction("c1", void_ptr_type, {char_ptr_type});
-  registerFunction("c2", void_ptr_type, {int32_type});
-  registerFunction("c3", void_ptr_type, {int32_ptr_type});
-  registerFunction("c4", void_ptr_type, {char_ptr_type});
+  //  registerFunction("c1", void_ptr_type, {char_ptr_type});
+  //  registerFunction("c2", void_ptr_type, {int32_type});
+  //  registerFunction("c3", void_ptr_type, {int32_ptr_type});
+  //  registerFunction("c4", void_ptr_type, {char_ptr_type});
 
-  //  LOG(INFO) << i++;
-
-  //
-  //  LOG(INFO) << i++;
-  //  // void *getTableRegistry();
-  //  assert(int8_type);
-  //  registerFunction("getTableRegistry", void_ptr_type);
-  //
-  //  LOG(INFO) << i++;
-  //  // void* getTable(const char* table_name);
-  //  registerFunction("getTable", void_ptr_type, {char_ptr_type});
-  //
-  //  LOG(INFO) << i++;
-  //  // uint doesTableExists(const char* table_name);
-  //  registerFunction("doesTableExists", int1_bool_type, {char_ptr_type});
-  //
-  //
-  //  // TO TEST IF IT CAN BE AUTO-REGISTERED.
-  ////  // void *createTablesInternal(const char *table_name, const dcds::valueType attributeTypes[],
-  ////  //                                      char *attributeNames[], int num_attributes)
-  ////  registerFunction("createTablesInternal", void_ptr_type, {char_ptr_type});
-  //
-  //
-  //  LOG(INFO) << i++;
-  //  //  void *getTxnManager(const char* txn_namespace = "default_namespace");
-  //  registerFunction("getTxnManager", void_ptr_type, {char_ptr_type});
-  //
-  //  LOG(INFO) << i++;
-  //  //  extern "C" void *beginTxn(void *txnManager);
-  //  registerFunction("beginTxn", void_ptr_type, {void_ptr_type});
-  //
-  //  LOG(INFO) << i++;
-  //  //  extern "C" bool commitTxn(void *txnManager, void* txnPtr);
-  //  registerFunction("commitTxn", int1_bool_type, {void_ptr_type, void_ptr_type});
-  //
-  //  LOG(INFO) << i++;
-  //  //  extern "C" uintptr_t insertMainRecord(void* table, void* txn, void* data);
-  //  registerFunction("insertMainRecord", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type});
-  //  LOG(INFO) << i++;
+  //  uintptr_t insertMainRecord(void* table, void* txn, void* data)
+  registerFunction("insertMainRecord", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type});
 }
 
 void LLVMCodegenContext::createPrintString(const std::string &str) {
@@ -134,9 +99,22 @@ void LLVMCodegenContext::createPrintString(const std::string &str) {
 
 llvm::Value *LLVMCodegenContext::createStringConstant(const std::string &value, const std::string &var_name) const {
   // FIXME: Currently a hack, no idea if it is good thing to do like this or do it the proper way.
-  llvm::Value *str = getBuilder()->CreateGlobalString(value);
-  llvm::Value *charPtrCast = getBuilder()->CreateBitCast(str, llvm::Type::getInt8PtrTy(getLLVMContext()));
-  return charPtrCast;
+  //  assert(getBuilder());
+  //  LOG(INFO) << "here: " << value;
+  //  getBuilder()->getInt32(3)->dump();
+  //  LOG(INFO) << " xx ";
+  //  getModule()->dump();
+  //  LOG(INFO) << " xx2 ";
+  //  StringRef Str, const Twine &Name = "",
+  //                             unsigned AddressSpace = 0,
+  //                             Module *M = nullptr
+  return getBuilder()->CreateGlobalStringPtr(value);
+
+  //  llvm::Value *str = getBuilder()->CreateGlobalString(value);
+  //  LOG(INFO) << "here2";
+  //  llvm::Value *charPtrCast = getBuilder()->CreateBitCast(str, llvm::Type::getInt8PtrTy(getLLVMContext()));
+  //  LOG(INFO) << "here3";
+  //  return charPtrCast;
 
   //  Constant *strConstant = ConstantDataArray::getString(getLLVMContext(), value, true);
   //  //  LOG(INFO) << "[createStringConstant] 3";
@@ -198,16 +176,17 @@ llvm::Value *LLVMCodegenContext::createVaListStart() {
   return ValuePtr;
 }
 
-void LLVMCodegenContext::createVaListEnd(llvm::Value *va_list_ptr) {
+void LLVMCodegenContext::createVaListEnd(llvm::Value *va_list_ptr) const {
   llvm::Function *vaEndFunc = llvm::Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::vaend);
   getBuilder()->CreateCall(vaEndFunc, {va_list_ptr});
 }
 
-llvm::Value *LLVMCodegenContext::getVAArg(llvm::Value *va_list_ptr, llvm::Type *type) {
+llvm::Value *LLVMCodegenContext::getVAArg(llvm::Value *va_list_ptr, llvm::Type *type) const {
   return getBuilder()->CreateVAArg(va_list_ptr, type);
 }
 
-std::vector<llvm::Value *> LLVMCodegenContext::getVAArgs(llvm::Value *va_list_ptr, std::vector<llvm::Type *> types) {
+std::vector<llvm::Value *> LLVMCodegenContext::getVAArgs(llvm::Value *va_list_ptr,
+                                                         const std::vector<llvm::Type *> &types) const {
   std::vector<llvm::Value *> ret;
   const auto builder = getBuilder();
   for (const auto &t : types) {
@@ -436,16 +415,14 @@ llvm::Value *LLVMCodegenContext::gen_call(llvm::Function *f, std::vector<llvm::V
 
 llvm::Value *LLVMCodegenContext::gen_call(const std::string &func, std::initializer_list<llvm::Value *> args,
                                           llvm::Type *ret) {
-  LOG(INFO) << "[LLVMCodegenContext][gen_call][2] "
-            << "function_name: " << func;
   llvm::Function *f;
   try {
     f = getFunction(func);
     assert(f);
-    // LOG(INFO) << "Found function: " << func;
+    LOG(INFO) << "Found function: " << func;
     for (const auto &arg : args) {
-      // LOG(INFO) << "argDump[1]";
-      // arg->getType()->dump();
+      LOG(INFO) << "argDump[1]";
+      arg->getType()->dump();
     }
 
     assert(!ret || ret == f->getReturnType());
@@ -457,8 +434,8 @@ llvm::Value *LLVMCodegenContext::gen_call(const std::string &func, std::initiali
     v.reserve(args.size());
     for (const auto &arg : args) {
       v.emplace_back(arg->getType());
-      //      LOG(INFO) << "argDump[2]";
-      //      arg->getType()->dump();
+      LOG(INFO) << "argDump[2]";
+      arg->getType()->dump();
     }
     auto FT = llvm::FunctionType::get(ret, v, false);
 
