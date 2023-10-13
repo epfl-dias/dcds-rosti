@@ -56,10 +56,12 @@ class PackerPtr {
 
   auto operator->() const { return reinterpret_cast<void*>(pt & PTR_MASK); }
 
-  void print() const {  // LOG(INFO) << "data: " << getData() << " | pt:  " << reinterpret_cast<void*>(pt & PTR_MASK);
+  void dump() const {
+    LOG(INFO) << "[PackerPtr] data: " << static_cast<size_t>(getData())
+              << " | pt (void*):  " << reinterpret_cast<void*>(pt & PTR_MASK);
   }
 
-  [[nodiscard]] uint16_t getData() const { return (pt >> 56u); }
+  [[nodiscard]] uint16_t getData() const { return (pt >> PTR_BITS); }
   [[nodiscard]] auto getPtr() const { return pt; }
 
   void setData(uint16_t data) {
