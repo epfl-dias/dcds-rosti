@@ -72,6 +72,12 @@ class JitContainer {
         LOG(INFO) << "RET VOID: ";
         return {};
       }
+      case BOOL: {
+        auto ret = reinterpret_cast<bool (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
+            _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
+        LOG(INFO) << "RET BOOL: " << ret;
+        return {ret};
+      }
       case FLOAT:
       case RECORD_ID:
       case CHAR:

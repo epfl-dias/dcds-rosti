@@ -12,7 +12,7 @@
 namespace dcds {
 
 // NOTE: VOID is strictly a return type.
-enum valueType { INTEGER, FLOAT, RECORD_ID, CHAR, RECORD_PTR, VOID };
+enum valueType { INTEGER, FLOAT, RECORD_ID, CHAR, RECORD_PTR, VOID, BOOL };
 
 enum VAR_SOURCE_TYPE { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTION_ARGUMENT };
 

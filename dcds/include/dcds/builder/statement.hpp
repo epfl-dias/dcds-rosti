@@ -25,15 +25,16 @@
 #include <dcds/builder/attribute.hpp>
 #include <utility>
 
+#include "dcds/builder/expressions/expressions.hpp"
+#include "dcds/builder/expressions/unary-expressions.hpp"
+
 namespace dcds {
 
 class Builder;
+class StatementBuilder;
 
 /// Types of statements for DCDS functions
-enum statementType { READ, UPDATE, CREATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, METHOD_CALL, LOG_STRING };
-
-/// Types of comparisons for DCDS comparison statements
-enum CmpIPredicate { gt, eq, lt, neq };
+enum statementType { READ, UPDATE, CREATE, YIELD, CONDITIONAL_STATEMENT, METHOD_CALL, LOG_STRING };
 
 /// Cass representing a statement in DCDS
 class Statement {
@@ -48,12 +49,12 @@ class Statement {
       : stType(type), actionVarName(std::move(actionVar)), refVarName(std::move(refVar)) {}
 
   /// Type of the statement
-  dcds::statementType stType;
+  const dcds::statementType stType;
   /// Variable name on which some action (read/update) will be taken. Not a hard specification for all statements.
-  std::string actionVarName;
+  const std::string actionVarName;
   /// Variable name which will be used as reference for the action on action variable (will store read/write value).
   /// Not a hard specification for all statements
-  std::string refVarName;
+  const std::string refVarName;
 };
 
 class UpdateStatement : public Statement {
@@ -72,16 +73,17 @@ class InsertStatement : public Statement {
 
 class MethodCallStatement : public Statement {
  public:
-  explicit MethodCallStatement(std::shared_ptr<dcds::Builder> object_type, const std::string& reference_variable,
-                               std::string _function_name, const std::string& return_destination_variable,
-                               std::vector<std::pair<std::string, dcds::VAR_SOURCE_TYPE>> _function_arguments = {})
+  explicit MethodCallStatement(
+      std::shared_ptr<dcds::Builder> object_type, const std::string& reference_variable, std::string _function_name,
+      const std::string& return_destination_variable,
+      std::vector<std::shared_ptr<expressions::LocalVariableExpression>> _function_arguments = {})
       : Statement(statementType::METHOD_CALL, reference_variable, return_destination_variable),
         function_name(std::move(_function_name)),
         function_arguments(std::move(_function_arguments)),
         object_type_info(std::move(object_type)) {}
 
   const std::string function_name;
-  const std::vector<std::pair<std::string, dcds::VAR_SOURCE_TYPE>> function_arguments;
+  const std::vector<std::shared_ptr<expressions::LocalVariableExpression>> function_arguments;
   const std::shared_ptr<dcds::Builder> object_type_info;
 };
 
@@ -90,42 +92,22 @@ class LogStringStatement : public Statement {
   explicit LogStringStatement(const std::string& log_string) : Statement(statementType::LOG_STRING, log_string, "") {}
 };
 
-/// Class to represent conditional statements in DCDS
-class ConditionBuilder {
+class ConditionalStatement : public Statement {
  public:
-  ///
-  /// \param predicate Type of comparison
-  /// \param condVar1 First variable name for comparison
-  /// \param condVar2 Second variable name for comparison
-  ConditionBuilder(CmpIPredicate predicate, std::string condVar1, std::string condVar2)
-      : pred(predicate), conditionVariableAttr1Name(condVar1), conditionVariableAttr2Name(condVar2) {}
+  // enum BRANCH_TYPE { IF_BLOCK, ELSE_BLOCK };
 
-  /// Type of Comparison
-  CmpIPredicate pred;
-  /// First variable name for comparison
-  std::string conditionVariableAttr1Name;
-  /// Second variable name for comparison
-  std::string conditionVariableAttr2Name;
+  explicit ConditionalStatement(expressions::Expression* _expr, std::shared_ptr<StatementBuilder> if_block,
+                                std::shared_ptr<StatementBuilder> else_block)
+      : Statement(statementType::CONDITIONAL_STATEMENT, "", ""),
+        expr(_expr),
+        ifBlock(std::move(if_block)),
+        elseBLock(std::move(else_block)) {}
+
+  const expressions::Expression* expr;
+  const std::shared_ptr<StatementBuilder> ifBlock;
+  const std::shared_ptr<StatementBuilder> elseBLock;
 };
 
-/// Class to represent conditional blocks in DCDS
-class ConditionStatementBuilder {
- public:
-  ///
-  /// \param cond            Condition for the block
-  /// \param ifRStatements   Statements residing in if block
-  /// \param elseRStatements Statements residing in else block
-  ConditionStatementBuilder(ConditionBuilder cond, std::vector<std::shared_ptr<Statement>> ifRStatements,
-                            std::vector<std::shared_ptr<Statement>> elseRStatements = {})
-      : condition(cond), ifResStatements(ifRStatements), elseResStatements(elseRStatements) {}
-
-  /// Condition for the block
-  ConditionBuilder condition;
-  /// Statements residing in if block
-  std::vector<std::shared_ptr<Statement>> ifResStatements;
-  /// Statement residing in else block
-  std::vector<std::shared_ptr<Statement>> elseResStatements;
-};
 }  // namespace dcds
 
 #endif  // DCDS_STATEMENT_HPP
