@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "dcds/builder/function-builder.hpp"
+#include "dcds/builder/statement-builder.hpp"
 #include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 #include "dcds/exporter/jit-container.hpp"
@@ -70,7 +71,8 @@ std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& func
 }
 
 void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
-  // FIXME: make sure that it is a simple type or for one we can actually generate.
+  // NOTE: make sure that it is a simple type or for one we can actually generate.
+  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::SIMPLE);
 
   // Generates a function of name: {attribute.type} get_{attribute_name}()
 
@@ -80,9 +82,11 @@ void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
   std::string function_name = "get_" + attribute->name;
   auto fn = this->createFunction(function_name, attribute->type);
 
+  auto stmtBuilder = fn->getStatementBuilder();
   fn->addTempVariable("tmp", attribute->type);
-  fn->addReadStatement(attribute, "tmp");
-  fn->addReturnStatement("tmp");
+
+  stmtBuilder->addReadStatement(attribute, "tmp");
+  stmtBuilder->addReturnStatement("tmp");
 }
 
 void Builder::generateGetter(const std::string& attribute_name) {
@@ -91,7 +95,8 @@ void Builder::generateGetter(const std::string& attribute_name) {
 }
 
 void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
-  // FIXME: make sure that it is a simple type or for one we can actually generate.
+  // NOTE: make sure that it is a simple type or for one we can actually generate.
+  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::SIMPLE);
 
   // Generates a function of name: void set_{attribute_name}(attribute.type)
 
@@ -100,9 +105,10 @@ void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
 
   std::string function_name = "set_" + attribute->name;
   auto fn = this->createFunction(function_name);
+  auto stmtBuilder = fn->getStatementBuilder();
   fn->addArgument("val", attribute->type);
-  fn->addUpdateStatement(attribute, "val");
-  fn->addReturnVoidStatement();
+  stmtBuilder->addUpdateStatement(attribute, "val");
+  stmtBuilder->addReturnVoidStatement();
 }
 
 void Builder::generateSetter(const std::string& attribute_name) {
@@ -158,7 +164,7 @@ JitContainer* Builder::createInstance() {
     throw dcds::exceptions::dcds_dynamic_exception("Data structure is not built yet");
   }
 
-  LOG(INFO) << "[Builder::createInstance] creating instance";
+  LOG(INFO) << "[Builder::createInstance] creating instance: " << this->getName();
   auto* ds_constructor = codegen_engine->getFunction(this->getName() + "_constructor");
 
   auto* ds_instance = reinterpret_cast<void* (*)()>(ds_constructor)();

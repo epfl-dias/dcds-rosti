@@ -26,12 +26,16 @@
 #include <any>
 #include <dcds/builder/builder.hpp>
 #include <dcds/builder/function-builder.hpp>
+#include <dcds/builder/statement-builder.hpp>
 #include <dcds/context/DCDSContext.hpp>
 #include <dcds/exporter/jit-container.hpp>
 #include <dcds/util/logging.hpp>
 #include <dcds/util/profiling.hpp>
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
+
+#include "dcds/builder/expressions/expressions.hpp"
+#include "dcds/builder/expressions/unary-expressions.hpp"
 
 static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder) {
   // FIXME: create addAttribute without initial value also.
@@ -52,85 +56,68 @@ static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder
 // }
 //
 static void addFront(std::shared_ptr<dcds::Builder>& builder) {
-  // get the first element from the tail (does not pop)
+  // get the first element from the head (does not pop)
 
   auto fn = builder->createFunction("front", dcds::valueType::INTEGER);
+
   fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
-  fn->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  fn->addLogStatement("log from inside addFront");
+
+  auto stmtBuilder = fn->getStatementBuilder();
+  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
+  // fn->addLogStatement("log from inside addFront");
   fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
-  fn->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
-  fn->addReturnStatement("tmp_payload_ret");
+  stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
+  stmtBuilder->addReturnStatement("tmp_payload_ret");
 }
 
 static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
-  // add a condition of attribute has a tail, then update that.
+  // FIXME: Can argument to a method call be a constant value or constant expression?
+  // FIXME: micro-opt: we dont need a txn starting until reading head but that wouldn't be the case.
+  // TODO: Add tail-checks, and then write code, and try dead/write-only attribute.
+  // TODO: add condition, if tail attribute exists, then update tail if necessary.
 
   /*
-   * auto newNode = node(val)
-   * auto tmp = head;
-   * if(tmp != nullptr)
-   *    tmp.next = newNode
-   * head = newNode
+   * void push_front(uint64_t value){
+   *     auto newNode = node(val)
+   *     auto tmp = head;
+   *     if(tmp != nullptr)
+   *        tmp.next = newNode
+   *     head = newNode
+   *     return;
    * */
+
+  // declare void push_front(uint64_t value)
   auto fn = builder->createFunction("push_front", dcds::valueType::INTEGER);
-
   auto nodeType = builder->getRegisteredType("LL_NODE");
-
   fn->addArgument("push_value", dcds::INTEGER);
 
-  // auto newNode = fn->addInsertStatement(nodeType, "push_value", nullptr); // not possible as we dont have custom
-  // constructors
-  fn->addInsertStatement(nodeType->getName(), "tmp_node");
-  fn->addMethodCall(nodeType, "tmp_node", "set_payload", "", std::string{"push_value"});
-  //    instance->op("set_payload", 10);
+  auto stmtBuilder = fn->getStatementBuilder();
 
-  // can be a constant value?
-  //    // fn->addCallStatement("tmp_node", "set_payload", 10);
-  //    fn->addCallStatement("tmp_node", "set_payload", "push_value"); // tmp_node->set_payload(push_value);
-  //
-  //    fn->addTempVariable("tmp_head", builder.getAttribute("head")->type);
-  //    fn->addReadStatement("head", "tmp_head");
-  //
-  //    fn->addCallStatement("tmp_node", "set_next", "tmp_head"); // tmp_node->set_next(tmp_head);
-  //
-  fn->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
+  // gen: auto newNode = node(val)
+  stmtBuilder->addInsertStatement(nodeType, "tmp_node");
+  stmtBuilder->addMethodCall(nodeType, "tmp_node", "set_payload", "", std::string{"push_value"});
 
-  // FIXME: we need conditions for checking head==null, but thats later for now.
+  // gen: auto tmp = head;
+  fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
+  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
 
-  //    //dsBuilder.addTempVar("one_1", dcds::valueType::INTEGER, 1, read_fn);
-  //    //auto tmpHead = fn->addTempVariable("tmp", nodeType);
-  //
-  //
-  //    //    auto add_statement =
-  //    //        dsBuilder.createTempVarAddStatement("counter_value_read_variable", "one_1",
-  //    //"counter_value_read_variable");
-  //
-  //
-  //    auto newNode = fn->addInsertStatement(nodeType, "push_value", nullptr);
-  //    fn->addReadStatement(builder.getAttribute("head"), tmpHead);
-  //
-  //    //  if tmpHead is nullptr then directly assign
-  //    std::vector<std::shared_ptr<dcds::StatementBuilder>> ifHeadNotNull;
-  //    auto cond = dcds::ConditionBuilder(dcds::CmpIPredicate::neq, tmpHead, nullptr);
-  //    ifHeadNotNull.emplace_back(nodeType.createCallStatement(tmpHead, "set_next", newNode));
-  //
-  //    // TODO: add this createCallStatement in list.
-  //    fn->createConditionalStatement(cond, ifHeadNotNull);
-  //
-  //    fn->addUpdateStatement(builder.getAttribute("head"), newNode);
-  //
-  //
-  //
-  //    // TODO: add condition, if tail attribute exists, then update tail if necessary.
+  // gen: if(tmp != nullptr)
+  auto conditionalBlocks =
+      stmtBuilder->addConditionalBranch(new dcds::expressions::IsNotNullExpression{fn->getTempVariable("tmp_head")});
 
-  fn->addTempVariable("tmp_ret", dcds::valueType::INTEGER, UINT64_C(1));
-  fn->addReturnStatement("tmp_ret");
+  // gen: tmp.next = newNode
+  conditionalBlocks.ifBlock->addMethodCall(nodeType, "tmp_head", "set_next", "", std::string{"tmp_node"});
+
+  // gen: head = newNode
+  stmtBuilder->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
+
+  // gen: return;
+  stmtBuilder->addReturnVoidStatement();
 }
 
 static void generateLinkedList() {
   auto builder = std::make_shared<dcds::Builder>("LinkedList");
-  auto nodeType = generateLinkedListNode(builder->createType("LL_NODE"));
+  generateLinkedListNode(builder->createType("LL_NODE"));
 
   // list will have a node type, and two attribute of head/tail.
 
@@ -141,8 +128,8 @@ static void generateLinkedList() {
   builder->addAttribute("head", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
   builder->addAttribute("tail", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
 
-  builder->addAttributePointerType("LL_NODE", "head");
-  builder->addAttributePointerType("LL_NODE", "tail");
+  // builder->addAttributePointerType("LL_NODE", "head"); // does not work at the moment.
+  // builder->addAttributePointerType("LL_NODE", "tail");
 
   addPushFront(builder);
   addFront(builder);
@@ -186,10 +173,167 @@ static void generateNode() {
   instance->op("get_payload");
 }
 
-int main(int argc, char** argv) {
+static void testCondBr() {
+  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR");
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
+  // FIXME: adding attribute as it expects at least one attr
+  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
+  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+
+  // -- function create
+
+  //  testConditionBr
+
+  auto fn = builder->createFunction("testConditionBr");
+  fn->addArgument("arg_one", dcds::INTEGER);
+  auto sb = fn->getStatementBuilder();
+
+  auto conditionalBlocks =
+      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
+
+  conditionalBlocks.ifBlock->addLogStatement("It is even branch");
+  conditionalBlocks.elseBlock->addLogStatement("It is odd branch");
+  sb->addReturnVoidStatement();
+
+  //  fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
+  //
+  //  auto stmtBuilder = fn->getStatementBuilder();
+  //  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
+  //  // fn->addLogStatement("log from inside addFront");
+  //  fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
+  //  stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
+  //  stmtBuilder->addReturnStatement("tmp_payload_ret");
+
+  // -- function end
+
+  LOG(INFO) << "testCondBr -- build-before";
+  builder->build();
+  LOG(INFO) << "testCondBr -- build-after";
+
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+
+  auto res = instance->op("testConditionBr");
+  LOG(INFO) << "xxxx";
+  instance->op("testConditionBr", 3);
+  instance->op("testConditionBr", 4);
+}
+static void testOnlyIfBranch() {
+  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_MULTIPLE");
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
+  // FIXME: adding attribute as it expects at least one attr
+  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
+  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+
+  auto fn = builder->createFunction("testConditionBr");
+  fn->addArgument("arg_one", dcds::INTEGER);
+  fn->addArgument("arg_two", dcds::INTEGER);
+  auto sb = fn->getStatementBuilder();
+
+  auto conditionalBlocks =
+      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
+  conditionalBlocks.ifBlock->addLogStatement("1: It is the if branch");
+
+  sb->addLogStatement("Merge branch, returning now");
+
+  sb->addReturnVoidStatement();
+
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+  builder->build();
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+
+  LOG(INFO) << __FUNCTION__ << " -- tests";
+  instance->op("testConditionBr", 1, 2);
+  instance->op("testConditionBr", 3, 4);
+}
+
+static void testMultipleBranches() {
+  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_MULTIPLE");
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
+  // FIXME: adding attribute as it expects at least one attr
+  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
+  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+
+  auto fn = builder->createFunction("testConditionBr");
+  fn->addArgument("arg_one", dcds::INTEGER);
+  fn->addArgument("arg_two", dcds::INTEGER);
+  auto sb = fn->getStatementBuilder();
+
+  auto conditionalBlocks =
+      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
+  conditionalBlocks.ifBlock->addLogStatement("1: It is even branch");
+  conditionalBlocks.elseBlock->addLogStatement("1: It is odd branch");
+
+  auto cond2 = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_two")});
+  cond2.ifBlock->addLogStatement("2: It is even branch");
+  cond2.elseBlock->addLogStatement("2: It is odd branch");
+
+  sb->addReturnVoidStatement();
+
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+  builder->build();
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+
+  LOG(INFO) << __FUNCTION__ << " -- tests";
+  instance->op("testConditionBr", 1, 2);
+  instance->op("testConditionBr", 3, 4);
+}
+
+static void testNestedBranches() {
+  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_NESTED");
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
+  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+
+  auto fn = builder->createFunction("testConditionBr");
+  fn->addArgument("arg_one", dcds::INTEGER);
+  fn->addArgument("arg_two", dcds::INTEGER);
+  auto sb = fn->getStatementBuilder();
+
+  auto conditionalBlocks =
+      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
+  conditionalBlocks.ifBlock->addLogStatement("1: It is even branch");
+  conditionalBlocks.elseBlock->addLogStatement("1: It is odd branch");
+
+  auto cond2 = conditionalBlocks.ifBlock->addConditionalBranch(
+      new dcds::expressions::IsEvenExpression{fn->getArgument("arg_two")});
+  cond2.ifBlock->addLogStatement("2: It is even branch");
+  cond2.elseBlock->addLogStatement("2: It is odd branch");
+
+  sb->addLogStatement("Merge branch, returning now");
+  sb->addReturnVoidStatement();
+
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+  builder->build();
+  LOG(INFO) << __FUNCTION__ << " -- build-before";
+
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+
+  LOG(INFO) << __FUNCTION__ << " -- tests";
+  instance->op("testConditionBr", 1, 2);  // odd then even
+  instance->op("testConditionBr", 1, 3);  // odd then odd
+  instance->op("testConditionBr", 2, 4);  // even then even
+  instance->op("testConditionBr", 2, 3);  // even then odd
+}
+
+int main() {
   LOG(INFO) << "main() -- start";
   generateLinkedList();
-  //     generateNode();
+  // generateNode();
+  //  testCondBr();
+  //  testMultipleBranches();
+  //  testOnlyIfBranch();
+  //  testNestedBranches();
 
   LOG(INFO) << "main() -- done";
   return 0;

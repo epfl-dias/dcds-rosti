@@ -31,5 +31,6 @@ function(dcds_target_enable_default_warnings target)
     -Wno-error=unused-function
     -Wno-error=unused-parameter
     -Wno-error=unused-but-set-variable
+    -Wno-weak-vtables
     )
 endfunction()

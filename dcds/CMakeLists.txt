@@ -4,6 +4,9 @@ set(dcds_cxx
 
         # Builder
         lib/builder/builder.cpp
+        lib/builder/function-builder.cpp
+        lib/builder/statement-builder.cpp
+        lib/builder/expressions/expressions.cpp
 
         # Codegen
         lib/codegen/codegen.cpp

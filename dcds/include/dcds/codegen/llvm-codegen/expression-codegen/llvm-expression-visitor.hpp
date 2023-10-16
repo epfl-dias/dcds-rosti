@@ -22,24 +22,45 @@
 #ifndef DCDS_LLVM_EXPRESSION_VISITOR_HPP
 #define DCDS_LLVM_EXPRESSION_VISITOR_HPP
 
+#include <llvm/IR/Value.h>
+
 #include "dcds/builder/expressions/expression-visitor.hpp"
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 
 namespace dcds {
+class LLVMCodegen;
+}
+
+namespace dcds::expressions {
 
 class LLVMExpressionVisitor : public ExpressionVisitor {
  public:
-  explicit LLVMExpressionVisitor(LLVMCodegen* codegen_engine) : codegenEngine(codegen_engine) {}
+  explicit LLVMExpressionVisitor(LLVMCodegen* codegen_engine,
+                                 dcds::LLVMCodegen::function_build_context* function_context)
+      : codegenEngine(codegen_engine), fnCtx(function_context) {}
+
+  ~LLVMExpressionVisitor() override = default;
 
  public:
-  void visit(const expressions::IsNullExpression& isNull) override;
-  void visit(const expressions::AddExpression& isNull) override;
+  // Unary expressions
+  void* visit(const expressions::IsNullExpression& expr) override;
+  void* visit(const expressions::IsNotNullExpression& expr) override;
+  void* visit(const expressions::IsEvenExpression& expr) override;
+
+  // Binary expressions
+  void* visit(const expressions::AddExpression& expr) override;
+
+  // Temporary variables / Function Arguments
+  void* visit(const expressions::LocalVariableExpression& localVariableExpr) override;
+  void* visit(const expressions::FunctionArgumentExpression& functionArgumentExpr) override;
+  void* visit(const expressions::TemporaryVariableExpression& expr) override;
 
  private:
-  LLVMCodegen* codegenEngine;
+  dcds::LLVMCodegen* codegenEngine;
+  dcds::LLVMCodegen::function_build_context* fnCtx;
 };
 
-}  // namespace dcds
+}  // namespace dcds::expressions
 
 #endif  // DCDS_LLVM_EXPRESSION_VISITOR_HPP

@@ -19,35 +19,22 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_EXPRESSION_VISITOR_HPP
-#define DCDS_EXPRESSION_VISITOR_HPP
+#include "dcds/builder/expressions/expressions.hpp"
 
 #include "dcds/builder/expressions/binary-expressions.hpp"
-#include "dcds/builder/expressions/expressions.hpp"
+#include "dcds/builder/expressions/expression-visitor.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
 
-namespace dcds::expressions {
+using namespace dcds::expressions;
 
-// Add visit methods for other expression types
+// Temporary variables / Function Arguments
+void* FunctionArgumentExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* TemporaryVariableExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
-class ExpressionVisitor {
- public:
-  // Unary expressions
-  virtual void* visit(const expressions::IsNullExpression& expr) = 0;
-  virtual void* visit(const expressions::IsNotNullExpression& expr) = 0;
-  virtual void* visit(const expressions::IsEvenExpression& expr) = 0;
+// Unary expressions
+void* IsNullExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* IsNotNullExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* IsEvenExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
-  // Binary expressions
-  virtual void* visit(const expressions::AddExpression& expr) = 0;
-
-  // Temporary variables / Function Arguments
-  virtual void* visit(const expressions::LocalVariableExpression& expr) = 0;
-  virtual void* visit(const expressions::FunctionArgumentExpression& expr) = 0;
-  virtual void* visit(const expressions::TemporaryVariableExpression& expr) = 0;
-
-  virtual ~ExpressionVisitor() = default;
-};
-
-}  // namespace dcds::expressions
-
-#endif  // DCDS_EXPRESSION_VISITOR_HPP
+// Binary expressions
+void* AddExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }

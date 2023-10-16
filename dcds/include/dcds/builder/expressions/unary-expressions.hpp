@@ -23,6 +23,7 @@
 #define DCDS_UNARY_EXPRESSIONS_HPP
 
 #include <any>
+#include <cassert>
 #include <iostream>
 #include <utility>
 
@@ -38,16 +39,52 @@ class UnaryExpression : public Expression {
   [[nodiscard]] int getNumOperands() const final { return 1; }
   [[nodiscard]] bool isUnaryExpression() const final { return true; }
   [[nodiscard]] bool isBinaryExpression() const final { return false; }
+
+  virtual Expression* getExpression() const = 0;
+};
+
+class IsEvenExpression : public UnaryExpression {
+ public:
+  explicit IsEvenExpression(Expression* _expr) : expr(_expr) { assert(_expr->getResultType() == valueType::INTEGER); }
+  explicit IsEvenExpression(const std::shared_ptr<Expression>& _expr) : expr(_expr.get()) {
+    assert(_expr->getResultType() == valueType::INTEGER);
+  }
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
+
+  Expression* getExpression() const override { return expr; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+ private:
+  Expression* expr;
 };
 
 class IsNullExpression : public UnaryExpression {
  public:
-  explicit IsNullExpression(Expression* expr) : expr(expr) {}
-  explicit IsNullExpression(const std::shared_ptr<Expression>& expr) : expr(expr.get()) {}
+  explicit IsNullExpression(Expression* _expr) : expr(_expr) {}
+  explicit IsNullExpression(const std::shared_ptr<Expression>& _expr) : expr(_expr.get()) {}
 
   [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
 
-  Expression* getExpression() { return expr; }
+  Expression* getExpression() const override { return expr; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+ private:
+  Expression* expr;
+};
+
+class IsNotNullExpression : public UnaryExpression {
+ public:
+  explicit IsNotNullExpression(Expression* _expr) : expr(_expr) {}
+  explicit IsNotNullExpression(const std::shared_ptr<Expression>& _expr) : expr(_expr.get()) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
+
+  Expression* getExpression() const override { return expr; }
+
+  void* accept(ExpressionVisitor* v) override;
 
  private:
   Expression* expr;
@@ -60,11 +97,13 @@ class LocalVariableExpression : public UnaryExpression {
       : var_name(std::move(variable_name)), var_type(variable_type), var_src_type(source_type) {}
 
  public:
-  [[nodiscard]] auto getName() { return var_name; };
+  [[nodiscard]] auto getName() { return var_name; }
   [[nodiscard]] auto getType() const { return var_type; }
   [[nodiscard]] auto getSourceType() const { return var_src_type; }
 
   [[nodiscard]] valueType getResultType() const override { return var_type; }
+
+  Expression* getExpression() const override { assert(false && "how come here?"); }
 
  public:
   const std::string var_name;
@@ -81,7 +120,7 @@ class TemporaryVariableExpression : public LocalVariableExpression {
   explicit TemporaryVariableExpression(std::string variable_name, dcds::valueType variable_type)
       : TemporaryVariableExpression(std::move(variable_name), variable_type, {}) {}
 
-  ~TemporaryVariableExpression() override { LOG(INFO) << "~TemporaryVariableExpression"; }
+  void* accept(ExpressionVisitor* v) override;
 
  public:
   const std::any var_default_value;
@@ -92,7 +131,7 @@ class FunctionArgumentExpression : public LocalVariableExpression {
   explicit FunctionArgumentExpression(std::string variable_name, dcds::valueType variable_type)
       : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {}
 
-  ~FunctionArgumentExpression() override { LOG(INFO) << "~FunctionArgumentExpression"; }
+  void* accept(ExpressionVisitor* v) override;
 };
 
 }  // namespace dcds::expressions

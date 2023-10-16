@@ -35,10 +35,10 @@ class Expression {
   //  explicit Expression(const ExpressionType *type)
   //      : type(type), registered(false) {}
 
-  //  Expression(const Expression &) = default;
-  //  Expression(Expression &&) = default;
-  //  Expression &operator=(const Expression &) = default;
-  //  Expression &operator=(Expression &&) = default;
+  Expression(const Expression &) = default;
+  Expression(Expression &&) = default;
+  Expression &operator=(const Expression &) = default;
+  Expression &operator=(Expression &&) = default;
 
   Expression() = default;
   virtual ~Expression() = default;
@@ -49,7 +49,7 @@ class Expression {
   //  // this would go in our codegen engine.
   //  virtual int evaluate() const = 0;
 
-  virtual void accept(ExpressionVisitor &v){};
+  virtual void *accept(ExpressionVisitor *v) = 0;
 
  public:
   // Utilities

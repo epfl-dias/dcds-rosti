@@ -63,7 +63,25 @@
 namespace dcds {
 using namespace llvm;
 
+namespace expressions {
+class LLVMExpressionVisitor;
+}
+
 class LLVMCodegen : public Codegen, public LLVMCodegenContext {
+  friend class expressions::LLVMExpressionVisitor;
+
+ private:
+  struct function_build_context {
+    std::shared_ptr<FunctionBuilder> fb;
+    std::shared_ptr<StatementBuilder> sb;
+    llvm::Function *fn;
+    std::map<std::string, llvm::Value *> *tempVariableMap;
+
+    explicit function_build_context(std::shared_ptr<FunctionBuilder> _fb, std::shared_ptr<StatementBuilder> _sb,
+                                    llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap)
+        : fb(_fb), sb(_sb), fn(_fn), tempVariableMap(_tempVariableMap) {}
+  };
+
  public:
   explicit LLVMCodegen(dcds::Builder *builder);
   ~LLVMCodegen() override {
@@ -123,9 +141,17 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
                                        const std::string &name_prefix = "", const std::string &name_suffix = "");
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
-  void buildStatement(dcds::Builder *builder, std::shared_ptr<Statement> &sb, std::shared_ptr<FunctionBuilder> &fb,
-                      llvm::Function *fn, llvm::BasicBlock *basicBlock,
-                      std::map<std::string, llvm::Value *> &tempVariableMap);
+
+  void buildFunctionBody(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
+                         std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn, llvm::BasicBlock *basicBlock,
+                         std::map<std::string, llvm::Value *> &tempVariableMap);
+
+  void buildStatement(dcds::Builder *builder, function_build_context &fnCtx, std::shared_ptr<Statement> &stmt);
+  void buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx,
+                                           std::shared_ptr<Statement> &stmt);
+
+  llvm::Value *codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
+                                 const dcds::expressions::Expression *expr);
 
  private:
   //  std::vector<llvm::Function *> userFunctions;
@@ -145,7 +171,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
  private:
   std::unique_ptr<LLVMJIT> jitter;
 
- private:
   //  struct function_builder_context {
   //    // temporary_variables
   //  };

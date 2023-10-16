@@ -22,32 +22,34 @@
 #ifndef DCDS_BINARY_EXPRESSIONS_HPP
 #define DCDS_BINARY_EXPRESSIONS_HPP
 
+#include <cassert>
+
 #include "dcds/builder/expressions/expressions.hpp"
 
 namespace dcds::expressions {
 
 class BinaryExpression : public Expression {
  public:
-  BinaryExpression() = default;
+  BinaryExpression(Expression* left, Expression* right) : _left(left), _right(right) {}
   [[nodiscard]] int getNumOperands() const override { return 2; };
   [[nodiscard]] bool isUnaryExpression() const override { return false; }
   [[nodiscard]] bool isBinaryExpression() const override { return true; }
+
+  Expression* getLeft() const { return _left; }
+  Expression* getRight() const { return _right; }
+
+ private:
+  Expression* _left;
+  Expression* _right;
 };
 
 class AddExpression : public BinaryExpression {
  public:
-  AddExpression(Expression* left, Expression* right) : left(left), right(right) {}
+  explicit AddExpression(Expression* left, Expression* right) : BinaryExpression(left, right) {}
+  explicit AddExpression(const std::shared_ptr<Expression>& left, const std::shared_ptr<Expression>& right)
+      : BinaryExpression(left.get(), right.get()) {}
 
-  //  int accept(ExpressionVisitor& visitor); override {
-  //    return visitor.visit(*this);
-  //  }
-
-  Expression* getLeft() { return left; }
-  Expression* getRight() { return right; }
-
- private:
-  Expression* left;
-  Expression* right;
+  void* accept(ExpressionVisitor* v) override;
 };
 
 }  // namespace dcds::expressions
