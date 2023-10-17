@@ -61,3 +61,5 @@ target_link_libraries(dcds
         )
 
 target_compile_features(dcds PUBLIC cxx_std_20)
+
+add_subdirectory(test)
