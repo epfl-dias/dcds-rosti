@@ -58,7 +58,7 @@ class FunctionBuilder : remove_copy {
   auto getReturnValueType() { return returnValueType; }
 
   [[nodiscard]] auto isAlwaysInline() const { return _is_always_inline; }
-  void setAlwaysInline() { _is_always_inline = true; }
+  void setAlwaysInline(bool val) { _is_always_inline = val; }
 
   // --------------------------------------
   // Function Arguments
@@ -71,9 +71,11 @@ class FunctionBuilder : remove_copy {
   }
 
  public:
-  void addArgument(const std::string &name, dcds::valueType varType) {
+  auto addArgument(const std::string &name, dcds::valueType varType) {
     isValidVarAddition(name);
-    this->function_args.emplace_back(std::make_shared<expressions::FunctionArgumentExpression>(name, varType));
+    auto arg = std::make_shared<expressions::FunctionArgumentExpression>(name, varType);
+    this->function_args.push_back(arg);
+    return arg;
   }
   [[nodiscard]] auto getArguments() const { return function_args; }
   [[nodiscard]] bool hasArguments() const { return !function_args.empty(); }
@@ -94,13 +96,13 @@ class FunctionBuilder : remove_copy {
   // Temporary Variables
   // --------------------------------------
 
-  void addTempVariable(const std::string &name, dcds::valueType varType) { addTempVariable(name, varType, {}); }
-  void addTempVariable(const std::string &name, dcds::valueType varType, const std::any &initial_value) {
+  auto addTempVariable(const std::string &name, dcds::valueType varType, const std::any &initial_value) {
     isValidVarAddition(name);
-    // temp_variables.emplace(name, std::make_tuple(varType, initial_value));
-    temp_variables.emplace(name,
-                           std::make_shared<expressions::TemporaryVariableExpression>(name, varType, initial_value));
+    auto var = std::make_shared<expressions::TemporaryVariableExpression>(name, varType, initial_value);
+    temp_variables.emplace(name, var);
+    return var;
   }
+  auto addTempVariable(const std::string &name, dcds::valueType varType) { return addTempVariable(name, varType, {}); }
 
   //  void addTempVariable(const std::string &name, std::shared_ptr<SimpleAttribute> &attributeTypeRef) {
   //    addTempVariable(name, varType, {});

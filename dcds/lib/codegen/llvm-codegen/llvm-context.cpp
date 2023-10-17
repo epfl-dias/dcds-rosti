@@ -358,7 +358,8 @@ PointerType *LLVMCodegenContext::getPointerType(Type *type) { return PointerType
 void LLVMCodegenContext::registerFunction(const char *funcName, Function *func) { availableFunctions[funcName] = func; }
 
 void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm::Type *returnType,
-                                          const std::vector<llvm::Type *> &args, bool always_inline) {
+                                          const std::vector<llvm::Type *> &args, bool always_inline,
+                                          llvm::GlobalValue::LinkageTypes linkageType) {
   //  auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
   //  auto fn =llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, fb->_name,
   //  theLLVMModule.get()); fn->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -372,7 +373,7 @@ void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm
   } else {
     FT = FunctionType::get(returnType, args, false);
   }
-  Function *FN = Function::Create(FT, Function::ExternalLinkage, function_name, getModule());
+  Function *FN = Function::Create(FT, linkageType, function_name, getModule());
 
   if (always_inline) FN->addFnAttr(llvm::Attribute::AlwaysInline);
 

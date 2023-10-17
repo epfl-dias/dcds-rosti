@@ -1,6 +1,10 @@
 # Pure, regular C++ files
 set(dcds_test_cxx
         test-builder.cpp
+
+        statements/conditional-statements.cpp
+
+
         )
 
 add_executable(dcds_test

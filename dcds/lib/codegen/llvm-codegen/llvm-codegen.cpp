@@ -49,6 +49,8 @@ llvm::Type *toLLVMType(LLVMContext &context, dcds::valueType dcds_type) {
     case FLOAT: {
       return llvm::Type::getFloatTy(context);
     }
+    case BOOL:
+      return llvm::Type::getInt1Ty(context);
     case CHAR:
     case VOID:
     default:
@@ -195,7 +197,8 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
   auto fn_outer = this->genFunctionSignature(fb, fn_outer_args, fn_name_prefix);
   // pre_args: { txnManager*, mainRecord, txnPtr }
-  auto fn_inner = this->genFunctionSignature(fb, {ptrType, uintPtrType, ptrType}, fn_name_prefix, "_inner");
+  auto fn_inner = this->genFunctionSignature(fb, {ptrType, uintPtrType, ptrType}, fn_name_prefix, "_inner",
+                                             llvm::GlobalValue::LinkageTypes::PrivateLinkage);
 
   userFunctions.emplace(fn_outer->getName().str(), fn_outer);
   userFunctions.emplace(fn_inner->getName().str(), fn_inner);
@@ -204,7 +207,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   // 2- set insertion point at the beginning of the function.
   auto fn_inner_BB = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn_inner);
-  llvmBuilder->SetInsertPoint(fn_inner_BB);
+  getBuilder()->SetInsertPoint(fn_inner_BB);
 
   // 3- allocate temporary variables.
   LOG(INFO) << "codegen- temporary variables";
@@ -226,7 +229,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   // CODEGEN outer function.
   auto fn_outer_BB = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn_outer);
-  llvmBuilder->SetInsertPoint(fn_outer_BB);
+  getBuilder()->SetInsertPoint(fn_outer_BB);
 
   // ###### BeginTxn
   auto txnManager = fn_outer->getArg(0);
@@ -300,10 +303,27 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
                                     std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn,
                                     llvm::BasicBlock *basicBlock,
                                     std::map<std::string, llvm::Value *> &tempVariableMap) {
-  auto fnCtx = function_build_context(fb, sb, fn, &tempVariableMap);
+  auto returnBB = llvm::BasicBlock::Create(getLLVMContext(), "return", fn);
+  auto fnCtx = function_build_context(fb, sb, fn, &tempVariableMap, returnBB);
+  if (fb->returnValueType != dcds::valueType::VOID) {
+    fnCtx.retval_variable_name = builder->getName() + "_" + fb->getName() + "_retval";
+  }
+
   for (auto &s : sb->statements) {
     this->buildStatement(builder, fnCtx, s);
   }
+
+  // Generate the return block.
+  getBuilder()->SetInsertPoint(returnBB);
+  if (fb->returnValueType == VOID) {
+    getBuilder()->CreateRetVoid();
+  } else {
+    llvm::Value *retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(),
+                                                     fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+    getBuilder()->CreateRet(retValue);
+  }
+
+  returnBB->moveAfter(&(fn->back()));
 }
 
 llvm::Value *LLVMCodegen::codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
@@ -323,14 +343,17 @@ void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, fu
   llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, conditionalStatement->expr);
 
   auto hasElseBlock = !(conditionalStatement->elseBLock->statements.empty());
+  auto isLastStatementInBlock = (fnCtx.sb->statements.back() == stmt);
 
   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fnCtx.fn);
   llvm::BasicBlock *elseBlock = hasElseBlock ? llvm::BasicBlock::Create(getLLVMContext(), "else", fnCtx.fn) : nullptr;
-  llvm::BasicBlock *mergeBlock = llvm::BasicBlock::Create(getLLVMContext(), "merge", fnCtx.fn);
+  llvm::BasicBlock *mergeBlock =
+      isLastStatementInBlock ? nullptr : llvm::BasicBlock::Create(getLLVMContext(), "merge", fnCtx.fn);
 
   if (hasElseBlock) {
     getBuilder()->CreateCondBr(exprResult, thenBlock, elseBlock);
   } else {
+    // isLastStatementInBlock? then what, cant go to return, want to go to next block ideally.
     getBuilder()->CreateCondBr(exprResult, thenBlock, mergeBlock);
   }
 
@@ -348,7 +371,9 @@ void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, fu
       this->buildStatement(builder, fnCtx_IfBlock, if_stmt);
     }
 
-    getBuilder()->CreateBr(mergeBlock);
+    if (!(fnCtx_IfBlock.sb->doesReturn) && !isLastStatementInBlock) {
+      getBuilder()->CreateBr(mergeBlock);
+    }
   }
 
   // Build statements for else block
@@ -364,10 +389,14 @@ void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, fu
     for (auto &elseStmt : conditionalStatement->elseBLock->statements) {
       this->buildStatement(builder, fnCtx_elseBlock, elseStmt);
     }
-    getBuilder()->CreateBr(mergeBlock);
+    if (!(fnCtx_elseBlock.sb->doesReturn) && !isLastStatementInBlock) {
+      getBuilder()->CreateBr(mergeBlock);
+    }
   }
 
-  getBuilder()->SetInsertPoint(mergeBlock);
+  if (!isLastStatementInBlock) {
+    getBuilder()->SetInsertPoint(mergeBlock);
+  }
 
   // NOTE: do we need PHI node (due to SSA) or it can be automatic? and if we do, then how to do it automatically.
 }
@@ -455,20 +484,21 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     this->createPrintString(stmt->actionVarName);
   } else if (stmt->stType == dcds::statementType::YIELD) {
     LOG(INFO) << "StatementType: return";
-    if (stmt->refVarName.empty()) {
-      LOG(INFO) << "void return because sb->refVarName.empty()";
-      getBuilder()->CreateRetVoid();
-    } else {
+    if (!stmt->refVarName.empty()) {
       if (fnCtx.tempVariableMap->contains(stmt->refVarName)) {
         // We know temporary variables are allocated through llvm, hence, do a CreateLoad on it.
 
+        // copy the required variable to the retval place.
         llvm::Value *retValue =
             getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), fnCtx.tempVariableMap->operator[](stmt->refVarName));
-        getBuilder()->CreateRet(retValue);
+
+        getBuilder()->CreateStore(retValue, fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
       } else {
         assert(false && "reference variable not allocated?");
       }
     }
+
+    getBuilder()->CreateBr(fnCtx.returnBlock);
 
   } else if (stmt->stType == dcds::statementType::CREATE) {
     // actionVarName -> subType
@@ -506,7 +536,6 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     // 'inner' because txn is already here from wrapped outer function.
 
     std::string function_name = methodStmt->object_type_info->getName() + "_" + methodStmt->function_name + "_inner";
-    printIR();
 
     assert(userFunctions.contains(function_name));
     bool doesReturn = true;
@@ -570,7 +599,9 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
 llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilder> &fb,
                                                   const std::vector<llvm::Type *> &pre_args,
-                                                  const std::string &name_prefix, const std::string &name_suffix) {
+                                                  const std::string &name_prefix, const std::string &name_suffix,
+                                                  llvm::GlobalValue::LinkageTypes linkageType) {
+  LOG(INFO) << "genFunctionSignature: " << fb->_name << " | prefix: " << name_prefix << " | suffix: " << name_suffix;
   std::vector<llvm::Type *> argTypes(pre_args);
   llvm::Type *returnType;
 
@@ -581,17 +612,55 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
   if (fb->returnValueType == VOID) {
     returnType = llvm::Type::getVoidTy(getLLVMContext());
   } else {
+    LOG(INFO) << "fb->returnValueType: " << fb->returnValueType;
     returnType = toLLVMType(getLLVMContext(), fb->returnValueType);
   }
 
   auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
-  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
-                                   name_prefix + fb->_name + name_suffix, theLLVMModule.get());
+  auto fn = llvm::Function::Create(fn_type, linkageType, name_prefix + fb->_name + name_suffix, theLLVMModule.get());
 
   if (fb->isAlwaysInline()) {
     fn->addFnAttr(llvm::Attribute::AlwaysInline);
   }
   return fn;
+}
+
+llvm::Value *LLVMCodegen::allocateOneVar(std::string var_name, dcds::valueType var_type, std::any init_value) {
+  bool has_value = init_value.has_value();
+  LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
+
+  switch (var_type) {
+    case INTEGER:
+    case RECORD_PTR: {
+      auto int64_type = llvm::Type::getInt64Ty(getLLVMContext());
+      auto vr = getBuilder()->CreateAlloca(int64_type, nullptr, var_name);
+      if (has_value) {
+        auto value = createInt64(std::any_cast<uint64_t>(init_value));
+        getBuilder()->CreateStore(value, vr);
+      }
+
+      //        LOG(INFO) << "Allocating temp variable: " << var_name << " | " << vr->getType()->getTypeID() << " | "
+      //        << int64_type->getTypeID();
+      return vr;
+    }
+    case BOOL: {
+      auto bool_type = llvm::Type::getInt1Ty(getLLVMContext());
+      auto vr = getBuilder()->CreateAlloca(bool_type, nullptr, var_name);
+      if (has_value) {
+        auto value = std::any_cast<bool>(init_value) ? createTrue() : createFalse();
+        getBuilder()->CreateStore(value, vr);
+      }
+      return vr;
+    }
+    case VOID:
+    case FLOAT:
+    case RECORD_ID:
+    case CHAR:
+
+    default:
+      assert(false && "[allocateOneVar] valueTypeNotSupportedYet");
+      break;
+  }
 }
 
 std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
@@ -600,43 +669,24 @@ std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std
 
   auto allocaBuilder = llvm::IRBuilder<>(basicBlock, basicBlock->end());
 
+  // fnCtx.retval_variable_name = builder->getName() + "_" + fn->getName().str() + "_retval";
+  if (fb->returnValueType != dcds::VOID) {
+    auto retval_variable_name = fb->builder->getName() + "_" + fb->getName() + "_retval";
+    LOG(INFO) << "Allocating retval: " << retval_variable_name;
+
+    auto retValAlloc = allocateOneVar(retval_variable_name, fb->getReturnValueType(), {});
+    variableCodeMap.emplace(retval_variable_name, retValAlloc);
+  }
+
+  LOG(INFO) << "Allocating function's temp vars: " << fb->temp_variables.size();
+
   for (auto &v : fb->temp_variables) {
     auto var_name = v.first;
     auto var_type = v.second->var_type;
     auto init_value = v.second->var_default_value;
 
-    bool has_value = init_value.has_value();
-    LOG(INFO) << "[LLVMCodegen] allocateTemporaryVariables temp-var: " << var_name;
-
-    switch (var_type) {
-      case INTEGER:
-      case RECORD_PTR: {
-        auto int64_type = llvm::Type::getInt64Ty(getLLVMContext());
-        auto vr = allocaBuilder.CreateAlloca(int64_type, nullptr, var_name);
-        if (has_value) {
-          auto value = createInt64(std::any_cast<uint64_t>(init_value));
-          allocaBuilder.CreateStore(value, vr);
-        }
-
-        //        LOG(INFO) << "Allocating temp variable: " << var_name << " | " << vr->getType()->getTypeID() << " | "
-        //        << int64_type->getTypeID();
-        variableCodeMap.emplace(var_name, vr);
-        break;
-      }
-        //      case VOID:{
-        //        auto vr = allocaBuilder.CreateAlloca(llvm::Type::getVoidTy(getLLVMContext()), nullptr, var_name);
-        //        variableCodeMap.emplace(var_name, vr);
-        //        break;
-        //      }
-      case VOID:
-      case FLOAT:
-      case RECORD_ID:
-      case CHAR:
-
-      default:
-        assert(false && "[allocateTemporaryVariables] valueTypeNotSupportedYet");
-        break;
-    }
+    auto vr = allocateOneVar(var_name, var_type, v.second->var_default_value);
+    variableCodeMap.emplace(var_name, vr);
   }
 
   return variableCodeMap;
@@ -740,7 +790,7 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     // fixme: they should be simple type.
     // get default values for them.
     //    a.second->getDefaultValue();
-    //    structValue = llvmBuilder->CreateInsertValue(structValue, field1, {0});
+    //    structValue = getBuilder()->CreateInsertValue(structValue, field1, {0});
     i++;
   }
 
@@ -752,7 +802,7 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
   irBuilder->CreateStore(structValue, structPtr);
 
   //  return structPtr;
-  return llvmBuilder->CreateBitCast(structPtr, llvm::Type::getInt8PtrTy(getLLVMContext()));
+  return getBuilder()->CreateBitCast(structPtr, llvm::Type::getInt8PtrTy(getLLVMContext()));
 
   //  return structValue;
 }
@@ -761,16 +811,16 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
   auto function_name = builder.getName() + "_init_storage";
   auto returnType = llvm::Type::getInt8PtrTy(getLLVMContext());
   auto fn_type = llvm::FunctionType::get(returnType, std::vector<llvm::Type *>{}, false);
-  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
+  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::PrivateLinkage,
                                    builder.getName() + "_init_storage", getModule());
   userFunctions.emplace(function_name, fn);
 
   BasicBlock *entryBlock = BasicBlock::Create(getLLVMContext(), "entry", fn);
-  llvmBuilder->SetInsertPoint(entryBlock);
+  getBuilder()->SetInsertPoint(entryBlock);
 
   Value *numAttributes = ConstantInt::get(getLLVMContext(), APInt(32, builder.attributes.size()));
 
-  llvm::Value *tableNameCharPtr = llvmBuilder->CreateBitCast(table_name, llvm::Type::getInt8PtrTy(getLLVMContext()));
+  llvm::Value *tableNameCharPtr = getBuilder()->CreateBitCast(table_name, llvm::Type::getInt8PtrTy(getLLVMContext()));
 
   //  Value *c1Res = this->gen_call(c1, {tableNameCharPtr});
   //  Value *c2Res = this->gen_call(c2, {numAttributes});
@@ -787,24 +837,24 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
   }
 
   Constant *constAttributeTypeArray = ConstantArray::get(enumArrayType, valueTypeArray);
-  AllocaInst *allocaInstAttributeTypes = llvmBuilder->CreateAlloca(enumArrayType, nullptr, "attributeTypeArray");
-  llvmBuilder->CreateStore(constAttributeTypeArray, allocaInstAttributeTypes);
+  AllocaInst *allocaInstAttributeTypes = getBuilder()->CreateAlloca(enumArrayType, nullptr, "attributeTypeArray");
+  getBuilder()->CreateStore(constAttributeTypeArray, allocaInstAttributeTypes);
   Value *gepIndices[] = {ConstantInt::get(Type::getInt32Ty(getLLVMContext()), 0),
                          ConstantInt::get(Type::getInt32Ty(getLLVMContext()), 0)};
-  Value *elementPtrAttributeType = llvmBuilder->CreateGEP(enumArrayType, allocaInstAttributeTypes, gepIndices);
+  Value *elementPtrAttributeType = getBuilder()->CreateGEP(enumArrayType, allocaInstAttributeTypes, gepIndices);
 
   // Value *c3Res = this->gen_call(c3, {elementPtrAttributeType});
 
   llvm::Value *attributeNames = createStringArray(names, builder.getName() + "_attr_");
   // attributeNames->getType()->dump();
-  llvm::Value *attributeNamesFirstCharPtr = llvmBuilder->CreateExtractValue(attributeNames, {0});
+  llvm::Value *attributeNamesFirstCharPtr = getBuilder()->CreateExtractValue(attributeNames, {0});
 
   // Value *c4Res = this->gen_call(c4, {attributeNamesFirstCharPtr});
   llvm::Value *resultPtr = this->gen_call(
       createTablesInternal, {tableNameCharPtr, elementPtrAttributeType, attributeNamesFirstCharPtr, numAttributes});
 
   // return the table*
-  llvmBuilder->CreateRet(resultPtr);
+  getBuilder()->CreateRet(resultPtr);
 
   dcds::LLVMCodegen::llvmVerifyFunction(fn);
   return fn;
@@ -837,7 +887,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   userFunctions.emplace(function_name, fn);
 
   auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);
-  llvmBuilder->SetInsertPoint(fn_bb);
+  getBuilder()->SetInsertPoint(fn_bb);
 
   Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
 
@@ -848,25 +898,25 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fn);
   llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(getLLVMContext(), "else", fn);
   llvm::BasicBlock *mergeBlock = llvm::BasicBlock::Create(getLLVMContext(), "merge", fn);
-  llvmBuilder->CreateCondBr(fn_res_doesTableExists, thenBlock, elseBlock);
+  getBuilder()->CreateCondBr(fn_res_doesTableExists, thenBlock, elseBlock);
 
-  llvmBuilder->SetInsertPoint(thenBlock);
+  getBuilder()->SetInsertPoint(thenBlock);
   // Add logic for thenBlock
   //  if: table exits, get pointer to it.
   Value *thenValue = this->gen_call(getTable, {tableNameLlvmConstant});
-  llvmBuilder->CreateBr(mergeBlock);
+  getBuilder()->CreateBr(mergeBlock);
 
   // Add logic for elseBlock
   //  else : create tables which return the table*.
-  llvmBuilder->SetInsertPoint(elseBlock);
+  getBuilder()->SetInsertPoint(elseBlock);
   Value *elseValue = gen_call(fn_initTables, {});
-  llvmBuilder->CreateBr(mergeBlock);
+  getBuilder()->CreateBr(mergeBlock);
 
   // Set insertion point to the merge block
-  llvmBuilder->SetInsertPoint(mergeBlock);
+  getBuilder()->SetInsertPoint(mergeBlock);
 
   // Phi node to merge the values from "then" and "else" blocks
-  llvm::PHINode *phiNode = llvmBuilder->CreatePHI(llvm::Type::getInt8PtrTy(getLLVMContext()), 2);
+  llvm::PHINode *phiNode = getBuilder()->CreatePHI(llvm::Type::getInt8PtrTy(getLLVMContext()), 2);
   phiNode->addIncoming(thenValue, thenBlock);
   phiNode->addIncoming(elseValue, elseBlock);
   llvm::Value *tablePtrValue = phiNode;
@@ -888,7 +938,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   //  this->createPrintString("returning now:");
   //  this->gen_call(printPtr, {returnDs});
 
-  llvmBuilder->CreateRet(returnDs);
+  getBuilder()->CreateRet(returnDs);
   //--
 
   llvmVerifyFunction(fn);
@@ -904,19 +954,19 @@ void LLVMCodegen::codegenHelloWorld() {
   // Create a basic block in the function
   llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(getLLVMContext(), "entry", mainFunction);
 
-  llvmBuilder->SetInsertPoint(entryBlock);
+  getBuilder()->SetInsertPoint(entryBlock);
 
   // Create a constant string for "Hello, World!"
-  // llvm::Value *helloWorldStr = llvmBuilder->CreateGlobalString("Hello, World!");
+  // llvm::Value *helloWorldStr = getBuilder()->CreateGlobalString("Hello, World!");
 
   auto helloWorldCharPtr = this->createStringConstant("Hello, World!", "");
 
   this->gen_call(prints, {helloWorldCharPtr});
 
-  //  llvm::Value *helloWorldStr2 = llvmBuilder->CreateGlobalString("Hello, World2!");
+  //  llvm::Value *helloWorldStr2 = getBuilder()->CreateGlobalString("Hello, World2!");
   //  this->gen_call(prints, {helloWorldStr2});
 
-  llvmBuilder->CreateRetVoid();
+  getBuilder()->CreateRetVoid();
 
   // Verify the function for correctness
   llvm::verifyFunction(*mainFunction, &(llvm::outs()));

@@ -94,7 +94,8 @@ class LLVMCodegenContext {
   [[nodiscard]] virtual llvm::Function *getFunction(const std::string &funcName) const;
   virtual void registerFunction(const char *, llvm::Function *);
   void registerFunction(const std::string &function_name, llvm::Type *returnType,
-                        const std::vector<llvm::Type *> &args = {}, bool always_inline = false);
+                        const std::vector<llvm::Type *> &args = {}, bool always_inline = false,
+                        llvm::GlobalValue::LinkageTypes linkageType = llvm::Function::ExternalLinkage);
   void registerFunction(const std::string &func, std::initializer_list<llvm::Value *> args, llvm::Type *ret);
 
   static void llvmVerifyFunction(llvm::Function *f);

@@ -22,13 +22,17 @@
 #ifndef DCDS_DCDS_HPP
 #define DCDS_DCDS_HPP
 
+#include "dcds/builder/builder.hpp"
+#include "dcds/builder/function-builder.hpp"
+#include "dcds/builder/statement-builder.hpp"
 #include "dcds/common/common.hpp"
+#include "dcds/exporter/jit-container.hpp"
 
 namespace dcds {
 
-class DCDS {
-  static void init();
-};
+// class DCDS {
+//   static void init();
+// };
 }  // namespace dcds
 
 #endif  // DCDS_DCDS_HPP

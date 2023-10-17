@@ -64,7 +64,6 @@ static void addFront(std::shared_ptr<dcds::Builder>& builder) {
 
   auto stmtBuilder = fn->getStatementBuilder();
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  // fn->addLogStatement("log from inside addFront");
   fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
   stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
   stmtBuilder->addReturnStatement("tmp_payload_ret");
@@ -87,7 +86,7 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
    * */
 
   // declare void push_front(uint64_t value)
-  auto fn = builder->createFunction("push_front", dcds::valueType::INTEGER);
+  auto fn = builder->createFunction("push_front");
   auto nodeType = builder->getRegisteredType("LL_NODE");
   fn->addArgument("push_value", dcds::INTEGER);
 
@@ -95,7 +94,7 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
 
   // gen: auto newNode = node(val)
   stmtBuilder->addInsertStatement(nodeType, "tmp_node");
-  stmtBuilder->addMethodCall(nodeType, "tmp_node", "set_payload", "", std::string{"push_value"});
+  stmtBuilder->addMethodCall(nodeType, "tmp_node", "set_payload", "", "push_value");
 
   // gen: auto tmp = head;
   fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
@@ -106,7 +105,7 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
       stmtBuilder->addConditionalBranch(new dcds::expressions::IsNotNullExpression{fn->getTempVariable("tmp_head")});
 
   // gen: tmp.next = newNode
-  conditionalBlocks.ifBlock->addMethodCall(nodeType, "tmp_head", "set_next", "", std::string{"tmp_node"});
+  conditionalBlocks.ifBlock->addMethodCall(nodeType, "tmp_head", "set_next", "", "tmp_node");
 
   // gen: head = newNode
   stmtBuilder->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
@@ -173,167 +172,10 @@ static void generateNode() {
   instance->op("get_payload");
 }
 
-static void testCondBr() {
-  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR");
-  builder->addHint(dcds::hints::SINGLE_THREADED);
-
-  // FIXME: adding attribute as it expects at least one attr
-  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
-
-  // -- function create
-
-  //  testConditionBr
-
-  auto fn = builder->createFunction("testConditionBr");
-  fn->addArgument("arg_one", dcds::INTEGER);
-  auto sb = fn->getStatementBuilder();
-
-  auto conditionalBlocks =
-      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
-
-  conditionalBlocks.ifBlock->addLogStatement("It is even branch");
-  conditionalBlocks.elseBlock->addLogStatement("It is odd branch");
-  sb->addReturnVoidStatement();
-
-  //  fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
-  //
-  //  auto stmtBuilder = fn->getStatementBuilder();
-  //  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  //  // fn->addLogStatement("log from inside addFront");
-  //  fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
-  //  stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
-  //  stmtBuilder->addReturnStatement("tmp_payload_ret");
-
-  // -- function end
-
-  LOG(INFO) << "testCondBr -- build-before";
-  builder->build();
-  LOG(INFO) << "testCondBr -- build-after";
-
-  auto instance = builder->createInstance();
-  instance->listAllAvailableFunctions();
-
-  auto res = instance->op("testConditionBr");
-  LOG(INFO) << "xxxx";
-  instance->op("testConditionBr", 3);
-  instance->op("testConditionBr", 4);
-}
-static void testOnlyIfBranch() {
-  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_MULTIPLE");
-  builder->addHint(dcds::hints::SINGLE_THREADED);
-
-  // FIXME: adding attribute as it expects at least one attr
-  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
-
-  auto fn = builder->createFunction("testConditionBr");
-  fn->addArgument("arg_one", dcds::INTEGER);
-  fn->addArgument("arg_two", dcds::INTEGER);
-  auto sb = fn->getStatementBuilder();
-
-  auto conditionalBlocks =
-      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
-  conditionalBlocks.ifBlock->addLogStatement("1: It is the if branch");
-
-  sb->addLogStatement("Merge branch, returning now");
-
-  sb->addReturnVoidStatement();
-
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-  builder->build();
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-
-  auto instance = builder->createInstance();
-  instance->listAllAvailableFunctions();
-
-  LOG(INFO) << __FUNCTION__ << " -- tests";
-  instance->op("testConditionBr", 1, 2);
-  instance->op("testConditionBr", 3, 4);
-}
-
-static void testMultipleBranches() {
-  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_MULTIPLE");
-  builder->addHint(dcds::hints::SINGLE_THREADED);
-
-  // FIXME: adding attribute as it expects at least one attr
-  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
-
-  auto fn = builder->createFunction("testConditionBr");
-  fn->addArgument("arg_one", dcds::INTEGER);
-  fn->addArgument("arg_two", dcds::INTEGER);
-  auto sb = fn->getStatementBuilder();
-
-  auto conditionalBlocks =
-      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
-  conditionalBlocks.ifBlock->addLogStatement("1: It is even branch");
-  conditionalBlocks.elseBlock->addLogStatement("1: It is odd branch");
-
-  auto cond2 = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_two")});
-  cond2.ifBlock->addLogStatement("2: It is even branch");
-  cond2.elseBlock->addLogStatement("2: It is odd branch");
-
-  sb->addReturnVoidStatement();
-
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-  builder->build();
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-
-  auto instance = builder->createInstance();
-  instance->listAllAvailableFunctions();
-
-  LOG(INFO) << __FUNCTION__ << " -- tests";
-  instance->op("testConditionBr", 1, 2);
-  instance->op("testConditionBr", 3, 4);
-}
-
-static void testNestedBranches() {
-  auto builder = std::make_shared<dcds::Builder>("TEST_COND_BR_NESTED");
-  builder->addHint(dcds::hints::SINGLE_THREADED);
-
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
-
-  auto fn = builder->createFunction("testConditionBr");
-  fn->addArgument("arg_one", dcds::INTEGER);
-  fn->addArgument("arg_two", dcds::INTEGER);
-  auto sb = fn->getStatementBuilder();
-
-  auto conditionalBlocks =
-      sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_one")});
-  conditionalBlocks.ifBlock->addLogStatement("1: It is even branch");
-  conditionalBlocks.elseBlock->addLogStatement("1: It is odd branch");
-
-  auto cond2 = conditionalBlocks.ifBlock->addConditionalBranch(
-      new dcds::expressions::IsEvenExpression{fn->getArgument("arg_two")});
-  cond2.ifBlock->addLogStatement("2: It is even branch");
-  cond2.elseBlock->addLogStatement("2: It is odd branch");
-
-  sb->addLogStatement("Merge branch, returning now");
-  sb->addReturnVoidStatement();
-
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-  builder->build();
-  LOG(INFO) << __FUNCTION__ << " -- build-before";
-
-  auto instance = builder->createInstance();
-  instance->listAllAvailableFunctions();
-
-  LOG(INFO) << __FUNCTION__ << " -- tests";
-  instance->op("testConditionBr", 1, 2);  // odd then even
-  instance->op("testConditionBr", 1, 3);  // odd then odd
-  instance->op("testConditionBr", 2, 4);  // even then even
-  instance->op("testConditionBr", 2, 3);  // even then odd
-}
-
 int main() {
   LOG(INFO) << "main() -- start";
-  generateLinkedList();
+  // generateLinkedList();
   // generateNode();
-  //  testCondBr();
-  //  testMultipleBranches();
-  //  testOnlyIfBranch();
-  //  testNestedBranches();
 
   LOG(INFO) << "main() -- done";
   return 0;

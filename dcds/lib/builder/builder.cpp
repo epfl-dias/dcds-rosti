@@ -87,6 +87,7 @@ void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
 
   stmtBuilder->addReadStatement(attribute, "tmp");
   stmtBuilder->addReturnStatement("tmp");
+  fn->setAlwaysInline(true);
 }
 
 void Builder::generateGetter(const std::string& attribute_name) {
@@ -109,6 +110,7 @@ void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
   fn->addArgument("val", attribute->type);
   stmtBuilder->addUpdateStatement(attribute, "val");
   stmtBuilder->addReturnVoidStatement();
+  fn->setAlwaysInline(true);
 }
 
 void Builder::generateSetter(const std::string& attribute_name) {
