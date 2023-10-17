@@ -22,6 +22,7 @@
 #ifndef DCDS_BUILDER_HPP
 #define DCDS_BUILDER_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <deque>
 #include <iostream>
@@ -78,37 +79,28 @@ class Builder : remove_copy {
     assert(hasFunction(function_name));
     return this->functions[function_name];
   }
+  auto dropAllFunctionsExceptList(const std::vector<std::string>& keep_list) {
+    const auto count = std::erase_if(functions, [&](const auto& item) {
+      if (keep_list.empty()) return true;
 
-  ///
-  /// \param functionName  Name of the function to be created
-  /// \param returnType    Return type of the function to be created
-  /// \param argsTypes     Argument types for the function to be created
-  /// \return              DCDS function representation
-  //  static auto createFunction(const std::string& functionName, dcds::valueType returnType,
-  //                             std::same_as<dcds::valueType> auto... argsTypes) {
-  //    return std::make_shared<FunctionBuilder>(functionName, returnType, argsTypes...);
-  //  }
-
-  ///
-  /// \param functionName  Name of the function to be created
-  /// \param argsTypes     Argument types of the function to be created
-  /// \return              DCDS function representation
-  //  static auto createFunction(const std::string& functionName, std::same_as<dcds::valueType> auto... args) {
-  //    return std::make_shared<FunctionBuilder>(functionName, args...);
-  //  }
-
-  ///
-  /// \param function      DCDS function representation
-  //  void addFunction(const std::shared_ptr<FunctionBuilder>& function) {
-  //    // TODO: Add asserts for checking if the function is in a proper state before the codegen starts.
-  //    assert(functions.contains(function->getName()) == false);
-  //    functions.emplace(function->getName(), function);
-  //  }
-
-  ///
-  /// \param functionName  Name of the function to be returned
-  /// \return              DCDS function representation
-  //  auto getFunction(std::string functionName) { return *functions[functionName]; }
+      auto const& [key, value] = item;
+      // keep_list does not have the key
+      bool shouldErase = (std::find(keep_list.begin(), keep_list.end(), key) == keep_list.end());
+      LOG_IF(INFO, shouldErase) << "[dropAllFunctionsExceptList] Erasing function: " << key;
+      return shouldErase;
+    });
+    LOG(INFO) << "[dropAllFunctionsExceptList] # of removed functions: " << count;
+    return count;
+  }
+  bool dropFunctionIfExists(const std::string& function_name) {
+    if (hasFunction(function_name)) {
+      LOG(INFO) << "[dropFunctionIfExists] Erasing function: " << function_name;
+      functions.erase(function_name);
+      return true;
+    } else {
+      return false;
+    }
+  }
 
  public:
   auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
@@ -190,7 +182,7 @@ class Builder : remove_copy {
 
  private:
   std::map<std::string, std::shared_ptr<SimpleAttribute>> attributes;
-  std::unordered_map<std::string, std::shared_ptr<FunctionBuilder>> functions;
+  std::map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   std::map<std::string, std::shared_ptr<Builder>> registered_subtypes;
 
  private:
