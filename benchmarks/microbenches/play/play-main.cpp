@@ -174,7 +174,7 @@ static void generateNode() {
 
 int main() {
   LOG(INFO) << "main() -- start";
-  // generateLinkedList();
+  generateLinkedList();
   // generateNode();
 
   LOG(INFO) << "main() -- done";

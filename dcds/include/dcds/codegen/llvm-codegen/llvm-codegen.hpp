@@ -75,11 +75,15 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
     std::shared_ptr<FunctionBuilder> fb;
     std::shared_ptr<StatementBuilder> sb;
     llvm::Function *fn;
+    BasicBlock *returnBlock;
     std::map<std::string, llvm::Value *> *tempVariableMap;
 
+    std::string retval_variable_name;
+
     explicit function_build_context(std::shared_ptr<FunctionBuilder> _fb, std::shared_ptr<StatementBuilder> _sb,
-                                    llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap)
-        : fb(_fb), sb(_sb), fn(_fn), tempVariableMap(_tempVariableMap) {}
+                                    llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap,
+                                    BasicBlock *_returnBlock)
+        : fb(_fb), sb(_sb), fn(_fn), tempVariableMap(_tempVariableMap), returnBlock(_returnBlock) {}
   };
 
  public:
@@ -136,11 +140,14 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   void buildFunctionDictionary(dcds::Builder &builder);
 
   llvm::Function *buildInitTablesFn(dcds::Builder &builder, llvm::Value *table_name);
-  llvm::Function *genFunctionSignature(std::shared_ptr<FunctionBuilder> &fb,
-                                       const std::vector<llvm::Type *> &pre_args = {},
-                                       const std::string &name_prefix = "", const std::string &name_suffix = "");
+  llvm::Function *genFunctionSignature(
+      std::shared_ptr<FunctionBuilder> &fb, const std::vector<llvm::Type *> &pre_args = {},
+      const std::string &name_prefix = "", const std::string &name_suffix = "",
+      llvm::GlobalValue::LinkageTypes linkageType = llvm::GlobalValue::LinkageTypes::ExternalLinkage);
+
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
+  llvm::Value *allocateOneVar(std::string var_name, dcds::valueType var_type, std::any init_value = {});
 
   void buildFunctionBody(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
                          std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn, llvm::BasicBlock *basicBlock,
