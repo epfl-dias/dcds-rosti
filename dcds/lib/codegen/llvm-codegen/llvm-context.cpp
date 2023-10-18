@@ -245,6 +245,13 @@ IntegerType *LLVMCodegenContext::createSizeType() const {
   return Type::getIntNTy(getLLVMContext(), sizeof(size_t) * 8);
 }
 
+llvm::Constant *LLVMCodegenContext::createDouble(double val) const {
+  return llvm::ConstantFP::get(llvm::Type::getDoubleTy(getLLVMContext()), val);
+}
+llvm::Constant *LLVMCodegenContext::createFloat(float val) const {
+  return llvm::ConstantFP::get(llvm::Type::getFloatTy(getLLVMContext()), val);
+}
+
 ConstantInt *LLVMCodegenContext::createTrue() const { return ConstantInt::get(getLLVMContext(), APInt(1, 1)); }
 
 ConstantInt *LLVMCodegenContext::createFalse() const { return ConstantInt::get(getLLVMContext(), APInt(1, 0)); }

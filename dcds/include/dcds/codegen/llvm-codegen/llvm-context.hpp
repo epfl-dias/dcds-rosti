@@ -108,6 +108,8 @@ class LLVMCodegenContext {
   [[nodiscard]] llvm::ConstantInt *createInt64(int64_t val) const;
   [[nodiscard]] llvm::ConstantInt *createSizeT(size_t val) const;
   [[nodiscard]] llvm::ConstantInt *createUintptr(uintptr_t val) const;
+  [[nodiscard]] llvm::Constant *createDouble(double val) const;
+  [[nodiscard]] llvm::Constant *createFloat(float val) const;
   [[nodiscard]] llvm::ConstantInt *createTrue() const;
   [[nodiscard]] llvm::ConstantInt *createFalse() const;
   [[nodiscard]] llvm::IntegerType *createSizeType() const;
