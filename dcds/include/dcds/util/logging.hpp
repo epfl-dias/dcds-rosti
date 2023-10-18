@@ -19,10 +19,6 @@
      RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-//
-// Created by Hamish Nicholson on 14.04.23.
-//
-
 #ifndef DCDS_LOGGING_HPP
 #define DCDS_LOGGING_HPP
 #include <absl/log/log.h>

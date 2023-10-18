@@ -19,10 +19,6 @@
      RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-//
-// Created by Hamish Nicholson on 13.04.23.
-//
-
 #include <benchmark/benchmark.h>
 
 #include <dcds/util/logging.hpp>
