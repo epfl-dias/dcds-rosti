@@ -523,21 +523,16 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     // should be `builder.getName() + "_constructor"`
     assert(builder->hasRegisteredType(stmt->actionVarName));
     auto subtype = builder->getRegisteredType(stmt->actionVarName);
-    auto constructorName = subtype->getName() + "_constructor";
+    auto constructorName = subtype->getName() + "_constructor_inner";
     assert(userFunctions.contains(constructorName));
     assert(fnCtx.tempVariableMap->contains(stmt->refVarName));
     auto dst = fnCtx.tempVariableMap->operator[](stmt->refVarName);
 
-    // FIXME: caveat: there is a txn in constructor, which we dont want ideally.
-    llvm::Value *dsContainer = this->gen_call(userFunctions[constructorName], {});
+    llvm::Value *dsContainer = this->gen_call(userFunctions[constructorName], {txnManager, txn});
 
     // extern "C" uintptr_t extractRecordFromDsContainer(void* container);
     llvm::Value *newRecord = this->gen_call(extractRecordFromDsContainer, {dsContainer});
     getBuilder()->CreateStore(newRecord, dst);
-
-    // check in available functions if it is already there, else, then call it.
-    // but this means vice versa also, in constructor, check if it was already declared.
-    // getModule()->getFunctionList().
 
   } else if (stmt->stType == dcds::statementType::METHOD_CALL) {
     LOG(INFO) << "StatementType: METHOD_CALL";
@@ -894,40 +889,32 @@ void LLVMCodegen::buildDestructor() {
   //  what about user-defined cleanups, if any.
 }
 
-void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
-  // FIXME: get namespace prefix from context? buildContext or runtimeContext?
-  //  maybe take it from runtime context to enable cross-DS or intra-DS txns.
-  std::string namespace_prefix = "default_namespace";
-  // FIXME: do we need namespace prefix on the table name? i dont think so. check and confirm!
-  std::string table_name = namespace_prefix + "_" + builder.getName();
-  LOG(INFO) << "[LLVMCodegen][buildConstructor] table_name: " << table_name;
+llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
+  std::string table_name = builder.getName() + "_tbl";
+  LOG(INFO) << "[LLVMCodegen][buildConstructorInner] table_name: " << table_name;
+
+  auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
 
   bool hasAttributes = !(builder.attributes.empty());
-  bool isMainDs = (&builder == this->top_level_builder);
-  auto linkageType =
-      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
-  // NOTE: if we know this is a composed type, then we can anyway omit txn, and take it as an arg also.
+  auto void_ptr_type = PointerType::get(Type::getInt8Ty(getLLVMContext()), 0);
 
-  auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
-  auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
   llvm::Function *fn_initTables = hasAttributes ? this->buildInitTablesFn(builder, tableNameLlvmConstant) : nullptr;
 
+  // inner args: { txnManager*, txn* }
   auto returnType = PointerType::getUnqual(Type::getInt8Ty(getLLVMContext()));
-  auto fn_type = llvm::FunctionType::get(returnType, std::vector<llvm::Type *>{}, false);
+  auto fn_type = llvm::FunctionType::get(returnType, std::vector<llvm::Type *>{void_ptr_type, void_ptr_type}, false);
 
-  auto function_name = builder.getName() + "_constructor";
-  auto fn = llvm::Function::Create(fn_type, linkageType, function_name, theLLVMModule.get());
+  auto function_name = builder.getName() + "_constructor_inner";
+  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::PrivateLinkage, function_name,
+                                   theLLVMModule.get());
   userFunctions.emplace(function_name, fn);
 
   auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);
   getBuilder()->SetInsertPoint(fn_bb);
 
-  Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
+  Value *arg_txnManger = fn->getArg(0);
+  Value *arg_txn = fn->getArg(1);
   llvm::Value *mainRecordRef;
-
-  // FIXME: do we actually need txn here?
-  //  if yes, then create a  inner_function for composed calls so there are no nested transactions,
-  //  otherwise remove it from here.
 
   // Only create table and related logic when DS actually has concurrent attributes.
   if (hasAttributes) {
@@ -961,26 +948,67 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
     phiNode->addIncoming(elseValue, elseBlock);
     llvm::Value *tablePtrValue = phiNode;
 
-    // Begin Txn
-    Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
-    // this->createPrintString("fn_res_beginTxn done");
-
     // insert a record in table here.
     llvm::Value *defaultInsValues = this->initializeDsValueStructDefault(builder);
-    mainRecordRef = this->gen_call(insertMainRecord, {tablePtrValue, fn_res_beginTxn, defaultInsValues});
+    mainRecordRef = this->gen_call(insertMainRecord, {tablePtrValue, arg_txn, defaultInsValues});
 
-    // Commit Txn
-    this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
   } else {
     mainRecordRef = this->createInt64(UINT64_C(0));
   }
-  llvm::Value *returnDs = this->gen_call(createDsContainer, {fn_res_getTxnManger, mainRecordRef});
+  llvm::Value *returnDs = this->gen_call(createDsContainer, {arg_txnManger, mainRecordRef});
 
   //  this->gen_call(printPtr, {returnDs});
 
   getBuilder()->CreateRet(returnDs);
 
   llvmVerifyFunction(fn);
+  LOG(INFO) << "buildConstructorInner DONE";
+  return fn;
+}
+
+void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
+  // FIXME: get namespace prefix from context? buildContext or runtimeContext?
+  //  maybe take it from runtime context to enable cross-DS or intra-DS txns.
+  std::string namespace_prefix = "default_namespace";
+
+  bool isMainDs = (&builder == this->top_level_builder);
+  auto linkageType =
+      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
+
+  auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
+
+  auto *fn_constructor_inner = buildConstructorInner(builder);
+
+  auto fn_type = llvm::FunctionType::get(fn_constructor_inner->getReturnType(), std::vector<llvm::Type *>{}, false);
+  auto function_name = builder.getName() + "_constructor";
+  auto fn = llvm::Function::Create(fn_type, linkageType, function_name, theLLVMModule.get());
+  userFunctions.emplace(function_name, fn);
+
+  auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);
+  getBuilder()->SetInsertPoint(fn_bb);
+
+  Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
+  llvm::Value *mainRecordRef;
+
+  // FIXME: do we actually need txn here?
+  //  if yes, then create a  inner_function for composed calls so there are no nested transactions,
+  //  otherwise remove it from here.
+
+  // Begin Txn
+  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
+
+  // Call constructor_inner
+  llvm::Value *inner_fn_res = this->gen_call(fn_constructor_inner, {fn_res_getTxnManger, fn_res_beginTxn});
+
+  // Commit Txn
+  this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
+
+  //  this->gen_call(printPtr, {returnDs});
+
+  getBuilder()->CreateRet(inner_fn_res);
+
+  llvmVerifyFunction(fn);
+
   LOG(INFO) << "buildConstructor DONE";
 }
 
@@ -995,20 +1023,14 @@ void LLVMCodegen::codegenHelloWorld() {
 
   getBuilder()->SetInsertPoint(entryBlock);
 
-  // Create a constant string for "Hello, World!"
-  // llvm::Value *helloWorldStr = getBuilder()->CreateGlobalString("Hello, World!");
-
   auto helloWorldCharPtr = this->createStringConstant("Hello, World!", "");
 
   this->gen_call(prints, {helloWorldCharPtr});
 
-  //  llvm::Value *helloWorldStr2 = getBuilder()->CreateGlobalString("Hello, World2!");
-  //  this->gen_call(prints, {helloWorldStr2});
-
   getBuilder()->CreateRetVoid();
 
   // Verify the function for correctness
-  llvm::verifyFunction(*mainFunction, &(llvm::outs()));
+  llvmVerifyFunction(mainFunction);
 }
 
 void LLVMCodegen::testHelloWorld() {

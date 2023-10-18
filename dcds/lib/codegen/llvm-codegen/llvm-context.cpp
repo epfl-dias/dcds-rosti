@@ -99,53 +99,7 @@ void LLVMCodegenContext::createPrintString(const std::string &str) {
 
 llvm::Value *LLVMCodegenContext::createStringConstant(const std::string &value, const std::string &var_name) const {
   // FIXME: Currently a hack, no idea if it is good thing to do like this or do it the proper way.
-  //  assert(getBuilder());
-  //  LOG(INFO) << "here: " << value;
-  //  getBuilder()->getInt32(3)->dump();
-  //  LOG(INFO) << " xx ";
-  //  getModule()->dump();
-  //  LOG(INFO) << " xx2 ";
-  //  StringRef Str, const Twine &Name = "",
-  //                             unsigned AddressSpace = 0,
-  //                             Module *M = nullptr
   return getBuilder()->CreateGlobalStringPtr(value);
-
-  //  llvm::Value *str = getBuilder()->CreateGlobalString(value);
-  //  LOG(INFO) << "here2";
-  //  llvm::Value *charPtrCast = getBuilder()->CreateBitCast(str, llvm::Type::getInt8PtrTy(getLLVMContext()));
-  //  LOG(INFO) << "here3";
-  //  return charPtrCast;
-
-  //  Constant *strConstant = ConstantDataArray::getString(getLLVMContext(), value, true);
-  //  //  LOG(INFO) << "[createStringConstant] 3";
-  //  //  AllocaInst *strAlloca = irBuilder->CreateAlloca(type, nullptr, var_name);
-  //  //  LOG(INFO) << "[createStringConstant] 4";
-  //  //  irBuilder->CreateStore(strConstant, strAlloca);
-  //  //  LOG(INFO) << "[createStringConstant] 5";
-  //
-  //  //  llvm::Value* stringPtr = irBuilder->CreateGlobalStringPtr(value.c_str(), var_name);
-  //  // return stringPtr;
-  //
-  //  auto *strGlobal =
-  //      new llvm::GlobalVariable(strConstant->getType(), true, llvm::GlobalValue::PrivateLinkage, strConstant,
-  //      var_name);
-  //  llvm::Value *strPtr = getBuilder()->CreateBitCast(strGlobal, llvm::Type::getInt8PtrTy(getLLVMContext()));
-  //  return strPtr;
-
-  // can be of type llvm::Value* too.
-  //  auto allocaString = irBuilder->CreateAlloca(llvm::Type::getInt8Ty(getLLVMContext()),
-  //                                                      llvm::ConstantInt::get(llvm::Type::getInt64Ty(getLLVMContext()),
-  //                                                                             value.length() + 1),
-  //                                                      var_name);
-  //
-  //  // Store the string in the allocated memory
-  //  irBuilder->CreateMemCpy(allocaString,
-  //                          llvm::MaybeAlign{}
-  //                          llvm::ConstantDataArray::getString(getLLVMContext(), value.c_str()),
-  //                          value.length() + 1,
-  //                          1);
-
-  //  return allocaString;
 }
 
 llvm::StructType *LLVMCodegenContext::getVaListStructType() {

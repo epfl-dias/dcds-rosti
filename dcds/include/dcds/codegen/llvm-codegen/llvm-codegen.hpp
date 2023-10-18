@@ -141,6 +141,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   Value *initializeDsValueStructDefault(dcds::Builder &builder);
 
   void buildConstructor(dcds::Builder &builder);
+  llvm::Function *buildConstructorInner(dcds::Builder &builder);
   void buildDestructor();
   void buildFunctions(dcds::Builder *builder);
   void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
