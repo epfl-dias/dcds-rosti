@@ -35,8 +35,8 @@ class BinaryExpression : public Expression {
   [[nodiscard]] bool isUnaryExpression() const override { return false; }
   [[nodiscard]] bool isBinaryExpression() const override { return true; }
 
-  Expression* getLeft() const { return _left; }
-  Expression* getRight() const { return _right; }
+  [[nodiscard]] Expression* getLeft() const { return _left; }
+  [[nodiscard]] Expression* getRight() const { return _right; }
 
  private:
   Expression* _left;
@@ -47,6 +47,15 @@ class AddExpression : public BinaryExpression {
  public:
   explicit AddExpression(Expression* left, Expression* right) : BinaryExpression(left, right) {}
   explicit AddExpression(const std::shared_ptr<Expression>& left, const std::shared_ptr<Expression>& right)
+      : BinaryExpression(left.get(), right.get()) {}
+
+  void* accept(ExpressionVisitor* v) override;
+};
+
+class SubtractExpression : public BinaryExpression {
+ public:
+  explicit SubtractExpression(Expression* left, Expression* right) : BinaryExpression(left, right) {}
+  explicit SubtractExpression(const std::shared_ptr<Expression>& left, const std::shared_ptr<Expression>& right)
       : BinaryExpression(left.get(), right.get()) {}
 
   void* accept(ExpressionVisitor* v) override;

@@ -50,6 +50,7 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
 
   // Binary expressions
   void* visit(const expressions::AddExpression& expr) override;
+  void* visit(const expressions::SubtractExpression& expr) override;
 
   // Temporary variables / Function Arguments
   void* visit(const expressions::LocalVariableExpression& localVariableExpr) override;

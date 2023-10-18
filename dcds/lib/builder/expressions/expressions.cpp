@@ -38,3 +38,4 @@ void* IsEvenExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
 // Binary expressions
 void* AddExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* SubtractExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }

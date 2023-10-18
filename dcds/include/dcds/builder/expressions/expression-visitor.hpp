@@ -39,6 +39,7 @@ class ExpressionVisitor {
 
   // Binary expressions
   virtual void* visit(const expressions::AddExpression& expr) = 0;
+  virtual void* visit(const expressions::SubtractExpression& expr) = 0;
 
   // Temporary variables / Function Arguments
   virtual void* visit(const expressions::LocalVariableExpression& expr) = 0;

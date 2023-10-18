@@ -89,6 +89,20 @@ void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
     assert(false && "what is the type??");
   }
 }
+void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) {
+  LOG(INFO) << "LLVMExpressionVisitor::SubtractExpression::visit";
+  auto builder = codegenEngine->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+  if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
+    return builder->CreateSub(leftValue, rightValue);
+  } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
+    return builder->CreateSub(leftValue, rightValue);
+  } else {
+    assert(false && "what is the type??");
+  }
+}
 
 void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) {
   LOG(INFO) << "LLVMExpressionVisitor::IsEvenExpression::visit";
