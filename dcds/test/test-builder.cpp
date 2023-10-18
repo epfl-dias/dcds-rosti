@@ -21,4 +21,34 @@
 
 #include <gtest/gtest.h>
 
-TEST(ExampleTest, DoesNothing) { EXPECT_EQ(1, 1); }
+#include <dcds/dcds.hpp>
+
+// TEST(ExampleTest, DoesNothing) { EXPECT_EQ(1, 1); }
+
+TEST(BuilderTest, NoAttributeBuild) {
+  std::string name = "BuilderTest_NoAttributeBuild";
+  auto op_name = name + "_op";
+
+  auto builder = std::make_shared<dcds::Builder>(name);
+  builder->addHint(dcds::hints::SINGLE_THREADED);
+
+  // -- function create
+  auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::INTEGER);  // function takes one argument
+
+  // FIXME: return constant expressions instead of temp variables.
+  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
+
+  auto sb = fn->getStatementBuilder();
+  sb->addReturnStatement("temp_bool_true");
+  // -- function end
+
+  builder->build();
+  auto instance = builder->createInstance();
+
+  EXPECT_TRUE(std::any_cast<bool>(instance->op(op_name, 1)));
+  EXPECT_TRUE(std::any_cast<bool>(instance->op(op_name, 2)));
+  EXPECT_TRUE(std::any_cast<bool>(instance->op(op_name, 3)));
+  EXPECT_TRUE(std::any_cast<bool>(instance->op(op_name, 4)));
+  EXPECT_TRUE(std::any_cast<bool>(instance->op(op_name, 5)));
+}

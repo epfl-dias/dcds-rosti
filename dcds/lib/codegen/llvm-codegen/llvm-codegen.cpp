@@ -625,7 +625,7 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
   return fn;
 }
 
-llvm::Value *LLVMCodegen::allocateOneVar(std::string var_name, dcds::valueType var_type, std::any init_value) {
+llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valueType var_type, std::any init_value) {
   bool has_value = init_value.has_value();
   LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
 
@@ -874,9 +874,11 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   std::string table_name = namespace_prefix + "_" + builder.getName();
   LOG(INFO) << "[LLVMCodegen][buildConstructor] table_name: " << table_name;
 
+  bool hasAttributes = !(builder.attributes.empty());
+
   auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
   auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
-  auto fn_initTables = this->buildInitTablesFn(builder, tableNameLlvmConstant);
+  llvm::Function *fn_initTables = hasAttributes ? this->buildInitTablesFn(builder, tableNameLlvmConstant) : nullptr;
 
   auto returnType = PointerType::getUnqual(Type::getInt8Ty(getLLVMContext()));
   auto fn_type = llvm::FunctionType::get(returnType, std::vector<llvm::Type *>{}, false);
@@ -890,56 +892,62 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   getBuilder()->SetInsertPoint(fn_bb);
 
   Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
+  llvm::Value *mainRecordRef;
 
-  Value *fn_res_doesTableExists =
-      this->gen_call(doesTableExists, {tableNameLlvmConstant}, Type::getInt1Ty(getLLVMContext()));
+  // FIXME: do we actually need txn here?
+  //  if yes, then create a  inner_function for composed calls so there are no nested transactions,
+  //  otherwise remove it from here.
 
-  //  // Create a conditional branch based on the external function's result
-  llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fn);
-  llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(getLLVMContext(), "else", fn);
-  llvm::BasicBlock *mergeBlock = llvm::BasicBlock::Create(getLLVMContext(), "merge", fn);
-  getBuilder()->CreateCondBr(fn_res_doesTableExists, thenBlock, elseBlock);
+  // Only create table and related logic when DS actually has concurrent attributes.
+  if (hasAttributes) {
+    Value *fn_res_doesTableExists =
+        this->gen_call(doesTableExists, {tableNameLlvmConstant}, Type::getInt1Ty(getLLVMContext()));
 
-  getBuilder()->SetInsertPoint(thenBlock);
-  // Add logic for thenBlock
-  //  if: table exits, get pointer to it.
-  Value *thenValue = this->gen_call(getTable, {tableNameLlvmConstant});
-  getBuilder()->CreateBr(mergeBlock);
+    //  // Create a conditional branch based on the external function's result
+    llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fn);
+    llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(getLLVMContext(), "else", fn);
+    llvm::BasicBlock *mergeBlock = llvm::BasicBlock::Create(getLLVMContext(), "merge", fn);
+    getBuilder()->CreateCondBr(fn_res_doesTableExists, thenBlock, elseBlock);
 
-  // Add logic for elseBlock
-  //  else : create tables which return the table*.
-  getBuilder()->SetInsertPoint(elseBlock);
-  Value *elseValue = gen_call(fn_initTables, {});
-  getBuilder()->CreateBr(mergeBlock);
+    getBuilder()->SetInsertPoint(thenBlock);
+    // Add logic for thenBlock
+    //  if: table exits, get pointer to it.
+    Value *thenValue = this->gen_call(getTable, {tableNameLlvmConstant});
+    getBuilder()->CreateBr(mergeBlock);
 
-  // Set insertion point to the merge block
-  getBuilder()->SetInsertPoint(mergeBlock);
+    // Add logic for elseBlock
+    //  else : create tables which return the table*.
+    getBuilder()->SetInsertPoint(elseBlock);
+    Value *elseValue = gen_call(fn_initTables, {});
+    getBuilder()->CreateBr(mergeBlock);
 
-  // Phi node to merge the values from "then" and "else" blocks
-  llvm::PHINode *phiNode = getBuilder()->CreatePHI(llvm::Type::getInt8PtrTy(getLLVMContext()), 2);
-  phiNode->addIncoming(thenValue, thenBlock);
-  phiNode->addIncoming(elseValue, elseBlock);
-  llvm::Value *tablePtrValue = phiNode;
+    // Set insertion point to the merge block
+    getBuilder()->SetInsertPoint(mergeBlock);
 
-  // Begin Txn
-  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
-  // this->createPrintString("fn_res_beginTxn done");
+    // Phi node to merge the values from "then" and "else" blocks
+    llvm::PHINode *phiNode = getBuilder()->CreatePHI(llvm::Type::getInt8PtrTy(getLLVMContext()), 2);
+    phiNode->addIncoming(thenValue, thenBlock);
+    phiNode->addIncoming(elseValue, elseBlock);
+    llvm::Value *tablePtrValue = phiNode;
 
-  // insert a record in table here.
-  llvm::Value *defaultInsValues = this->initializeDsValueStructDefault(builder);
-  Value *fn_res_insertMainRecord = this->gen_call(insertMainRecord, {tablePtrValue, fn_res_beginTxn, defaultInsValues});
+    // Begin Txn
+    Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
+    // this->createPrintString("fn_res_beginTxn done");
 
-  // Commit Txn
-  this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
+    // insert a record in table here.
+    llvm::Value *defaultInsValues = this->initializeDsValueStructDefault(builder);
+    mainRecordRef = this->gen_call(insertMainRecord, {tablePtrValue, fn_res_beginTxn, defaultInsValues});
 
-  //--
-  llvm::Value *returnDs = this->gen_call(createDsContainer, {fn_res_getTxnManger, fn_res_insertMainRecord});
+    // Commit Txn
+    this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
+  } else {
+    mainRecordRef = this->createInt64(UINT64_C(0));
+  }
+  llvm::Value *returnDs = this->gen_call(createDsContainer, {fn_res_getTxnManger, mainRecordRef});
 
-  //  this->createPrintString("returning now:");
   //  this->gen_call(printPtr, {returnDs});
 
   getBuilder()->CreateRet(returnDs);
-  //--
 
   llvmVerifyFunction(fn);
   LOG(INFO) << "buildConstructor DONE";

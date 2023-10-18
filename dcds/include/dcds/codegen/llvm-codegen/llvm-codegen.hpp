@@ -147,7 +147,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
 
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
-  llvm::Value *allocateOneVar(std::string var_name, dcds::valueType var_type, std::any init_value = {});
+  llvm::Value *allocateOneVar(const std::string &var_name, dcds::valueType var_type, std::any init_value = {});
 
   void buildFunctionBody(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
                          std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn, llvm::BasicBlock *basicBlock,

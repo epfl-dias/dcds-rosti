@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dcds/dcds.hpp"
+#include <dcds/dcds.hpp>
 
 TEST(ConditionalStatementTest, IfAndElse) {
   std::string name = "ConditionalStatementTest_IfAndElse";
@@ -29,10 +29,6 @@ TEST(ConditionalStatementTest, IfAndElse) {
 
   auto builder = std::make_shared<dcds::Builder>(name);
   builder->addHint(dcds::hints::SINGLE_THREADED);
-
-  // FIXME: adding attribute as it expects at least one attr
-  //  do the case where there is no attribute, hence, no sync anyway between stuff. then whats the point of dcds?
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
@@ -65,7 +61,6 @@ TEST(ConditionalStatementTest, OnlyIf) {
 
   auto builder = std::make_shared<dcds::Builder>(name);
   builder->addHint(dcds::hints::SINGLE_THREADED);
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
@@ -97,7 +92,6 @@ TEST(ConditionalStatementTest, MultipleBranches) {
 
   auto builder = std::make_shared<dcds::Builder>(name);
   builder->addHint(dcds::hints::SINGLE_THREADED);
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
@@ -135,7 +129,6 @@ TEST(ConditionalStatementTest, NestedBranches) {
 
   auto builder = std::make_shared<dcds::Builder>(name);
   builder->addHint(dcds::hints::SINGLE_THREADED);
-  builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
