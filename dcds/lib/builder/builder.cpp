@@ -58,9 +58,9 @@ std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& func
   return f;
 }
 
-void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
+void Builder::generateGetter(const std::shared_ptr<dcds::SimpleAttribute>& attribute) {
   // NOTE: make sure that it is a simple type or for one we can actually generate.
-  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::SIMPLE);
+  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::PRIMITIVE);
 
   // Generates a function of name: {attribute.type} get_{attribute_name}()
 
@@ -80,13 +80,11 @@ void Builder::generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
 
 void Builder::generateGetter(const std::string& attribute_name) {
   auto attribute = this->getAttribute(attribute_name);
-  this->generateGetter(attribute);
+  // NOTE: make sure that it is a simple type or for one we can actually generate.
+  this->generateGetter(std::static_pointer_cast<SimpleAttribute>(attribute));
 }
 
-void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) {
-  // NOTE: make sure that it is a simple type or for one we can actually generate.
-  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::SIMPLE);
-
+void Builder::generateSetter(const std::shared_ptr<dcds::SimpleAttribute>& attribute) {
   // Generates a function of name: void set_{attribute_name}(attribute.type)
 
   // sanity-check:
@@ -103,7 +101,9 @@ void Builder::generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute) 
 
 void Builder::generateSetter(const std::string& attribute_name) {
   auto attribute = this->getAttribute(attribute_name);
-  this->generateSetter(attribute);
+  assert(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::PRIMITIVE);
+  // NOTE: make sure that it is a simple type or for one we can actually generate.
+  this->generateSetter(std::static_pointer_cast<SimpleAttribute>(attribute));
 }
 
 void Builder::build_no_jit() {
@@ -168,7 +168,7 @@ std::shared_ptr<Builder> Builder::clone(std::string name) {
   auto tmp = std::make_shared<dcds::Builder>(this->context, std::move(name));
 
   for (auto& a : attributes) {
-    tmp->attributes.emplace(a.first, std::make_shared<SimpleAttribute>(*(a.second)));
+    tmp->attributes.emplace(a.first, std::make_shared<Attribute>(*(a.second)));
   }
 
   for (auto& rt : registered_subtypes) {

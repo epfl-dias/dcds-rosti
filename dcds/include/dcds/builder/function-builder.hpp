@@ -115,10 +115,6 @@ class FunctionBuilder : remove_copy {
   }
 
  public:
-  //  void addTempVariable(const std::string &name, std::shared_ptr<SimpleAttribute> &attributeTypeRef) {
-  //    addTempVariable(name, varType, {});
-  //  }
-
   auto getTempVariable(const std::string &name) {
     if (!(this->temp_variables.contains(name))) {
       throw dcds::exceptions::dcds_dynamic_exception("Temporary variable does not exists: " + name);
@@ -175,7 +171,7 @@ class FunctionBuilder : remove_copy {
       throw dcds::exceptions::dcds_dynamic_exception("Data structure attribute with same name already exists: " + name);
     }
   }
-  inline bool hasAttribute(const std::shared_ptr<dcds::SimpleAttribute> &attribute) {
+  inline bool hasAttribute(const std::shared_ptr<dcds::Attribute> &attribute) {
     return this->builder->hasAttribute(attribute);
   }
   inline bool hasRegisteredType(const std::string &registered_type_name) {

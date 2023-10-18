@@ -771,8 +771,16 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
 
   uint i = 0;
   for (const auto &a : builder.attributes) {
-    auto defaultValue = a.second->getDefaultValue();
-    auto hasValue = defaultValue.has_value();
+    auto hasValue = false;
+    std::any defaultValue;
+
+    if (a.second->type_category == PRIMITIVE) {
+      hasValue = defaultValue.has_value();
+      if (hasValue) {
+        defaultValue = std::static_pointer_cast<SimpleAttribute>(a.second)->getDefaultValue();
+      }
+    }
+
     LOG(INFO) << "[initializeDsValueStructDefault] Processing: " << a.first
               << " | has_value: " << defaultValue.has_value();
 

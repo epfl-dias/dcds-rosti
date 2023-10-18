@@ -36,7 +36,7 @@
 namespace dcds {
 
 enum ATTRIBUTE_TYPE_CATEGORY {
-  SIMPLE,
+  PRIMITIVE,
   COMPOSITE_POINTER, /* enables 1-N relation */
   COMPOSITE          /* 1-1 relation, contained within */
 };
@@ -57,7 +57,8 @@ class SimpleAttribute : public Attribute {
   SimpleAttribute(std::string _name, dcds::valueType _type) : SimpleAttribute(std::move(_name), _type, {}) {}
 
   SimpleAttribute(std::string _name, dcds::valueType _type, std::any default_value)
-      : Attribute(std::move(_name), _type, ATTRIBUTE_TYPE_CATEGORY::SIMPLE), defaultValue(std::move(default_value)) {}
+      : Attribute(std::move(_name), _type, ATTRIBUTE_TYPE_CATEGORY::PRIMITIVE),
+        defaultValue(std::move(default_value)) {}
 
   [[nodiscard]] auto getDefaultValue() const {
     assert(defaultValue.has_value());
@@ -69,5 +70,15 @@ class SimpleAttribute : public Attribute {
  public:
   const std::any defaultValue;
 };
+
+class CompositeAttributePointer : public Attribute {
+ public:
+  explicit CompositeAttributePointer(std::string _name, std::string _composite_type_name)
+      : Attribute(std::move(_name), dcds::valueType::RECORD_PTR, ATTRIBUTE_TYPE_CATEGORY::COMPOSITE_POINTER),
+        composite_type_name(std::move(_composite_type_name)) {}
+
+  const std::string composite_type_name;
+};
+
 }  // namespace dcds
 #endif  // DCDS_ATTRIBUTE_HPP

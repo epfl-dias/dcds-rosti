@@ -26,7 +26,7 @@
 
 using namespace dcds;
 
-void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute,
+void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                         const std::string &destination) {
   // Ideally this should return a valueType or something operate-able so the user knows what is the return type?
   // NOTE: Source will always be DS-attribute, and destination will be a temporary variable always.
@@ -43,7 +43,7 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::SimpleAttrib
   statements.push_back(s);
 }
 
-void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute,
+void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                           const std::string &source) {
   // NOTE: Destination will always be DS-attribute, and source can be either temporary variable or function argument.
 

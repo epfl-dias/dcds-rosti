@@ -55,9 +55,9 @@ class StatementBuilder {
  public:
   void addLogStatement(const std::string &log_string);
 
-  void addReadStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &destination);
+  void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &destination);
 
-  void addUpdateStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &source);
+  void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &source);
 
   void addReturnStatement(const std::string &temporary_var_name);
   void addReturnStatement(const std::shared_ptr<expressions::Expression> &expr);

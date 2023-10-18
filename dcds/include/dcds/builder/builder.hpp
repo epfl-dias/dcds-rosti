@@ -107,27 +107,38 @@ class Builder : remove_copy {
     return std::distance(std::begin(attributes), attributes.find(attribute_name));
   }
 
-  auto addAttributePointerType(const std::string& name, const std::string& type) {
+  auto addAttributePtr(const std::string& name, const std::shared_ptr<Builder>& type) {
+    if (hasAttribute(name)) {
+      throw dcds::exceptions::dcds_dynamic_exception("Duplicate attribute name: " + name);
+    }
+    auto pt = std::make_shared<dcds::CompositeAttributePointer>(name, type->getName());
+    attributes.emplace(name, pt);
+    return pt;
+  }
+
+  auto addAttributePtr(const std::string& name, const std::string& type) {
     if (!(registered_subtypes.contains(name))) {
       throw dcds::exceptions::dcds_dynamic_exception("Unknown/Unregistered type: " + type);
     }
+    return addAttributePtr(name, registered_subtypes[type]);
   }
 
   auto addAttribute(const std::string& name, dcds::valueType attrType, const std::any& default_value) {
+    if (hasAttribute(name)) {
+      throw dcds::exceptions::dcds_dynamic_exception("Duplicate attribute name: " + name);
+    }
     auto pt = std::make_shared<dcds::SimpleAttribute>(name, attrType, default_value);
     attributes.emplace(name, pt);
     return pt;
   }
   bool hasAttribute(const std::string& name) { return attributes.contains(name); }
-  bool hasAttribute(const std::shared_ptr<dcds::SimpleAttribute>& attribute) {
-    return this->hasAttribute(attribute->name);
-  }
+  bool hasAttribute(const std::shared_ptr<dcds::Attribute>& attribute) { return this->hasAttribute(attribute->name); }
 
   void generateGetter(const std::string& attribute_name);
   void generateSetter(const std::string& attribute_name);
 
-  void generateGetter(std::shared_ptr<dcds::SimpleAttribute>& attribute);
-  void generateSetter(std::shared_ptr<dcds::SimpleAttribute>& attribute);
+  void generateGetter(const std::shared_ptr<dcds::SimpleAttribute>& attribute);
+  void generateSetter(const std::shared_ptr<dcds::SimpleAttribute>& attribute);
 
   // Composability: Types
 
@@ -179,7 +190,7 @@ class Builder : remove_copy {
   const std::string dataStructureName;
 
  private:
-  std::map<std::string, std::shared_ptr<SimpleAttribute>> attributes;
+  std::map<std::string, std::shared_ptr<Attribute>> attributes;
   std::map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   std::map<std::string, std::shared_ptr<Builder>> registered_subtypes;
 

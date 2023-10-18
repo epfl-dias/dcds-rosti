@@ -121,15 +121,10 @@ static void generateLinkedList() {
 
   // list will have a node type, and two attribute of head/tail.
 
-  // This should be named, and attribute. what about initial value of this attribute?
-  // builder.addAttribute("head", nodeType); this is not type nodeType! This is a reference to it!!
-
-  // TODO: how do we ensure the initial value provide is legal for the given type.
-  builder->addAttribute("head", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
-  builder->addAttribute("tail", dcds::RECORD_PTR, nullptr);  // initially, the list is empty, so pointing null.
-
-  // builder->addAttributePointerType("LL_NODE", "head"); // does not work at the moment.
-  // builder->addAttributePointerType("LL_NODE", "tail");
+  builder->addAttributePtr("head", builder->getRegisteredType("LL_NODE"));
+  // alternate: builder->addAttribute("head", dcds::RECORD_PTR, nullptr);
+  builder->addAttributePtr("tail", builder->getRegisteredType("LL_NODE"));
+  // alternate: builder->addAttribute("tail", dcds::RECORD_PTR, nullptr);
 
   addPushFront(builder);
   addFront(builder);
@@ -144,9 +139,6 @@ static void generateLinkedList() {
 
   instance->listAllAvailableFunctions();
 
-  //  auto res = instance->op("get_payload");
-  //  instance->op("set_payload", 10);
-  //  instance->op("get_payload");
   instance->op("push_front", 99);
   //  instance->op("push_front", 11);
   //  instance->op("push_front", 12);
