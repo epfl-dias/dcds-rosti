@@ -55,6 +55,9 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
+#include <utility>
+
+#include "dcds/builder/statement-builder.hpp"
 #include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-context.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-jit.hpp"
@@ -83,7 +86,11 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
     explicit function_build_context(std::shared_ptr<FunctionBuilder> _fb, std::shared_ptr<StatementBuilder> _sb,
                                     llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap,
                                     BasicBlock *_returnBlock)
-        : fb(_fb), sb(_sb), fn(_fn), tempVariableMap(_tempVariableMap), returnBlock(_returnBlock) {}
+        : fb(std::move(_fb)),
+          sb(std::move(_sb)),
+          fn(_fn),
+          tempVariableMap(_tempVariableMap),
+          returnBlock(_returnBlock) {}
   };
 
  public:

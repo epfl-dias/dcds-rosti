@@ -57,6 +57,14 @@ class Statement {
   const std::string refVarName;
 };
 
+class ReturnStatement : public Statement {
+ public:
+  explicit ReturnStatement(std::shared_ptr<expressions::Expression> _expr)
+      : Statement(statementType::YIELD, "", ""), expr(std::move(_expr)) {}
+
+  const std::shared_ptr<expressions::Expression> expr;
+};
+
 class UpdateStatement : public Statement {
  public:
   explicit UpdateStatement(const std::string& destination, const std::string& source, VAR_SOURCE_TYPE sourceType)

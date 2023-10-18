@@ -59,12 +59,15 @@ class StatementBuilder {
 
   void addUpdateStatement(const std::shared_ptr<dcds::SimpleAttribute> &attribute, const std::string &source);
 
-  void addReturnStatement(const std::string &var_name);
+  void addReturnStatement(const std::string &temporary_var_name);
+  void addReturnStatement(const std::shared_ptr<expressions::Expression> &expr);
 
   void addReturnVoidStatement();
 
-  void addInsertStatement(const std::string &registered_type_name, const std::string &variable_name);
-  void addInsertStatement(const std::shared_ptr<Builder> &object_type, const std::string &variable_name);
+  std::shared_ptr<expressions::TemporaryVariableExpression> addInsertStatement(const std::string &registered_type_name,
+                                                                               const std::string &variable_name);
+  std::shared_ptr<expressions::TemporaryVariableExpression> addInsertStatement(
+      const std::shared_ptr<Builder> &object_type, const std::string &variable_name);
 
   void addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
                      const std::string &function_name, const std::string &return_destination_variable,

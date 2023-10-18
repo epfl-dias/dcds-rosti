@@ -95,7 +95,7 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
     LOG(INFO) << "Loading attribute: " << name << " | type: " << type;
 
     int64_t sizeVar = 0;
-    if (type == dcds::valueType::INTEGER)
+    if (type == dcds::valueType::INT64)
       sizeVar = sizeof(int64_t);
     else if (type == dcds::valueType::RECORD_PTR)
       sizeVar = sizeof(void*);
@@ -190,6 +190,7 @@ void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr
   //  void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx);
   LOG(INFO) << "getAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
   storageTable->getAttribute(*txn, mainRecord.operator->(), dst, attributeIdx);
+  LOG(INFO) << "getAttribute done";
 
   // with-latch:
   //  mainRecord->readWithLatch([&](dcds::storage::record_metadata_t* rc) {
@@ -215,6 +216,7 @@ void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPt
   LOG(INFO) << "updateAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
   LOG(INFO) << "src val: " << *(reinterpret_cast<uint64_t*>(src));
   storageTable->updateAttribute(*txn, mainRecord.operator->(), src, attributeIdx);
+  LOG(INFO) << "updateAttribute done";
 
   // with-latch:
   //  mainRecord->writeWithLatch([&](dcds::storage::record_metadata_t* dsRc) {

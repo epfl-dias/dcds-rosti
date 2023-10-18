@@ -22,26 +22,79 @@
 #ifndef DCDS_CONSTANT_EXPRESSIONS_HPP
 #define DCDS_CONSTANT_EXPRESSIONS_HPP
 
-#include "dcds/builder/expressions/expressions.hpp"
+#include "dcds/builder/expressions/unary-expressions.hpp"
 
 namespace dcds::expressions {
 
-// class Constant : public Expression {
-//  public:
-//   enum ConstantType { INT, INT64, BOOL, FLOAT, STRING, DSTRING, DATE };
-//   Constant(const ExpressionType *type) : Expression(type) {}
-//
-//   [[nodiscard]] virtual ConstantType getConstantType() const = 0;
-// };
-//
-// class Int64Constant
-//     : public TConstant<int64_t, Int64Type, Constant::ConstantType::INT64,
-//                        Int64Constant> {
-//  public:
-//   using TConstant<int64_t, Int64Type, Constant::ConstantType::INT64,
-//                   Int64Constant>::TConstant;
-// };
+class Constant : public UnaryExpression {
+ public:
+  enum ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE };
+  explicit Constant(ConstantType constantType) : type(constantType) {}
 
-}
+  [[nodiscard]] virtual ConstantType getConstantType() const { return type; }
+
+  [[nodiscard]] Expression* getExpression() const override { assert(false); }
+
+ public:
+  const ConstantType type;
+};
+
+class Int64Constant : public Constant {
+ public:
+  explicit Int64Constant(int64_t _val) : Constant(Constant::ConstantType::INT64), val(_val) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::INT64; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] auto getValue() const { return val; }
+
+ private:
+  int64_t val;
+};
+
+class BoolConstant : public Constant {
+ public:
+  explicit BoolConstant(bool _val) : Constant(Constant::ConstantType::BOOL), val(_val) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] auto getValue() const { return val; }
+
+ private:
+  bool val;
+};
+
+class FloatConstant : public Constant {
+ public:
+  explicit FloatConstant(float _val) : Constant(Constant::ConstantType::FLOAT), val(_val) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::FLOAT; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] auto getValue() const { return val; }
+
+ private:
+  float val;
+};
+
+class DoubleConstant : public Constant {
+ public:
+  explicit DoubleConstant(double _val) : Constant(Constant::ConstantType::DOUBLE), val(_val) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::DOUBLE; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] auto getValue() const { return val; }
+
+ private:
+  double val;
+};
+
+}  // namespace dcds::expressions
 
 #endif  // DCDS_CONSTANT_EXPRESSIONS_HPP

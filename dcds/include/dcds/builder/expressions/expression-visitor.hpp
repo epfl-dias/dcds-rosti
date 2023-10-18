@@ -23,6 +23,7 @@
 #define DCDS_EXPRESSION_VISITOR_HPP
 
 #include "dcds/builder/expressions/binary-expressions.hpp"
+#include "dcds/builder/expressions/constant-expressions.hpp"
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
 
@@ -36,6 +37,12 @@ class ExpressionVisitor {
   virtual void* visit(const expressions::IsNullExpression& expr) = 0;
   virtual void* visit(const expressions::IsNotNullExpression& expr) = 0;
   virtual void* visit(const expressions::IsEvenExpression& expr) = 0;
+
+  // Constant expressions
+  virtual void* visit(const expressions::Int64Constant& expr) = 0;
+  virtual void* visit(const expressions::BoolConstant& expr) = 0;
+  virtual void* visit(const expressions::FloatConstant& expr) = 0;
+  virtual void* visit(const expressions::DoubleConstant& expr) = 0;
 
   // Binary expressions
   virtual void* visit(const expressions::AddExpression& expr) = 0;

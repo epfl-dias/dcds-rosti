@@ -33,14 +33,11 @@ TEST(BuilderTest, NoAttributeBuild) {
   builder->addHint(dcds::hints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INTEGER);  // function takes one argument
-
-  // FIXME: return constant expressions instead of temp variables.
-  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
+  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
-  sb->addReturnStatement("temp_bool_true");
+  sb->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
   // -- function end
 
   builder->build();

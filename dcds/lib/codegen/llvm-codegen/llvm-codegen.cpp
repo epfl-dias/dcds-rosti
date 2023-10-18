@@ -37,25 +37,23 @@ void LLVMCodegen::saveToFile(const std::string &filename) {
   theLLVMModule->print(outLL, nullptr);
 }
 
-void LLVMCodegen::printIR() { theLLVMModule->print(llvm::outs(), nullptr); };
+void LLVMCodegen::printIR() { theLLVMModule->print(llvm::outs(), nullptr); }
 
 llvm::Type *toLLVMType(LLVMContext &context, dcds::valueType dcds_type) {
   switch (dcds_type) {
-    case INTEGER:
-    case RECORD_ID:
-    case RECORD_PTR: {
+    case INT64:
+    case RECORD_PTR:
       return llvm::Type::getInt64Ty(context);
-    }
-    case FLOAT: {
+    case INT32:
+      return llvm::Type::getInt32Ty(context);
+    case DOUBLE:
+      return llvm::Type::getDoubleTy(context);
+    case FLOAT:
       return llvm::Type::getFloatTy(context);
-    }
     case BOOL:
       return llvm::Type::getInt1Ty(context);
-    case CHAR:
     case VOID:
-    default:
-      assert(false && "valueTypeNotSupportedYet");
-      break;
+      return llvm::Type::getVoidTy(context);
   }
 }
 
@@ -99,7 +97,6 @@ void LLVMCodegen::initializePassManager() {
   /// Simplify the control flow graph (deleting unreachable blocks, etc).
   theLLVMFPM->add(createCFGSimplificationPass());
 
-  /// TODO: Eliminate unnecessary code generation at its source (wherever it makes sense to do so).
   theLLVMFPM->add(createDeadCodeEliminationPass());
 
   theLLVMFPM->doInitialization();
@@ -184,6 +181,12 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   // FIXME: what about scoping of temporary variables??
   // FIXME: this would create nested transactions! we need to make sure we dont call txn if there is recursive function.
 
+  bool isMainDs = (builder == this->top_level_builder);
+
+  // Only export symbols for the top-level DS, not the composed ones.
+  auto linkageType =
+      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
+
   auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
   auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
 
@@ -195,7 +198,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   // pre_args: { txnManager*, mainRecord }
   std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
-  auto fn_outer = this->genFunctionSignature(fb, fn_outer_args, fn_name_prefix);
+  auto fn_outer = this->genFunctionSignature(fb, fn_outer_args, fn_name_prefix, "", linkageType);
   // pre_args: { txnManager*, mainRecord, txnPtr }
   auto fn_inner = this->genFunctionSignature(fb, {ptrType, uintPtrType, ptrType}, fn_name_prefix, "_inner",
                                              llvm::GlobalValue::LinkageTypes::PrivateLinkage);
@@ -266,15 +269,19 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   dcds::LLVMCodegen::llvmVerifyFunction(fn_outer);
 
-  // so we have a function R f(void*,void*,void*, A,B,C)
-  // we want it wrapped to R f(void*,void*,void*,...)
+  if (isMainDs) {
+    // Only wrap va-args for the exposed functions as it is purely used by jit-container only.
 
-  std::vector<llvm::Type *> expected_vargs;
-  for (const auto &arg : fb->function_args) {
-    expected_vargs.push_back(toLLVMType(getLLVMContext(), arg->getType()));
+    // so we have a function R f(void*,void*,void*, A,B,C)
+    // we want it wrapped to R f(void*,void*,void*,...)
+
+    std::vector<llvm::Type *> expected_vargs;
+    for (const auto &arg : fb->function_args) {
+      expected_vargs.push_back(toLLVMType(getLLVMContext(), arg->getType()));
+    }
+
+    this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
   }
-
-  this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
 
   // Optimizations:
   //   easy: if an attribute is only accessed in a single function across DS, then you don't need CC either on that one.
@@ -484,18 +491,26 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     this->createPrintString(stmt->actionVarName);
   } else if (stmt->stType == dcds::statementType::YIELD) {
     LOG(INFO) << "StatementType: return";
-    if (!stmt->refVarName.empty()) {
-      if (fnCtx.tempVariableMap->contains(stmt->refVarName)) {
-        // We know temporary variables are allocated through llvm, hence, do a CreateLoad on it.
 
-        // copy the required variable to the retval place.
-        llvm::Value *retValue =
-            getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), fnCtx.tempVariableMap->operator[](stmt->refVarName));
+    auto returnStmt = std::static_pointer_cast<ReturnStatement>(stmt);
 
-        getBuilder()->CreateStore(retValue, fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+    if (returnStmt->expr) {
+      llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, returnStmt->expr.get());
+
+      llvm::Value *retValue;
+
+      if (exprResult->getType()->isPointerTy()) {
+        retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), exprResult);
       } else {
-        assert(false && "reference variable not allocated?");
+        retValue = exprResult;
       }
+
+      // Option 2:
+      // if (llvm::isa<llvm::AllocaInst>(exprResult)) {
+      //   auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
+      //   retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), allocaInst);
+      // }
+      getBuilder()->CreateStore(retValue, fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
     }
 
     getBuilder()->CreateBr(fnCtx.returnBlock);
@@ -569,7 +584,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
       if (llvm::isa<llvm::AllocaInst>(exprResult)) {
         // Temporary variables might be AllocaInst, and need to be loaded before use or passing to function by value.
-        llvm::AllocaInst *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
+        auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
         llvm::Value *loadedTmpVar = getBuilder()->CreateLoad(toLLVMType(getLLVMContext(), fArg->getType()), allocaInst);
         callArgs.push_back(loadedTmpVar);
 
@@ -591,12 +606,6 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
   }
 }
 
-// What about CC? nothing about CC yet, essentially,
-// it should be injected in starting and ending of each function.
-// We would need the read/write set, that should be easy though.
-
-// For latching, each statementBuild will take care of that, actually.
-
 llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilder> &fb,
                                                   const std::vector<llvm::Type *> &pre_args,
                                                   const std::string &name_prefix, const std::string &name_suffix,
@@ -612,7 +621,7 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
   if (fb->returnValueType == VOID) {
     returnType = llvm::Type::getVoidTy(getLLVMContext());
   } else {
-    LOG(INFO) << "fb->returnValueType: " << fb->returnValueType;
+    // LOG(INFO) << "fb->returnValueType: " << fb->returnValueType;
     returnType = toLLVMType(getLLVMContext(), fb->returnValueType);
   }
 
@@ -630,17 +639,21 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
   LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
 
   switch (var_type) {
-    case INTEGER:
+    case INT64:
     case RECORD_PTR: {
-      auto int64_type = llvm::Type::getInt64Ty(getLLVMContext());
-      auto vr = getBuilder()->CreateAlloca(int64_type, nullptr, var_name);
+      auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt64Ty(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createInt64(std::any_cast<uint64_t>(init_value));
         getBuilder()->CreateStore(value, vr);
       }
-
-      //        LOG(INFO) << "Allocating temp variable: " << var_name << " | " << vr->getType()->getTypeID() << " | "
-      //        << int64_type->getTypeID();
+      return vr;
+    }
+    case INT32: {
+      auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt32Ty(getLLVMContext()), nullptr, var_name);
+      if (has_value) {
+        auto value = createInt32(std::any_cast<int32_t>(init_value));
+        getBuilder()->CreateStore(value, vr);
+      }
       return vr;
     }
     case BOOL: {
@@ -652,14 +665,24 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
+    case FLOAT: {
+      auto vr = getBuilder()->CreateAlloca(llvm::Type::getFloatTy(getLLVMContext()), nullptr, var_name);
+      if (has_value) {
+        auto value = createFloat(std::any_cast<float>(init_value));
+        getBuilder()->CreateStore(value, vr);
+      }
+      return vr;
+    }
+    case DOUBLE: {
+      auto vr = getBuilder()->CreateAlloca(llvm::Type::getDoubleTy(getLLVMContext()), nullptr, var_name);
+      if (has_value) {
+        auto value = createDouble(std::any_cast<double>(init_value));
+        getBuilder()->CreateStore(value, vr);
+      }
+      return vr;
+    }
     case VOID:
-    case FLOAT:
-    case RECORD_ID:
-    case CHAR:
-
-    default:
-      assert(false && "[allocateOneVar] valueTypeNotSupportedYet");
-      break;
+      assert(false && "[allocateOneVar] cannot allocate a variable of type 'void'");
   }
 }
 
@@ -756,47 +779,44 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     llvm::Value *fieldValue;
 
     switch (a.second->type) {
-      case INTEGER: {
+      case INT64: {
         auto value = hasValue ? std::any_cast<uint64_t>(defaultValue) : 0;
         fieldValue = createInt64(value);
+        break;
+      }
+      case INT32: {
+        auto value = hasValue ? std::any_cast<int32_t>(defaultValue) : 0;
+        fieldValue = createInt32(value);
         break;
       }
       case RECORD_PTR: {
         // RECORD_PTR is a uintptr underlying.
         fieldValue = createUintptr(0);
-        //        fieldValue = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(getLLVMContext()));
-        //        // fixme: isn't record_ptr will be int? as internally its integer.
-        //        if(hasValue){
-        //          LOG(INFO) << "has_value:";
-        //          CastPtrToLlvmPtr(llvm::Type::getInt8PtrTy(getLLVMContext()), std::any_cast<void*>(fieldValue));
-        //        } else {
-        //          fieldValue = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(getLLVMContext()));
-        //        }
+        break;
+      }
+      case DOUBLE: {
+        auto value = hasValue ? std::any_cast<double>(defaultValue) : 0;
+        fieldValue = createDouble(value);
+        break;
+      }
+      case FLOAT: {
+        auto value = hasValue ? std::any_cast<float>(defaultValue) : 0;
+        fieldValue = createFloat(value);
+        break;
+      }
+      case BOOL: {
+        auto value = hasValue && std::any_cast<bool>(defaultValue);
+        fieldValue = value ? createTrue() : createFalse();
         break;
       }
       case VOID:
-      case FLOAT:
-      case RECORD_ID:
-      case CHAR:
-      default:
-        assert(false && "[allocateTemporaryVariables] valueTypeNotSupportedYet");
+        assert(false && "[initializeDsValueStructDefault] cannot create value of type VOID");
         break;
     }
 
-    // LOG(INFO) << "CreateInsertValue";
-    // fieldValue->dump();
     structValue = irBuilder->CreateInsertValue(structValue, fieldValue, {i});
-
-    // fixme: they should be simple type.
-    // get default values for them.
-    //    a.second->getDefaultValue();
-    //    structValue = getBuilder()->CreateInsertValue(structValue, field1, {0});
     i++;
   }
-
-  // structValue->dump();
-  // structValue->getType()->dump();
-  // LOG(INFO) << "Done";
 
   llvm::AllocaInst *structPtr = irBuilder->CreateAlloca(dsRecordValueStructType);
   irBuilder->CreateStore(structValue, structPtr);
@@ -875,6 +895,10 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   LOG(INFO) << "[LLVMCodegen][buildConstructor] table_name: " << table_name;
 
   bool hasAttributes = !(builder.attributes.empty());
+  bool isMainDs = (&builder == this->top_level_builder);
+  auto linkageType =
+      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
+  // NOTE: if we know this is a composed type, then we can anyway omit txn, and take it as an arg also.
 
   auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
   auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
@@ -884,8 +908,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   auto fn_type = llvm::FunctionType::get(returnType, std::vector<llvm::Type *>{}, false);
 
   auto function_name = builder.getName() + "_constructor";
-  auto fn = llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, function_name,
-                                   theLLVMModule.get());
+  auto fn = llvm::Function::Create(fn_type, linkageType, function_name, theLLVMModule.get());
   userFunctions.emplace(function_name, fn);
 
   auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);

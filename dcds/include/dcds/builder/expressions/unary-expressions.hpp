@@ -27,6 +27,7 @@
 #include <iostream>
 #include <utility>
 
+#include "dcds/builder/builder.hpp"
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/util/logging.hpp"
@@ -40,19 +41,19 @@ class UnaryExpression : public Expression {
   [[nodiscard]] bool isUnaryExpression() const final { return true; }
   [[nodiscard]] bool isBinaryExpression() const final { return false; }
 
-  virtual Expression* getExpression() const = 0;
+  [[nodiscard]] virtual Expression* getExpression() const = 0;
 };
 
 class IsEvenExpression : public UnaryExpression {
  public:
-  explicit IsEvenExpression(Expression* _expr) : expr(_expr) { assert(_expr->getResultType() == valueType::INTEGER); }
+  explicit IsEvenExpression(Expression* _expr) : expr(_expr) { assert(_expr->getResultType() == valueType::INT64); }
   explicit IsEvenExpression(const std::shared_ptr<Expression>& _expr) : expr(_expr.get()) {
-    assert(_expr->getResultType() == valueType::INTEGER);
+    assert(_expr->getResultType() == valueType::INT64);
   }
 
   [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
 
-  Expression* getExpression() const override { return expr; }
+  [[nodiscard]] Expression* getExpression() const override { return expr; }
 
   void* accept(ExpressionVisitor* v) override;
 
@@ -67,7 +68,7 @@ class IsNullExpression : public UnaryExpression {
 
   [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
 
-  Expression* getExpression() const override { return expr; }
+  [[nodiscard]] Expression* getExpression() const override { return expr; }
 
   void* accept(ExpressionVisitor* v) override;
 
@@ -82,7 +83,7 @@ class IsNotNullExpression : public UnaryExpression {
 
   [[nodiscard]] valueType getResultType() const override { return valueType::BOOL; }
 
-  Expression* getExpression() const override { return expr; }
+  [[nodiscard]] Expression* getExpression() const override { return expr; }
 
   void* accept(ExpressionVisitor* v) override;
 
@@ -103,7 +104,7 @@ class LocalVariableExpression : public UnaryExpression {
 
   [[nodiscard]] valueType getResultType() const override { return var_type; }
 
-  Expression* getExpression() const override { assert(false && "how come here?"); }
+  [[nodiscard]] Expression* getExpression() const override { assert(false && "how come here?"); }
 
  public:
   const std::string var_name;
@@ -120,10 +121,16 @@ class TemporaryVariableExpression : public LocalVariableExpression {
   explicit TemporaryVariableExpression(std::string variable_name, dcds::valueType variable_type)
       : TemporaryVariableExpression(std::move(variable_name), variable_type, {}) {}
 
+  // for composite-types.
+  explicit TemporaryVariableExpression(std::string variable_name, std::shared_ptr<Builder> type)
+      : LocalVariableExpression(std::move(variable_name), valueType::RECORD_PTR, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE),
+        objectType(std::move(type)) {}
+
   void* accept(ExpressionVisitor* v) override;
 
  public:
-  const std::any var_default_value;
+  const std::any var_default_value{};
+  const std::shared_ptr<Builder> objectType{};
 };
 
 class FunctionArgumentExpression : public LocalVariableExpression {

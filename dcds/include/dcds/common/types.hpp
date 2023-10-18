@@ -29,7 +29,7 @@
 namespace dcds {
 
 // NOTE: VOID is strictly a return type.
-enum valueType { INTEGER, FLOAT, RECORD_ID, CHAR, RECORD_PTR, VOID, BOOL };
+enum valueType { INT64, INT32, FLOAT, DOUBLE, RECORD_PTR, VOID, BOOL };
 
 enum VAR_SOURCE_TYPE { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTION_ARGUMENT };
 
@@ -53,10 +53,6 @@ class jit_function_t {
 //       return "INTEGER";
 //     case FLOAT:
 //       return "FLOAT";
-//     case RECORD_ID:
-//       return "RECORD_ID";
-//     case CHAR:
-//       return "CHAR";
 //     case RECORD_PTR:
 //       return "RECORD_PTR";
 //     case VOID:

@@ -48,6 +48,12 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
   void* visit(const expressions::IsNotNullExpression& expr) override;
   void* visit(const expressions::IsEvenExpression& expr) override;
 
+  // Constant expressions
+  void* visit(const expressions::Int64Constant& expr) override;
+  void* visit(const expressions::BoolConstant& expr) override;
+  void* visit(const expressions::FloatConstant& expr) override;
+  void* visit(const expressions::DoubleConstant& expr) override;
+
   // Binary expressions
   void* visit(const expressions::AddExpression& expr) override;
   void* visit(const expressions::SubtractExpression& expr) override;

@@ -23,6 +23,10 @@
 #define DCDS_DCDS_HPP
 
 #include "dcds/builder/builder.hpp"
+#include "dcds/builder/expressions/binary-expressions.hpp"
+#include "dcds/builder/expressions/constant-expressions.hpp"
+#include "dcds/builder/expressions/expressions.hpp"
+#include "dcds/builder/expressions/unary-expressions.hpp"
 #include "dcds/builder/function-builder.hpp"
 #include "dcds/builder/statement-builder.hpp"
 #include "dcds/common/common.hpp"

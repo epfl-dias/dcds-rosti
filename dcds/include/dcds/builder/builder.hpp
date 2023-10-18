@@ -35,7 +35,6 @@
 
 #include "dcds/builder/attribute.hpp"
 #include "dcds/builder/hints/builder-hints.hpp"
-#include "dcds/builder/statement.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/context/DCDSContext.hpp"
@@ -48,7 +47,6 @@ class Codegen;
 class LLVMCodegen;
 class JitContainer;
 
-/// DCDS Frontend class
 class Builder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;

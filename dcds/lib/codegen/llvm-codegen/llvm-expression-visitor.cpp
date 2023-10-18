@@ -25,7 +25,6 @@
 #include <llvm/IR/Value.h>
 
 #include "dcds/builder/function-builder.hpp"
-#include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-context.hpp"
 
 using namespace dcds::expressions;
@@ -89,6 +88,7 @@ void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
     assert(false && "what is the type??");
   }
 }
+
 void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::SubtractExpression::visit";
   auto builder = codegenEngine->getBuilder();
@@ -98,7 +98,7 @@ void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) 
   if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
     return builder->CreateSub(leftValue, rightValue);
   } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
-    return builder->CreateSub(leftValue, rightValue);
+    return builder->CreateFSub(leftValue, rightValue);
   } else {
     assert(false && "what is the type??");
   }
@@ -157,10 +157,30 @@ void* LLVMExpressionVisitor::visit(const expressions::TemporaryVariableExpressio
 void* LLVMExpressionVisitor::visit(const expressions::LocalVariableExpression& localVariableExpr) {
   LOG(INFO) << "LLVMExpressionVisitor::LocalVariableExpression::visit";
   if (localVariableExpr.var_src_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
-    return visit(static_cast<const TemporaryVariableExpression&>(localVariableExpr));
+    return visit(dynamic_cast<const TemporaryVariableExpression&>(localVariableExpr));
   } else if (localVariableExpr.var_src_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
-    return visit(static_cast<const FunctionArgumentExpression&>(localVariableExpr));
+    return visit(dynamic_cast<const FunctionArgumentExpression&>(localVariableExpr));
   } else {
     assert(false && "what type of VAR_SOURCE_TYPE in LocalVariableExpression ?");
+  }
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::Int64Constant& expr) {
+  return codegenEngine->createInt64(expr.getValue());
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::FloatConstant& expr) {
+  return codegenEngine->createFloat(expr.getValue());
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::DoubleConstant& expr) {
+  return codegenEngine->createDouble(expr.getValue());
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::BoolConstant& expr) {
+  if (expr.getValue()) {
+    return codegenEngine->createTrue();
+  } else {
+    return codegenEngine->createFalse();
   }
 }

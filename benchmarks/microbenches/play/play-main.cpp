@@ -34,13 +34,14 @@
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
 
+#include "dcds/builder/expressions/constant-expressions.hpp"
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
 
 static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder) {
   // FIXME: create addAttribute without initial value also.
 
-  auto payloadAttribute = builder->addAttribute("payload", dcds::INTEGER, UINT64_C(0));
+  auto payloadAttribute = builder->addAttribute("payload", dcds::INT64, UINT64_C(0));
   auto nextAttribute = builder->addAttribute("next", dcds::RECORD_PTR, nullptr);
   builder->generateGetter(payloadAttribute);  // get_payload
   builder->generateSetter(payloadAttribute);  // set_payload
@@ -58,13 +59,13 @@ static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder
 static void addFront(std::shared_ptr<dcds::Builder>& builder) {
   // get the first element from the head (does not pop)
 
-  auto fn = builder->createFunction("front", dcds::valueType::INTEGER);
+  auto fn = builder->createFunction("front", dcds::valueType::INT64);
 
   fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
 
   auto stmtBuilder = fn->getStatementBuilder();
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  fn->addTempVariable("tmp_payload_ret", dcds::INTEGER);
+  fn->addTempVariable("tmp_payload_ret", dcds::INT64);
   stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
   stmtBuilder->addReturnStatement("tmp_payload_ret");
 }
@@ -88,7 +89,7 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
   // declare void push_front(uint64_t value)
   auto fn = builder->createFunction("push_front");
   auto nodeType = builder->getRegisteredType("LL_NODE");
-  fn->addArgument("push_value", dcds::INTEGER);
+  fn->addArgument("push_value", dcds::INT64);
 
   auto stmtBuilder = fn->getStatementBuilder();
 

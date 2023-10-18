@@ -36,6 +36,12 @@ void* IsNullExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* IsNotNullExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* IsEvenExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
+// Constant expressions
+void* Int64Constant::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* BoolConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* FloatConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* DoubleConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
+
 // Binary expressions
 void* AddExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* SubtractExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }

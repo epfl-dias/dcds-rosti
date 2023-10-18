@@ -59,11 +59,17 @@ class JitContainer {
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
     // FIXME: verify if the number of args is same as the args required for the function.
     switch (fn->returnType) {
-      case INTEGER:
+      case INT64:
       case RECORD_PTR: {
         auto ret = reinterpret_cast<uint64_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET: " << ret;
+        return {ret};
+      }
+      case INT32: {
+        auto ret = reinterpret_cast<uint32_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
+            _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
+        LOG(INFO) << "RET INT32: " << ret;
         return {ret};
       }
       case VOID: {
@@ -78,9 +84,18 @@ class JitContainer {
         LOG(INFO) << "RET BOOL: " << ret;
         return {ret};
       }
-      case FLOAT:
-      case RECORD_ID:
-      case CHAR:
+      case DOUBLE: {
+        auto ret = reinterpret_cast<double (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
+            _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
+        LOG(INFO) << "RET DOUBLE: " << ret;
+        return {ret};
+      }
+      case FLOAT: {
+        auto ret = reinterpret_cast<float (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
+            _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
+        LOG(INFO) << "RET FLOAT: " << ret;
+        return {ret};
+      }
       default:
         assert(false);
         break;

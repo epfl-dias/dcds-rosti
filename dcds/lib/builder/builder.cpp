@@ -31,18 +31,6 @@
 
 namespace dcds {
 
-// Attribute* Builder::getAttributeByName(const std::string &name){
-//   return this->attr_map[name];
-// }
-//
-// void Builder::add_attribute_int8(const std::string& name){
-//   attributes_.emplace_back(attribute_type::INTEGER, name);
-// }
-//
-// void Builder::add_attribute_recordPtr(const std::string& name){
-//   attributes_.emplace_back(attribute_type::RECORD_ID, name);
-// }
-
 static inline void isValidFunctionName(const std::string& functionName) {
   LOG(INFO) << "[isValidFunctionName]: " + functionName;
   if (functionName.starts_with("get_") || functionName.starts_with("set_")) {

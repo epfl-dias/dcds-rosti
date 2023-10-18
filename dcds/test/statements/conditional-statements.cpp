@@ -31,18 +31,14 @@ TEST(ConditionalStatementTest, IfAndElse) {
   builder->addHint(dcds::hints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INTEGER);  // function takes one argument
-
-  // FIXME: return constant expressions instead of temp variables.
-  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
-  auto tmpBoolFalse = fn->addTempVariable("temp_bool_false", dcds::BOOL, false);
+  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
   auto conditionalBlocks = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{argOne});
 
-  conditionalBlocks.ifBlock->addReturnStatement("temp_bool_true");
-  conditionalBlocks.elseBlock->addReturnStatement("temp_bool_false");
+  conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
+  conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
 
   // -- function end
 
@@ -63,18 +59,14 @@ TEST(ConditionalStatementTest, OnlyIf) {
   builder->addHint(dcds::hints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);   // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INTEGER);  // function takes one argument
-
-  // FIXME: return constant expressions instead of temp variables.
-  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
-  auto tmpBoolFalse = fn->addTempVariable("temp_bool_false", dcds::BOOL, false);
+  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
   auto conditionalBlocks = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{argOne});
-  conditionalBlocks.ifBlock->addReturnStatement("temp_bool_true");
+  conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
 
-  sb->addReturnStatement("temp_bool_false");
+  sb->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
   // -- function end
 
   builder->build();
@@ -95,12 +87,8 @@ TEST(ConditionalStatementTest, MultipleBranches) {
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto arg1 = fn->addArgument("arg_one", dcds::INTEGER);
-  auto arg2 = fn->addArgument("arg_two", dcds::INTEGER);
-
-  // FIXME: return constant expressions instead of temp variables.
-  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
-  auto tmpBoolFalse = fn->addTempVariable("temp_bool_false", dcds::BOOL, false);
+  auto arg1 = fn->addArgument("arg_one", dcds::INT64);
+  auto arg2 = fn->addArgument("arg_two", dcds::INT64);
 
   auto sb = fn->getStatementBuilder();
 
@@ -109,8 +97,8 @@ TEST(ConditionalStatementTest, MultipleBranches) {
   cond1.elseBlock->addLogStatement("1: It is odd branch");
 
   auto cond2 = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{arg2});
-  cond2.ifBlock->addReturnStatement("temp_bool_true");
-  cond2.elseBlock->addReturnStatement("temp_bool_false");
+  cond2.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
+  cond2.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
 
   // -- function end
 
@@ -132,12 +120,8 @@ TEST(ConditionalStatementTest, NestedBranches) {
 
   // -- function create
   auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto arg1 = fn->addArgument("arg_one", dcds::INTEGER);
-  auto arg2 = fn->addArgument("arg_two", dcds::INTEGER);
-
-  // FIXME: return constant expressions instead of temp variables.
-  auto tmpBoolTrue = fn->addTempVariable("temp_bool_true", dcds::BOOL, true);
-  auto tmpBoolFalse = fn->addTempVariable("temp_bool_false", dcds::BOOL, false);
+  auto arg1 = fn->addArgument("arg_one", dcds::INT64);
+  auto arg2 = fn->addArgument("arg_two", dcds::INT64);
 
   auto sb = fn->getStatementBuilder();
 
@@ -146,13 +130,13 @@ TEST(ConditionalStatementTest, NestedBranches) {
 
   auto cond2 = cond1.ifBlock->addConditionalBranch(new dcds::expressions::IsEvenExpression{fn->getArgument("arg_two")});
   cond2.ifBlock->addLogStatement("arg_two is even");
-  cond2.ifBlock->addReturnStatement("temp_bool_true");
+  cond2.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
 
   cond2.elseBlock->addLogStatement("arg_two is odd");
-  cond2.elseBlock->addReturnStatement("temp_bool_false");
+  cond2.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
 
   cond1.elseBlock->addLogStatement("1: arg_one is odd");
-  cond1.elseBlock->addReturnStatement("temp_bool_false");
+  cond1.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
 
   // -- function end
 

@@ -104,6 +104,17 @@ class FunctionBuilder : remove_copy {
   }
   auto addTempVariable(const std::string &name, dcds::valueType varType) { return addTempVariable(name, varType, {}); }
 
+ private:
+  auto addTempVariable(const std::string &name, std::shared_ptr<Builder> objectType) {
+    isValidVarAddition(name);
+    assert(hasRegisteredType(objectType->getName()));
+
+    auto var = std::make_shared<expressions::TemporaryVariableExpression>(name, objectType);
+    temp_variables.emplace(name, var);
+    return var;
+  }
+
+ public:
   //  void addTempVariable(const std::string &name, std::shared_ptr<SimpleAttribute> &attributeTypeRef) {
   //    addTempVariable(name, varType, {});
   //  }
@@ -169,6 +180,9 @@ class FunctionBuilder : remove_copy {
   }
   inline bool hasRegisteredType(const std::string &registered_type_name) {
     return builder->hasRegisteredType(registered_type_name);
+  }
+  inline auto getRegisteredType(const std::string &registered_type_name) {
+    return builder->getRegisteredType(registered_type_name);
   }
 
  private:

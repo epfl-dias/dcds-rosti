@@ -21,6 +21,7 @@
 
 #include "dcds/builder/statement-builder.hpp"
 
+#include "dcds/builder/expressions/constant-expressions.hpp"
 #include "dcds/builder/function-builder.hpp"
 
 using namespace dcds;
@@ -62,27 +63,38 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::SimpleAttr
   statements.push_back(s);
 }
 
-void StatementBuilder::addReturnStatement(const std::string &var_name) {
-  // The reference variable should be a temporary variable.
-  // what about the case of returning a constant?
-
-  if (!(this->parent_function.hasTempVariable(var_name))) {
-    throw dcds::exceptions::dcds_dynamic_exception("Function does not contain variable referenced to be returned: " +
-                                                   var_name);
-  }
-
-  if (this->parent_function.getTempVariable(var_name)->getType() != this->parent_function.getReturnValueType()) {
+void StatementBuilder::addReturnStatement(const std::shared_ptr<expressions::Expression> &expr) {
+  // How do we know if expr is valid?
+  // checks?
+  if (expr->getResultType() != this->parent_function.returnValueType) {
     throw dcds::exceptions::dcds_invalid_type_exception(
         "Return type mismatch between return variable and declared return type");
   }
 
-  auto rs = std::make_shared<Statement>(dcds::statementType::YIELD, "", var_name);
+  auto rs = std::make_shared<ReturnStatement>(expr);
   statements.push_back(rs);
   this->doesReturn = true;
 }
 
+void StatementBuilder::addReturnStatement(const std::string &temporary_var_name) {
+  // The reference variable should be a temporary variable.
+  // what about the case of returning a constant?
+
+  if (!(this->parent_function.hasTempVariable(temporary_var_name))) {
+    throw dcds::exceptions::dcds_dynamic_exception("Function does not contain variable referenced to be returned: " +
+                                                   temporary_var_name);
+  }
+  auto tmpVar = this->parent_function.getTempVariable(temporary_var_name);
+  this->addReturnStatement(tmpVar);
+}
+
 void StatementBuilder::addReturnVoidStatement() {
-  auto rs = std::make_shared<Statement>(dcds::statementType::YIELD, "", "");
+  if (this->parent_function.returnValueType != dcds::valueType::VOID) {
+    throw dcds::exceptions::dcds_invalid_type_exception(
+        "Return type mismatch between return variable and declared return type");
+  }
+
+  auto rs = std::make_shared<ReturnStatement>(nullptr);
   statements.push_back(rs);
   this->doesReturn = true;
 }
@@ -92,19 +104,22 @@ void StatementBuilder::addLogStatement(const std::string &log_string) {
   statements.push_back(rs);
 }
 
-void StatementBuilder::addInsertStatement(const std::string &registered_type_name, const std::string &variable_name) {
+std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addInsertStatement(
+    const std::string &registered_type_name, const std::string &variable_name) {
   assert(this->parent_function.hasRegisteredType(registered_type_name));
 
-  this->parent_function.addTempVariable(variable_name, dcds::valueType::RECORD_PTR);
+  auto resultVar = this->parent_function.addTempVariable(variable_name,
+                                                         this->parent_function.getRegisteredType(registered_type_name));
   // this would call the constructor of the registered_type,
   // and then assigns the returned record_reference to the variable name,
 
   auto rs = std::make_shared<InsertStatement>(registered_type_name, variable_name);
   statements.push_back(rs);
+  return resultVar;
 }
 
-void StatementBuilder::addInsertStatement(const std::shared_ptr<Builder> &object_type,
-                                          const std::string &variable_name) {
+std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addInsertStatement(
+    const std::shared_ptr<Builder> &object_type, const std::string &variable_name) {
   return this->addInsertStatement(object_type->getName(), variable_name);
 }
 
