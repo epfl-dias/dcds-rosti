@@ -23,7 +23,9 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 
+#include <iostream>
 #include <any>
+#include <dcds/common/types.hpp>
 #include <dcds/builder/builder.hpp>
 #include <dcds/builder/function-builder.hpp>
 #include <dcds/builder/statement-builder.hpp>
@@ -38,11 +40,13 @@
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
 
+#include "dcds/builder/builder-opt-passes.hpp"
+
 static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder) {
   // FIXME: create addAttribute without initial value also.
 
-  auto payloadAttribute = builder->addAttribute("payload", dcds::INT64, UINT64_C(0));
-  auto nextAttribute = builder->addAttribute("next", dcds::RECORD_PTR, nullptr);
+  auto payloadAttribute = builder->addAttribute("payload", dcds::valueType::INT64, UINT64_C(0));
+  auto nextAttribute = builder->addAttribute("next", dcds::valueType::RECORD_PTR, nullptr);
   builder->generateGetter(payloadAttribute);  // get_payload
   builder->generateSetter(payloadAttribute);  // set_payload
 
@@ -65,7 +69,7 @@ static void addFront(std::shared_ptr<dcds::Builder>& builder) {
 
   auto stmtBuilder = fn->getStatementBuilder();
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  fn->addTempVariable("tmp_payload_ret", dcds::INT64);
+  fn->addTempVariable("tmp_payload_ret", dcds::valueType::INT64);
   stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
   stmtBuilder->addReturnStatement("tmp_payload_ret");
 }
@@ -89,7 +93,7 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
   // declare void push_front(uint64_t value)
   auto fn = builder->createFunction("push_front");
   auto nodeType = builder->getRegisteredType("LL_NODE");
-  fn->addArgument("push_value", dcds::INT64);
+  fn->addArgument("push_value", dcds::valueType::INT64);
 
   auto stmtBuilder = fn->getStatementBuilder();
 
@@ -115,6 +119,11 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
   stmtBuilder->addReturnVoidStatement();
 }
 
+static void fnUsage(std::shared_ptr<dcds::Builder> &builder){
+  dcds::BuilderOptPasses buildOptimizer(builder);
+  buildOptimizer.runAll();
+}
+
 static void generateLinkedList() {
   auto builder = std::make_shared<dcds::Builder>("LinkedList");
   generateLinkedListNode(builder->createType("LL_NODE"));
@@ -129,9 +138,14 @@ static void generateLinkedList() {
   addPushFront(builder);
   addFront(builder);
 
+  LOG(INFO) << "generateLinkedList -- optimize-before";
+  fnUsage(builder);
+  LOG(INFO) << "generateLinkedList -- optimize-after";
+
   LOG(INFO) << "generateLinkedList -- build-before";
   builder->build();
   LOG(INFO) << "generateLinkedList -- build-after";
+
 
   LOG(INFO) << "generateLinkedList -- create-instance-before";
   auto instance = builder->createInstance();

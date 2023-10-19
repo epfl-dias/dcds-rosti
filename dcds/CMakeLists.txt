@@ -7,6 +7,7 @@ set(dcds_cxx
         lib/builder/function-builder.cpp
         lib/builder/statement-builder.cpp
         lib/builder/expressions/expressions.cpp
+        lib/builder/builder-opt-passes.cpp
 
         # Codegen
         lib/codegen/codegen.cpp
@@ -18,6 +19,7 @@ set(dcds_cxx
 
         # Common
         lib/common/exceptions.cpp
+        lib/common/types.cpp
 
         # Indexes
         # lib/indexes/art-node.cpp

@@ -56,8 +56,8 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
                                                    source);
   }
 
-  auto sourceType =
-      this->parent_function.hasTempVariable(source) ? VAR_SOURCE_TYPE::TEMPORARY_VARIABLE : FUNCTION_ARGUMENT;
+  auto sourceType = this->parent_function.hasTempVariable(source) ? VAR_SOURCE_TYPE::TEMPORARY_VARIABLE
+                                                                  : VAR_SOURCE_TYPE::FUNCTION_ARGUMENT;
 
   auto s = std::make_shared<UpdateStatement>(attribute->name, source, sourceType);
   statements.push_back(s);
@@ -143,7 +143,7 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
                                                    reference_variable);
   }
 
-  if (referenceVarType != RECORD_PTR) {
+  if (referenceVarType != dcds::valueType::RECORD_PTR) {
     throw dcds::exceptions::dcds_invalid_type_exception("Reference variable is not of type RECORD_PTR ");
   }
   // FIXME: how to check if the record_ptr is of the correct type, that is, object_type!

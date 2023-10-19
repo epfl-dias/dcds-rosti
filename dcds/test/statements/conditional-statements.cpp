@@ -28,11 +28,11 @@ TEST(ConditionalStatementTest, IfAndElse) {
   auto op_name = name + "_op";
 
   auto builder = std::make_shared<dcds::Builder>(name);
-  builder->addHint(dcds::hints::SINGLE_THREADED);
+  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
+  auto fn = builder->createFunction(op_name, dcds::valueType::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::valueType::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
   auto conditionalBlocks = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{argOne});
@@ -56,11 +56,11 @@ TEST(ConditionalStatementTest, OnlyIf) {
   auto op_name = name + "_op";
 
   auto builder = std::make_shared<dcds::Builder>(name);
-  builder->addHint(dcds::hints::SINGLE_THREADED);
+  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
+  auto fn = builder->createFunction(op_name, dcds::valueType::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::valueType::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
   auto conditionalBlocks = sb->addConditionalBranch(new dcds::expressions::IsEvenExpression{argOne});
@@ -83,12 +83,12 @@ TEST(ConditionalStatementTest, MultipleBranches) {
   auto op_name = name + "_op";
 
   auto builder = std::make_shared<dcds::Builder>(name);
-  builder->addHint(dcds::hints::SINGLE_THREADED);
+  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto arg1 = fn->addArgument("arg_one", dcds::INT64);
-  auto arg2 = fn->addArgument("arg_two", dcds::INT64);
+  auto fn = builder->createFunction(op_name, dcds::valueType::BOOL);  // returns bool
+  auto arg1 = fn->addArgument("arg_one", dcds::valueType::INT64);
+  auto arg2 = fn->addArgument("arg_two", dcds::valueType::INT64);
 
   auto sb = fn->getStatementBuilder();
 
@@ -116,12 +116,12 @@ TEST(ConditionalStatementTest, NestedBranches) {
   auto op_name = name + "_op";
 
   auto builder = std::make_shared<dcds::Builder>(name);
-  builder->addHint(dcds::hints::SINGLE_THREADED);
+  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto arg1 = fn->addArgument("arg_one", dcds::INT64);
-  auto arg2 = fn->addArgument("arg_two", dcds::INT64);
+  auto fn = builder->createFunction(op_name, dcds::valueType::BOOL);  // returns bool
+  auto arg1 = fn->addArgument("arg_one", dcds::valueType::INT64);
+  auto arg2 = fn->addArgument("arg_two", dcds::valueType::INT64);
 
   auto sb = fn->getStatementBuilder();
 

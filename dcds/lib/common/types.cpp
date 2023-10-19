@@ -19,40 +19,6 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_EXPRESSIONS_HPP
-#define DCDS_EXPRESSIONS_HPP
-
 #include "dcds/common/types.hpp"
 
-namespace dcds::expressions {
-
-class ExpressionVisitor;  // forward declaration
-
-class Expression {
- public:
-  //  explicit Expression(const ExpressionType *type)
-  //      : type(type), registered(false) {}
-
-  Expression(const Expression &) = default;
-  Expression(Expression &&) = default;
-  Expression &operator=(const Expression &) = default;
-  Expression &operator=(Expression &&) = default;
-
-  Expression() = default;
-  virtual ~Expression() = default;
-
- public:
-  [[nodiscard]] virtual valueType getResultType() const = 0;  // Method to get the result type
-
-  virtual void *accept(ExpressionVisitor *v) = 0;
-
- public:
-  // Utilities
-  [[nodiscard]] virtual int getNumOperands() const = 0;
-  [[nodiscard]] virtual bool isUnaryExpression() const = 0;
-  [[nodiscard]] virtual bool isBinaryExpression() const = 0;
-};
-
-}  // namespace dcds::expressions
-
-#endif  // DCDS_EXPRESSIONS_HPP
+using namespace dcds;

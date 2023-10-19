@@ -34,7 +34,7 @@ class Builder;
 class StatementBuilder;
 
 /// Types of statements for DCDS functions
-enum statementType { READ, UPDATE, CREATE, YIELD, CONDITIONAL_STATEMENT, METHOD_CALL, LOG_STRING };
+enum class statementType { READ, UPDATE, CREATE, YIELD, CONDITIONAL_STATEMENT, METHOD_CALL, LOG_STRING };
 
 /// Cass representing a statement in DCDS
 class Statement {
@@ -102,8 +102,6 @@ class LogStringStatement : public Statement {
 
 class ConditionalStatement : public Statement {
  public:
-  // enum BRANCH_TYPE { IF_BLOCK, ELSE_BLOCK };
-
   explicit ConditionalStatement(expressions::Expression* _expr, std::shared_ptr<StatementBuilder> if_block,
                                 std::shared_ptr<StatementBuilder> else_block)
       : Statement(statementType::CONDITIONAL_STATEMENT, "", ""),

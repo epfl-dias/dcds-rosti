@@ -37,7 +37,7 @@ txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
 
 bool TransactionManager::commitTransaction(txn_ptr_t txn) {
   txn->commit_ts = txnIdGenerator.getCommitTs();
-  txn->status = COMMITTED;
+  txn->status = TXN_STATUS::COMMITTED;
   return true;
 }
 bool TransactionManager::abortTransaction(txn_ptr_t txn) {

@@ -30,11 +30,11 @@ TEST(BuilderTest, NoAttributeBuild) {
   auto op_name = name + "_op";
 
   auto builder = std::make_shared<dcds::Builder>(name);
-  builder->addHint(dcds::hints::SINGLE_THREADED);
+  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
 
   // -- function create
-  auto fn = builder->createFunction(op_name, dcds::BOOL);  // returns bool
-  auto argOne = fn->addArgument("arg_one", dcds::INT64);   // function takes one argument
+  auto fn = builder->createFunction(op_name, dcds::valueType::BOOL);  // returns bool
+  auto argOne = fn->addArgument("arg_one", dcds::valueType::INT64);   // function takes one argument
 
   auto sb = fn->getStatementBuilder();
   sb->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));

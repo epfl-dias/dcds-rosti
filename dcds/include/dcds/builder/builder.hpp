@@ -28,6 +28,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -43,6 +44,7 @@ namespace dcds {
 
 // forward declaration
 class FunctionBuilder;
+class BuilderOptPasses;
 class Codegen;
 class LLVMCodegen;
 class JitContainer;
@@ -50,6 +52,7 @@ class JitContainer;
 class Builder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;
+  friend class BuilderOptPasses;
 
  public:
   ///
@@ -77,7 +80,7 @@ class Builder : remove_copy {
     assert(hasFunction(function_name));
     return this->functions[function_name];
   }
-  auto dropAllFunctionsExceptList(const std::vector<std::string>& keep_list) {
+  auto dropAllFunctionsExceptList(const std::set<std::string>& keep_list) {
     const auto count = std::erase_if(functions, [&](const auto& item) {
       if (keep_list.empty()) return true;
 
@@ -99,6 +102,21 @@ class Builder : remove_copy {
       return false;
     }
   }
+
+ public:
+  //  auto addConstructorWithArguments(const std::string& attribute_name){
+  //    // NOTE: this will require to codegen both constructors, and on call statement, check which one to invoke, etc.
+  //    etc. std::vector<std::string> tmp {attribute_name};
+  //
+  //    for(auto &c: constructors){
+  //      if(c == tmp){
+  //        assert(false && "already exists!");
+  //      }
+  //    }
+  //    constructors.emplace_back(std::move(tmp));
+  //
+  //  }
+  //  std::deque<std::vector<std::string>> constructors;
 
  public:
   auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
@@ -133,6 +151,20 @@ class Builder : remove_copy {
   }
   bool hasAttribute(const std::string& name) { return attributes.contains(name); }
   bool hasAttribute(const std::shared_ptr<dcds::Attribute>& attribute) { return this->hasAttribute(attribute->name); }
+
+ private:
+  // should be called from optPasses only, otherwise user may declare, use and then delete it causing dangling issues.
+  // if to be provided to user, then check the usage on each remove call to verify.
+  void removeAttribute(const std::string& name) {
+    CHECK(hasAttribute(name)) << "Attribute does not exists";
+    LOG(INFO) << "Removing attribute '" << name << "' from data structure '" << this->getName() << "'";
+    attributes.erase(name);
+  }
+
+ public:
+  // --- MAP ATTRIBUTE FOR KEY-VALUE
+  auto addKeyValueMap(const std::string& name, dcds::valueType keyType, dcds::valueType valueType);
+  // ---
 
   void generateGetter(const std::string& attribute_name);
   void generateSetter(const std::string& attribute_name);
@@ -174,10 +206,10 @@ class Builder : remove_copy {
 
   void addHint(hints::BuilderHints hint) {
     switch (hint) {
-      case hints::SINGLE_THREADED:
+      case hints::BuilderHints::SINGLE_THREADED:
         is_multi_threaded = false;
         break;
-      case hints::MULTI_THREADED:
+      case hints::BuilderHints::MULTI_THREADED:
         is_multi_threaded = true;
         break;
     }
@@ -193,6 +225,7 @@ class Builder : remove_copy {
   std::map<std::string, std::shared_ptr<Attribute>> attributes;
   std::map<std::string, std::shared_ptr<FunctionBuilder>> functions;
   std::map<std::string, std::shared_ptr<Builder>> registered_subtypes;
+  std::shared_ptr<Builder> parentType{};
 
  private:
   bool is_jit_generated = false;

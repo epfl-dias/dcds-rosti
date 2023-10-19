@@ -35,7 +35,7 @@
 
 namespace dcds {
 
-enum ATTRIBUTE_TYPE_CATEGORY {
+enum class ATTRIBUTE_TYPE_CATEGORY {
   PRIMITIVE,
   COMPOSITE_POINTER, /* enables 1-N relation */
   COMPOSITE          /* 1-1 relation, contained within */

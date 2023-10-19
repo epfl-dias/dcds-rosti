@@ -59,38 +59,38 @@ class JitContainer {
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
     // FIXME: verify if the number of args is same as the args required for the function.
     switch (fn->returnType) {
-      case INT64:
-      case RECORD_PTR: {
+      case dcds::valueType::INT64:
+      case dcds::valueType::RECORD_PTR: {
         auto ret = reinterpret_cast<uint64_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET: " << ret;
         return {ret};
       }
-      case INT32: {
+      case dcds::valueType::INT32: {
         auto ret = reinterpret_cast<uint32_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET INT32: " << ret;
         return {ret};
       }
-      case VOID: {
+      case dcds::valueType::VOID: {
         reinterpret_cast<uint64_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET VOID: ";
         return {};
       }
-      case BOOL: {
+      case dcds::valueType::BOOL: {
         auto ret = reinterpret_cast<bool (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET BOOL: " << ret;
         return {ret};
       }
-      case DOUBLE: {
+      case dcds::valueType::DOUBLE: {
         auto ret = reinterpret_cast<double (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET DOUBLE: " << ret;
         return {ret};
       }
-      case FLOAT: {
+      case dcds::valueType::FLOAT: {
         auto ret = reinterpret_cast<float (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
         LOG(INFO) << "RET FLOAT: " << ret;

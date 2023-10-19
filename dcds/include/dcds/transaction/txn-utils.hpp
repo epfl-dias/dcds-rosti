@@ -28,15 +28,15 @@ namespace dcds::txn {
 
 // ACTIVE, IDLE, FINISHED
 // ACTIVE, COMMITTED, ABORTED
-enum txn_status { ACTIVE, COMMITTED, ABORTED };
+enum class TXN_STATUS { ACTIVE, COMMITTED, ABORTED };
 
 class TxnTs {
  public:
   xid_t txn_id;
   xid_t start_time;
 
-  TxnTs(xid_t txn_id_, xid_t start_time_) : txn_id(txn_id_), start_time(start_time_) {}
-  TxnTs(std::pair<xid_t, xid_t> txnTs_pair) : txn_id(txnTs_pair.first), start_time(txnTs_pair.second) {}
+  explicit TxnTs(xid_t txn_id_, xid_t start_time_) : txn_id(txn_id_), start_time(start_time_) {}
+  explicit TxnTs(std::pair<xid_t, xid_t> txnTs_pair) : txn_id(txnTs_pair.first), start_time(txnTs_pair.second) {}
 
   struct TxnTsCmp {
     bool operator()(const TxnTs& a, const TxnTs& b) const { return a.start_time < b.start_time; }
@@ -52,7 +52,7 @@ class TxnTsGenerator {
 
   inline TxnTs __attribute__((always_inline)) getTxnTs() {
     auto x = gen.fetch_add(1);
-    return {x << baseShift, x};
+    return TxnTs{x << baseShift, x};
   }
 
  private:

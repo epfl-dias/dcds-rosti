@@ -29,41 +29,71 @@
 namespace dcds {
 
 // NOTE: VOID is strictly a return type.
-enum valueType { INT64, INT32, FLOAT, DOUBLE, RECORD_PTR, VOID, BOOL };
-
-enum VAR_SOURCE_TYPE { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTION_ARGUMENT };
+enum class valueType : uint32_t { INT64, INT32, FLOAT, DOUBLE, RECORD_PTR, VOID, BOOL };
+enum class VAR_SOURCE_TYPE : uint32_t { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTION_ARGUMENT };
 
 class jit_function_t {
  public:
   const std::string name;
-  const void* address;
+  const void *address;
   const dcds::valueType returnType;
   const std::vector<std::pair<std::string, dcds::valueType>> args;
 
-  jit_function_t(std::string _name, void* _address, dcds::valueType _return_type,
+  jit_function_t(std::string _name, void *_address, dcds::valueType _return_type,
                  std::vector<std::pair<std::string, dcds::valueType>> _args)
       : name(std::move(_name)), address(_address), returnType(_return_type), args(std::move(_args)) {}
 };
-
-// How to store VARCHAR? separate dictionary or std::string and ptr?
-
-// auto valueTypeToString(valueType v){
-//   switch (v) {
-//     case INTEGER:
-//       return "INTEGER";
-//     case FLOAT:
-//       return "FLOAT";
-//     case RECORD_PTR:
-//       return "RECORD_PTR";
-//     case VOID:
-//       return "VOID";
-//   }
-// }
 
 using record_id_t = size_t;
 using xid_t = size_t;
 using table_id_t = uint16_t;
 using column_id_t = uint8_t;
+
+inline std::ostream &operator<<(std::ostream &os, dcds::valueType ty) {
+  // prefix?
+  os << "dcds::valueType::";
+  switch (ty) {
+    case dcds::valueType::INT64:
+      os << "INT64";
+      break;
+    case dcds::valueType::INT32:
+      os << "INT32";
+      break;
+    case dcds::valueType::FLOAT:
+      os << "FLOAT";
+      break;
+    case dcds::valueType::DOUBLE:
+      os << "DOUBLE";
+      break;
+    case dcds::valueType::RECORD_PTR:
+      os << "RECORD_PTR";
+      break;
+    case dcds::valueType::VOID:
+      os << "VOID";
+      break;
+    case dcds::valueType::BOOL:
+      os << "BOOL";
+      break;
+  }
+
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, dcds::VAR_SOURCE_TYPE ty) {
+  os << "dcds::VAR_SOURCE_TYPE::";
+  switch (ty) {
+    case dcds::VAR_SOURCE_TYPE::DS_ATTRIBUTE:
+      os << "DS_ATTRIBUTE";
+      break;
+    case dcds::VAR_SOURCE_TYPE::TEMPORARY_VARIABLE:
+      os << "TEMPORARY_VARIABLE";
+      break;
+    case dcds::VAR_SOURCE_TYPE::FUNCTION_ARGUMENT:
+      os << "FUNCTION_ARGUMENT";
+      break;
+  }
+  return os;
+}
 
 }  // namespace dcds
 

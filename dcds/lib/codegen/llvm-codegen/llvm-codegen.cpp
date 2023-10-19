@@ -23,6 +23,8 @@
 
 #include <llvm/IR/Instructions.h>
 
+#include <utility>
+
 #include "dcds/builder/function-builder.hpp"
 #include "dcds/builder/statement-builder.hpp"
 #include "dcds/codegen/llvm-codegen/expression-codegen/llvm-expression-visitor.hpp"
@@ -39,21 +41,21 @@ void LLVMCodegen::saveToFile(const std::string &filename) {
 
 void LLVMCodegen::printIR() { theLLVMModule->print(llvm::outs(), nullptr); }
 
-llvm::Type *toLLVMType(LLVMContext &context, dcds::valueType dcds_type) {
+llvm::Type *LLVMCodegen::DcdsToLLVMType(dcds::valueType dcds_type) {
   switch (dcds_type) {
-    case INT64:
-    case RECORD_PTR:
-      return llvm::Type::getInt64Ty(context);
-    case INT32:
-      return llvm::Type::getInt32Ty(context);
-    case DOUBLE:
-      return llvm::Type::getDoubleTy(context);
-    case FLOAT:
-      return llvm::Type::getFloatTy(context);
-    case BOOL:
-      return llvm::Type::getInt1Ty(context);
-    case VOID:
-      return llvm::Type::getVoidTy(context);
+    case dcds::valueType::INT64:
+    case dcds::valueType::RECORD_PTR:
+      return llvm::Type::getInt64Ty(getLLVMContext());
+    case dcds::valueType::INT32:
+      return llvm::Type::getInt32Ty(getLLVMContext());
+    case dcds::valueType::DOUBLE:
+      return llvm::Type::getDoubleTy(getLLVMContext());
+    case dcds::valueType::FLOAT:
+      return llvm::Type::getFloatTy(getLLVMContext());
+    case dcds::valueType::BOOL:
+      return llvm::Type::getInt1Ty(getLLVMContext());
+    case dcds::valueType::VOID:
+      return llvm::Type::getVoidTy(getLLVMContext());
   }
 }
 
@@ -277,7 +279,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
     std::vector<llvm::Type *> expected_vargs;
     for (const auto &arg : fb->function_args) {
-      expected_vargs.push_back(toLLVMType(getLLVMContext(), arg->getType()));
+      expected_vargs.push_back(DcdsToLLVMType(arg->getType()));
     }
 
     this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
@@ -322,7 +324,7 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
 
   // Generate the return block.
   getBuilder()->SetInsertPoint(returnBB);
-  if (fb->returnValueType == VOID) {
+  if (fb->returnValueType == dcds::valueType::VOID) {
     getBuilder()->CreateRetVoid();
   } else {
     llvm::Value *retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(),
@@ -580,7 +582,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
       if (llvm::isa<llvm::AllocaInst>(exprResult)) {
         // Temporary variables might be AllocaInst, and need to be loaded before use or passing to function by value.
         auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
-        llvm::Value *loadedTmpVar = getBuilder()->CreateLoad(toLLVMType(getLLVMContext(), fArg->getType()), allocaInst);
+        llvm::Value *loadedTmpVar = getBuilder()->CreateLoad(DcdsToLLVMType(fArg->getType()), allocaInst);
         callArgs.push_back(loadedTmpVar);
 
       } else {
@@ -610,14 +612,14 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
   llvm::Type *returnType;
 
   for (const auto &arg : fb->function_args) {
-    argTypes.push_back(toLLVMType(getLLVMContext(), arg->getType()));
+    argTypes.push_back(DcdsToLLVMType(arg->getType()));
   }
 
-  if (fb->returnValueType == VOID) {
+  if (fb->returnValueType == dcds::valueType::VOID) {
     returnType = llvm::Type::getVoidTy(getLLVMContext());
   } else {
     // LOG(INFO) << "fb->returnValueType: " << fb->returnValueType;
-    returnType = toLLVMType(getLLVMContext(), fb->returnValueType);
+    returnType = DcdsToLLVMType(fb->returnValueType);
   }
 
   auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
@@ -634,8 +636,8 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
   LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
 
   switch (var_type) {
-    case INT64:
-    case RECORD_PTR: {
+    case dcds::valueType::INT64:
+    case dcds::valueType::RECORD_PTR: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt64Ty(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createInt64(std::any_cast<uint64_t>(init_value));
@@ -643,7 +645,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
-    case INT32: {
+    case dcds::valueType::INT32: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt32Ty(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createInt32(std::any_cast<int32_t>(init_value));
@@ -651,7 +653,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
-    case BOOL: {
+    case dcds::valueType::BOOL: {
       auto bool_type = llvm::Type::getInt1Ty(getLLVMContext());
       auto vr = getBuilder()->CreateAlloca(bool_type, nullptr, var_name);
       if (has_value) {
@@ -660,7 +662,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
-    case FLOAT: {
+    case dcds::valueType::FLOAT: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getFloatTy(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createFloat(std::any_cast<float>(init_value));
@@ -668,7 +670,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
-    case DOUBLE: {
+    case dcds::valueType::DOUBLE: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getDoubleTy(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createDouble(std::any_cast<double>(init_value));
@@ -676,7 +678,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
       }
       return vr;
     }
-    case VOID:
+    case dcds::valueType::VOID:
       assert(false && "[allocateOneVar] cannot allocate a variable of type 'void'");
   }
 }
@@ -688,7 +690,7 @@ std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std
   auto allocaBuilder = llvm::IRBuilder<>(basicBlock, basicBlock->end());
 
   // fnCtx.retval_variable_name = builder->getName() + "_" + fn->getName().str() + "_retval";
-  if (fb->returnValueType != dcds::VOID) {
+  if (fb->returnValueType != dcds::valueType::VOID) {
     auto retval_variable_name = fb->builder->getName() + "_" + fb->getName() + "_retval";
     LOG(INFO) << "Allocating retval: " << retval_variable_name;
 
@@ -735,7 +737,7 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
   for (const auto &a : builder->attributes) {
     // simpleType to type, else have a ptr to it.
     LOG(INFO) << "attr: " << a.first;
-    struct_vars.push_back(toLLVMType(getLLVMContext(), a.second->type));
+    struct_vars.push_back(DcdsToLLVMType(a.second->type));
   }
 
   dsRecordValueStructType = StructType::create(getLLVMContext(), struct_vars, ds_struct_name, is_packed);
@@ -769,7 +771,7 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     auto hasValue = false;
     std::any defaultValue;
 
-    if (a.second->type_category == PRIMITIVE) {
+    if (a.second->type_category == ATTRIBUTE_TYPE_CATEGORY::PRIMITIVE) {
       hasValue = defaultValue.has_value();
       if (hasValue) {
         defaultValue = std::static_pointer_cast<SimpleAttribute>(a.second)->getDefaultValue();
@@ -782,37 +784,37 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     llvm::Value *fieldValue;
 
     switch (a.second->type) {
-      case INT64: {
+      case dcds::valueType::INT64: {
         auto value = hasValue ? std::any_cast<uint64_t>(defaultValue) : 0;
         fieldValue = createInt64(value);
         break;
       }
-      case INT32: {
+      case dcds::valueType::INT32: {
         auto value = hasValue ? std::any_cast<int32_t>(defaultValue) : 0;
         fieldValue = createInt32(value);
         break;
       }
-      case RECORD_PTR: {
+      case dcds::valueType::RECORD_PTR: {
         // RECORD_PTR is a uintptr underlying.
         fieldValue = createUintptr(0);
         break;
       }
-      case DOUBLE: {
+      case dcds::valueType::DOUBLE: {
         auto value = hasValue ? std::any_cast<double>(defaultValue) : 0;
         fieldValue = createDouble(value);
         break;
       }
-      case FLOAT: {
+      case dcds::valueType::FLOAT: {
         auto value = hasValue ? std::any_cast<float>(defaultValue) : 0;
         fieldValue = createFloat(value);
         break;
       }
-      case BOOL: {
+      case dcds::valueType::BOOL: {
         auto value = hasValue && std::any_cast<bool>(defaultValue);
         fieldValue = value ? createTrue() : createFalse();
         break;
       }
-      case VOID:
+      case dcds::valueType::VOID:
         assert(false && "[initializeDsValueStructDefault] cannot create value of type VOID");
         break;
     }
@@ -855,7 +857,8 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
   std::vector<std::string> names;
 
   for (const auto &a : builder.attributes) {
-    valueTypeArray.push_back(ConstantInt::get(cppEnumType, a.second->type));
+    // valueTypeArray.push_back(ConstantInt::get(cppEnumType, a.second->type));
+    valueTypeArray.push_back(ConstantInt::get(cppEnumType, std::to_underlying(a.second->type)));
     names.push_back(a.first);
   }
 
@@ -1070,7 +1073,7 @@ void LLVMCodegen::buildFunctionDictionary(dcds::Builder &builder) {
 void LLVMCodegen::jitCompileAndLoad() {
   LOG(INFO) << "[LLVMCodegen::jit()] IR- before passes: ";
   this->printIR();
-  //  LOG(INFO) << "[LLVMCodegen::jit()] IR- after passes: ";
+  LOG(INFO) << "[LLVMCodegen::jit()] IR- after passes: ";
   //  runOptimizationPasses();
   //  this->printIR();
   LOG(INFO) << "[LLVMCodegen::jit()] Passes done";

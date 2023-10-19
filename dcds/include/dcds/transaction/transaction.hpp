@@ -36,7 +36,7 @@ class Txn {
   Txn(const Txn& other) = delete;
   Txn& operator=(const Txn& other) = delete;
 
-  Txn(TxnTs txn_ts, bool is_read_only = false) : txnTs(txn_ts), read_only(is_read_only), status(ACTIVE) {}
+  Txn(TxnTs txn_ts, bool is_read_only = false) : txnTs(txn_ts), read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
 
  public:
   // Should be in txn-manager
@@ -56,7 +56,7 @@ class Txn {
 
  private:
   [[maybe_unused]] xid_t commit_ts{};
-  txn_status status;
+  TXN_STATUS status;
 
   friend class TransactionManager;
 

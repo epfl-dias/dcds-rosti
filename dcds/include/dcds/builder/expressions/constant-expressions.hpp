@@ -28,7 +28,7 @@ namespace dcds::expressions {
 
 class Constant : public UnaryExpression {
  public:
-  enum ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE };
+  enum class ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE };
   explicit Constant(ConstantType constantType) : type(constantType) {}
 
   [[nodiscard]] virtual ConstantType getConstantType() const { return type; }

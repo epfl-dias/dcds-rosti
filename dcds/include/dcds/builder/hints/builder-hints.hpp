@@ -24,7 +24,7 @@
 
 namespace dcds::hints {
 
-enum BuilderHints { SINGLE_THREADED, MULTI_THREADED };
+enum class BuilderHints { SINGLE_THREADED, MULTI_THREADED };
 
 }
 
