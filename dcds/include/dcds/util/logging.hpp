@@ -21,12 +21,27 @@
 
 #ifndef DCDS_LOGGING_HPP
 #define DCDS_LOGGING_HPP
+
+#include <absl/log/check.h>
 #include <absl/log/log.h>
 
 #include <cassert>
+#include <concepts>
+#include <numeric>
 
 namespace dcds {
 void InitializeLog(int argc, char** argv);
+
+template <class Container>  // add enable_id is subtype is convertible to std::string
+std::string joinString(const Container& container, const std::string& connector = ", ") {
+  static_assert(std::is_convertible_v<typename Container::value_type, std::string>,
+                "Container must be of type convertible_to std::string");
+
+  if (container.empty()) return "";
+
+  return std::accumulate(std::next(std::begin(container)), std::end(container), *std::begin(container),
+                         [connector](const std::string& a, const std::string& b) { return a + connector + b; });
 }
+}  // namespace dcds
 
 #endif  // DCDS_LOGGING_HPP
