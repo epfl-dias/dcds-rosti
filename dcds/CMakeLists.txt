@@ -31,6 +31,7 @@ set(dcds_cxx
 
         # Util
         lib/util/profiling.cpp
+        lib/util/logging.cpp
 )
 
 add_library(dcds SHARED
@@ -47,6 +48,9 @@ target_include_directories(dcds
 
 target_link_libraries_system(dcds
         absl::log
+        absl::log_initialize
+        absl::debugging
+        absl::failure_signal_handler
         cuckoo::cuckoo
         LLVM::LLVM)
 

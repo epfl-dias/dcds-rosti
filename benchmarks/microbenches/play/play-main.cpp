@@ -165,7 +165,8 @@ static void generateNode() {
   instance->op("get_payload");
 }
 
-int main() {
+int main(int argc, char** argv) {
+  dcds::InitializeLog(argc, argv);
   LOG(INFO) << "main() -- start";
   generateLinkedList();
   // generateNode();

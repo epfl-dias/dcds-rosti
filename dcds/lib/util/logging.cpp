@@ -19,14 +19,26 @@
      RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#ifndef DCDS_LOGGING_HPP
-#define DCDS_LOGGING_HPP
-#include <absl/log/log.h>
+#include <absl/debugging/failure_signal_handler.h>
+#include <absl/debugging/symbolize.h>
+#include <absl/log/globals.h>
+#include <absl/log/initialize.h>
 
-#include <cassert>
+#include <dcds/util/logging.hpp>
 
 namespace dcds {
-void InitializeLog(int argc, char** argv);
-}
 
-#endif  // DCDS_LOGGING_HPP
+void InitializeLog(int argc, char** argv) {
+  static bool initialized = false;
+  if (!initialized) {
+    initialized = true;
+    absl::InitializeLog();
+    // hardcoding to log everything to stderr for now
+    // this can be configured to use a log file as well
+    absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+    absl::InitializeSymbolizer(argv[0]);
+    auto failure_sig_handler_opts = absl::FailureSignalHandlerOptions{};
+    absl::InstallFailureSignalHandler(failure_sig_handler_opts);
+  }
+}
+}  // namespace dcds
