@@ -56,7 +56,6 @@ endif ()
 
 target_link_libraries(dcds
         PUBLIC
-        LLVM::LLVM
         ${CMAKE_DL_LIBS}
         )
 
