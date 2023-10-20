@@ -29,4 +29,26 @@
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 
+namespace dcds {
+
+using record_id_t = size_t;
+using xid_t = size_t;
+using table_id_t = uint16_t;
+using column_id_t = uint8_t;
+using rw_set_t = std::map<std::string, std::set<std::string>>;
+
+class jit_function_t {
+ public:
+  const std::string name;
+  const void *address;
+  const dcds::valueType returnType;
+  const std::vector<std::pair<std::string, dcds::valueType>> args;
+
+  jit_function_t(std::string _name, void *_address, dcds::valueType _return_type,
+                 std::vector<std::pair<std::string, dcds::valueType>> _args)
+      : name(std::move(_name)), address(_address), returnType(_return_type), args(std::move(_args)) {}
+};
+
+}
+
 #endif  // DCDS_COMMON_HPP

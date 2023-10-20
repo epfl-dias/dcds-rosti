@@ -22,6 +22,7 @@
 #ifndef DCDS_CC_HPP
 #define DCDS_CC_HPP
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/concurrency-control/record-metadata.hpp"
 #include "dcds/transaction/txn-utils.hpp"

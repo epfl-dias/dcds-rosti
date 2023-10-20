@@ -36,6 +36,7 @@
 
 #include "dcds/builder/attribute.hpp"
 #include "dcds/builder/hints/builder-hints.hpp"
+#include "dcds/common/common.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/context/DCDSContext.hpp"

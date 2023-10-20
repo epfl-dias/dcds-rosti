@@ -26,6 +26,7 @@
 #include <iostream>
 #include <utility>
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/transaction.hpp"
 #include "dcds/transaction/txn-utils.hpp"

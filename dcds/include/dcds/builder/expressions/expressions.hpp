@@ -22,6 +22,7 @@
 #ifndef DCDS_EXPRESSIONS_HPP
 #define DCDS_EXPRESSIONS_HPP
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 
 namespace dcds::expressions {

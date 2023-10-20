@@ -22,6 +22,7 @@
 #ifndef DCDS_TRANSACTION_HPP
 #define DCDS_TRANSACTION_HPP
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/txn-utils.hpp"
 

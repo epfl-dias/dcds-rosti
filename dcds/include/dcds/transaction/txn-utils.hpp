@@ -22,6 +22,7 @@
 #ifndef DCDS_TXN_UTILS_HPP
 #define DCDS_TXN_UTILS_HPP
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 
 namespace dcds::txn {

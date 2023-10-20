@@ -30,6 +30,7 @@
 #include <utility>
 #include <vector>
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/util/logging.hpp"
 

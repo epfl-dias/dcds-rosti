@@ -32,6 +32,8 @@
 
 #include "dcds/builder/builder.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
+#include "dcds/builder/statement-builder.hpp"
+#include "dcds/common/common.hpp"
 #include "dcds/common/exceptions/exception.hpp"
 #include "dcds/common/types.hpp"
 

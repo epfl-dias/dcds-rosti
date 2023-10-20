@@ -24,6 +24,7 @@
 
 #include <iostream>
 
+#include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 
 // NOTE: make sure to register the function in llvm-context.cpp
