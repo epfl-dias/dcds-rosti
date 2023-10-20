@@ -145,6 +145,9 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   void buildDestructor();
   void buildFunctions(dcds::Builder *builder);
   void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
+  llvm::Function *buildOneFunction_inner(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
+  llvm::Function *buildOneFunction_outer(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
+                                         llvm::Function *fn_inner);
   void buildFunctionDictionary(dcds::Builder &builder);
 
   llvm::Function *buildInitTablesFn(dcds::Builder &builder, llvm::Value *table_name);

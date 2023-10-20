@@ -71,11 +71,9 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   auto& tableRegistry = dcds::storage::TableRegistry::getInstance();
 
   std::vector<dcds::storage::AttributeDef> columns;
-  LOG(INFO) << "[createTablesInternal]: num_attributes: " << num_attributes;
-  LOG(INFO) << "[createTablesInternal]: table_name: " << table_name;
-  for (auto i = 0; i < num_attributes; i++) {
-    LOG(INFO) << "[createTablesInternal]: attributeTypes[" << i << "]: " << attributeTypes[i];
-  }
+
+  LOG(INFO) << "[createTablesInternal] table_name: " << table_name;
+  LOG(INFO) << "[createTablesInternal] num_attributes: " << num_attributes;
 
   // HACK: as we are getting pointer to first character of first attribute instead of ptr.
   auto* startPtr = reinterpret_cast<char*>(attributeNames);
@@ -84,7 +82,6 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   actual_attr_names.reserve(num_attributes);
   for (auto i = 0; i < num_attributes; i++) {
     auto sln = strlen(startPtr);
-    LOG(INFO) << "[createTablesInternal]: attributeNames[" << i << "]: " << startPtr;
     actual_attr_names.emplace_back(startPtr);
     startPtr += sln + 1;
   }
@@ -92,7 +89,7 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   for (auto i = 0; i < num_attributes; i++) {
     auto type = attributeTypes[i];
     auto name = actual_attr_names[i];
-    LOG(INFO) << "Loading attribute: " << name << " | type: " << type;
+    LOG(INFO) << "[createTablesInternal] Loading attribute: " << name << " | type: " << type;
 
     int64_t sizeVar = 0;
     if (type == dcds::valueType::INT64)
@@ -131,7 +128,7 @@ void* getTxnManager(const char* txn_namespace) {
 
 void* getTable(const char* table_name) { return dcds::storage::TableRegistry::getInstance().getTable(table_name); }
 
-void* beginTxn(void* txnManager) {
+void* beginTxn(void* txnManager, bool isReadOnly) {
   LOG(INFO) << "beginTxn: args: " << txnManager;
   auto txnPtr = static_cast<dcds::txn::TransactionManager*>(txnManager)->beginTransaction(false);
   LOG(INFO) << "beginTxn ret: " << txnPtr;

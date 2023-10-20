@@ -176,36 +176,15 @@ llvm::Function *LLVMCodegen::wrapFunctionVariadicArgs(llvm::Function *inner_func
   return func;
 }
 
-void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb) {
-  LOG(INFO) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
-
-  // FIXME: How to ensure that this function returns in all paths? and returns with correct type in all paths?
-  // FIXME: what about scoping of temporary variables??
-  // FIXME: this would create nested transactions! we need to make sure we dont call txn if there is recursive function.
-
-  bool isMainDs = (builder == this->top_level_builder);
-
-  // Only export symbols for the top-level DS, not the composed ones.
-  auto linkageType =
-      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
-
+llvm::Function *LLVMCodegen::buildOneFunction_inner(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb) {
   auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
   auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
-
-  //  argTypes.push_back(ptrType);      // txnManager*
-  //  argTypes.push_back(uintPtrType);  // mainRecord
-
-  // 1- generate function signatures
   auto fn_name_prefix = builder->getName() + "_";
 
-  // pre_args: { txnManager*, mainRecord }
-  std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
-  auto fn_outer = this->genFunctionSignature(fb, fn_outer_args, fn_name_prefix, "", linkageType);
   // pre_args: { txnManager*, mainRecord, txnPtr }
   auto fn_inner = this->genFunctionSignature(fb, {ptrType, uintPtrType, ptrType}, fn_name_prefix, "_inner",
                                              llvm::GlobalValue::LinkageTypes::PrivateLinkage);
 
-  userFunctions.emplace(fn_outer->getName().str(), fn_outer);
   userFunctions.emplace(fn_inner->getName().str(), fn_inner);
 
   // generate inner function first.
@@ -221,16 +200,26 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   // 4- codegen all statements
   LOG(INFO) << "codegen-statements";
 
-  //  for (auto &s : fb->entryPoint) {
-  //    this->buildStatement(builder, s, fb, fn_inner, fn_inner_BB, variableCodeMap);
-  //  }
   this->buildFunctionBody(builder, fb, fb->entryPoint, fn_inner, fn_inner_BB, variableCodeMap);
 
   dcds::LLVMCodegen::llvmVerifyFunction(fn_inner);
 
-  // NOTE: as we don't know the function inner return paths,
-  //  lets create a wrapper function which will do the txn stuff,
-  //  and then call the inner function with txn ptr.
+  return fn_inner;
+}
+
+llvm::Function *LLVMCodegen::buildOneFunction_outer(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
+                                                    llvm::Function *fn_inner) {
+  // It is the mainDS, else there would be no outer function.
+  auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
+  auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
+  auto fn_name_prefix = builder->getName() + "_";
+  bool genCC = top_level_builder->is_multi_threaded;
+
+  // pre_args: { txnManager*, mainRecord }
+  std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
+  auto fn_outer = this->genFunctionSignature(fb, fn_outer_args, fn_name_prefix, "",
+                                             llvm::GlobalValue::LinkageTypes::ExternalLinkage);
+  userFunctions.emplace(fn_outer->getName().str(), fn_outer);
 
   // CODEGEN outer function.
   auto fn_outer_BB = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn_outer);
@@ -241,8 +230,8 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   auto mainRecord = fn_outer->getArg(1);
   Value *txnPtr;
 
-  if (top_level_builder->is_multi_threaded) {
-    txnPtr = this->gen_call(beginTxn, {fn_outer->getArg(0)});
+  if (genCC) {
+    txnPtr = this->gen_call(beginTxn, {fn_outer->getArg(0), this->createFalse()});
   } else {
     // FIXME: possible issue because in storage, if it takes txn by reference, or even if it tries to do something, it
     //  may cause issue. we need to either propagate this to storage also, or have storage functions oblivious to txn.
@@ -259,7 +248,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   auto inner_ret = getBuilder()->CreateCall(fn_inner, inner_args);
 
   // ###### Commit Txn
-  if (top_level_builder->is_multi_threaded) {
+  if (genCC) {
     this->gen_call(commitTxn, {txnManager, txnPtr});
   }
 
@@ -271,19 +260,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   dcds::LLVMCodegen::llvmVerifyFunction(fn_outer);
 
-  if (isMainDs) {
-    // Only wrap va-args for the exposed functions as it is purely used by jit-container only.
-
-    // so we have a function R f(void*,void*,void*, A,B,C)
-    // we want it wrapped to R f(void*,void*,void*,...)
-
-    std::vector<llvm::Type *> expected_vargs;
-    for (const auto &arg : fb->function_args) {
-      expected_vargs.push_back(DcdsToLLVMType(arg->getType()));
-    }
-
-    this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
-  }
+  return fn_outer;
 
   // Optimizations:
   //   easy: if an attribute is only accessed in a single function across DS, then you don't need CC either on that one.
@@ -297,13 +274,49 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
   // ALSO, start a txn here, so that it could be passed everywhere!!
 
   // CcBuilder::injectTxnEnd
+}
 
-  // 4- Add return statement.
-  // FIXME: add void return if there is not return in the statements.
-  //  LOG(INFO) << "codegen-return";
-  //  if (fb->returnValueType == dcds::valueType::VOID) {
-  //    llvmBuilder->CreateRetVoid();
-  //  }
+void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb) {
+  LOG(INFO) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
+
+  // FIXME: How to ensure that this function returns in all paths? and returns with correct type in all paths?
+  // FIXME: what about scoping of temporary variables??
+  // FIXME: this would create nested transactions! we need to make sure we dont call txn if there is recursive function.
+
+  bool isMainDs = (builder == this->top_level_builder);
+
+  // NOTE: as we don't know the function inner return paths,
+  //  lets create a wrapper function which will do the txn stuff,
+  //  and then call the inner function with txn ptr.
+
+  auto fn_inner = buildOneFunction_inner(builder, fb);
+
+  if (isMainDs) {
+    // ------ GEN FN_OUTER ------
+    // build outer function which would be exposed in symbol table
+    auto fn_outer = buildOneFunction_outer(builder, fb, fn_inner);
+
+    // ------ GEN FN_OUTER END------
+
+    // ------ GEN VA ARGS WRAPPER ------
+    // pre_args: { txnManager*, mainRecord }
+    auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
+    auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
+    std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
+
+    // Only wrap va-args for the exposed functions as it is purely used by jit-container only.
+
+    // so we have a function R f(void*,void*,void*, A,B,C)
+    // we want it wrapped to R f(void*,void*,void*,...)
+
+    std::vector<llvm::Type *> expected_vargs;
+    for (const auto &arg : fb->function_args) {
+      expected_vargs.push_back(DcdsToLLVMType(arg->getType(), arg->is_reference_type));
+    }
+    this->wrapFunctionVariadicArgs(fn_outer, fn_outer_args, expected_vargs, fn_outer->getName().str() + "_vargs");
+
+    // ------ GEN VA ARGS WRAPPER END ------
+  }
 
   // later: mark this function as done?
 }
@@ -322,7 +335,7 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
     this->buildStatement(builder, fnCtx, s);
   }
 
-  // Generate the return block.
+  // ----- GEN RETURN BLOCK
   getBuilder()->SetInsertPoint(returnBB);
   if (fb->returnValueType == dcds::valueType::VOID) {
     getBuilder()->CreateRetVoid();
@@ -331,8 +344,8 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
                                                      fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
     getBuilder()->CreateRet(retValue);
   }
-
   returnBB->moveAfter(&(fn->back()));
+  // ----- GEN RETURN BLOCK END
 }
 
 llvm::Value *LLVMCodegen::codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
@@ -991,14 +1004,13 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
   getBuilder()->SetInsertPoint(fn_bb);
 
   Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
-  llvm::Value *mainRecordRef;
 
   // FIXME: do we actually need txn here?
   //  if yes, then create a  inner_function for composed calls so there are no nested transactions,
   //  otherwise remove it from here.
 
   // Begin Txn
-  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger});
+  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger, this->createFalse()});
 
   // Call constructor_inner
   llvm::Value *inner_fn_res = this->gen_call(fn_constructor_inner, {fn_res_getTxnManger, fn_res_beginTxn});

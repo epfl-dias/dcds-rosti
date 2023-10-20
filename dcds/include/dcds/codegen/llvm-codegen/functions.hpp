@@ -43,7 +43,7 @@ extern "C" void* c3(const dcds::valueType attributeTypes[]);
 extern "C" void* c4(char* attributeNames);
 
 extern "C" void* getTxnManager(const char* txn_namespace = "default_namespace");
-extern "C" void* beginTxn(void* txnManager);
+extern "C" void* beginTxn(void* txnManager, bool isReadOnly);
 extern "C" bool commitTxn(void* txnManager, void* txnPtr);
 
 extern "C" uintptr_t insertMainRecord(void* table, void* txn, void* data);
