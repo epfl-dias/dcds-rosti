@@ -488,14 +488,24 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
       updateSource = getBuilder()->CreateBitCast(fnCtx.tempVariableMap->operator[](updStmt->source_var),
                                                  llvm::Type::getInt8PtrTy(getLLVMContext()));
     } else if (updStmt->source_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
-      // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
       auto source_arg = fnCtx.fn->getArg(fnCtx.fb->getArgumentIndex(updStmt->source_var) + fn_arg_idx_st);
 
-      llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source_arg->getType());
-      getBuilder()->CreateStore(source_arg, allocaInst);
+      if (fnCtx.fb->getArgument(updStmt->source_var)->is_reference_type) {
+        LOG(INFO) << "The argument is of reference type.";
+        source_arg->dump();
+        source_arg->getType()->dump();
+        LOG(INFO) << "trying to pass it directly";
+        updateSource = source_arg;
 
-      // Bit-cast the value to i8*
-      updateSource = getBuilder()->CreateBitCast(allocaInst, llvm::Type::getInt8PtrTy(getLLVMContext()));
+      } else {
+        // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
+
+        llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source_arg->getType());
+        getBuilder()->CreateStore(source_arg, allocaInst);
+
+        // Bit-cast the value to i8*
+        updateSource = getBuilder()->CreateBitCast(allocaInst, llvm::Type::getInt8PtrTy(getLLVMContext()));
+      }
 
     } else {
       assert(false && "what?");
@@ -626,12 +636,13 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
                                                   const std::vector<llvm::Type *> &pre_args,
                                                   const std::string &name_prefix, const std::string &name_suffix,
                                                   llvm::GlobalValue::LinkageTypes linkageType) {
-  LOG(INFO) << "genFunctionSignature: " << fb->_name << " | prefix: " << name_prefix << " | suffix: " << name_suffix;
+  //  LOG(INFO) << "genFunctionSignature: " << fb->_name << " | prefix: " << name_prefix << " | suffix: " <<
+  //  name_suffix;
   std::vector<llvm::Type *> argTypes(pre_args);
   llvm::Type *returnType;
 
   for (const auto &arg : fb->function_args) {
-    argTypes.push_back(DcdsToLLVMType(arg->getType()));
+    argTypes.push_back(DcdsToLLVMType(arg->getType(), arg->is_reference_type));
   }
 
   if (fb->returnValueType == dcds::valueType::VOID) {

@@ -72,9 +72,9 @@ class FunctionBuilder : remove_copy {
   }
 
  public:
-  auto addArgument(const std::string &name, dcds::valueType varType) {
+  auto addArgument(const std::string &name, dcds::valueType varType, bool pass_by_reference = false) {
     isValidVarAddition(name);
-    auto arg = std::make_shared<expressions::FunctionArgumentExpression>(name, varType);
+    auto arg = std::make_shared<expressions::FunctionArgumentExpression>(name, varType, pass_by_reference);
     this->function_args.push_back(arg);
     return arg;
   }
@@ -106,7 +106,7 @@ class FunctionBuilder : remove_copy {
   auto addTempVariable(const std::string &name, dcds::valueType varType) { return addTempVariable(name, varType, {}); }
 
  private:
-  auto addTempVariable(const std::string &name, std::shared_ptr<Builder> objectType) {
+  auto addTempVariable(const std::string &name, const std::shared_ptr<Builder> &objectType) {
     isValidVarAddition(name);
     assert(hasRegisteredType(objectType->getName()));
 

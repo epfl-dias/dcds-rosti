@@ -135,10 +135,13 @@ class TemporaryVariableExpression : public LocalVariableExpression {
 
 class FunctionArgumentExpression : public LocalVariableExpression {
  public:
-  explicit FunctionArgumentExpression(std::string variable_name, dcds::valueType variable_type)
-      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {}
+  explicit FunctionArgumentExpression(std::string variable_name, dcds::valueType variable_type, bool pass_by_reference)
+      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT),
+        is_reference_type(pass_by_reference) {}
 
   void* accept(ExpressionVisitor* v) override;
+
+  const bool is_reference_type;
 };
 
 }  // namespace dcds::expressions
