@@ -72,7 +72,26 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
   auto sourceType = this->parent_function.hasTempVariable(source) ? VAR_SOURCE_TYPE::TEMPORARY_VARIABLE
                                                                   : VAR_SOURCE_TYPE::FUNCTION_ARGUMENT;
 
-  auto s = std::make_shared<UpdateStatement>(attribute->name, source, sourceType);
+  std::shared_ptr<expressions::Expression> source_expr;
+  if (sourceType == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
+    source_expr = this->parent_function.getArgument(source);
+  } else {
+    source_expr = this->parent_function.getTempVariable(source);
+  }
+
+  auto s = std::make_shared<UpdateStatement>(attribute->name, source_expr);
+  statements.push_back(s);
+}
+
+void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                                          const std::shared_ptr<expressions::Expression> &source) {
+  // How do we know if expr is valid?
+  // checks?
+  if (source->getResultType() != attribute->type) {
+    throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch between attribute and source expression");
+  }
+
+  auto s = std::make_shared<UpdateStatement>(attribute->name, source);
   statements.push_back(s);
 }
 

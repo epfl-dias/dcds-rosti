@@ -469,28 +469,16 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     CHECK(builder->hasAttribute(updStmt->destination_attr)) << "write attribute does not exists";
 
     llvm::Value *updateSource;
-    if (updStmt->source_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
-      assert(fnCtx.tempVariableMap->contains(updStmt->source_var));
 
-      updateSource = getBuilder()->CreateBitCast(fnCtx.tempVariableMap->operator[](updStmt->source_var),
-                                                 llvm::Type::getInt8PtrTy(getLLVMContext()));
-    } else if (updStmt->source_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
-      auto source_arg = fnCtx.fn->getArg(fnCtx.fb->getArgumentIndex(updStmt->source_var) + fn_arg_idx_st);
+    llvm::Value *source = this->codegenExpression(builder, fnCtx, updStmt->source_expr.get());
 
-      if (fnCtx.fb->getArgument(updStmt->source_var)->is_reference_type) {
-        // cast incoming ptr to void*
-        updateSource = getBuilder()->CreateBitCast(source_arg, llvm::Type::getInt8PtrTy(getLLVMContext()));
-
-      } else {
-        // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
-        llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source_arg->getType());
-        getBuilder()->CreateStore(source_arg, allocaInst);
-
-        // Bit-cast the value to i8*
-        updateSource = getBuilder()->CreateBitCast(allocaInst, llvm::Type::getInt8PtrTy(getLLVMContext()));
-      }
+    if (source->getType()->isPointerTy()) {
+      updateSource = getBuilder()->CreateBitCast(source, llvm::Type::getInt8PtrTy(getLLVMContext()));
     } else {
-      assert(false && "what?");
+      // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
+      llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source->getType());
+      getBuilder()->CreateStore(source, allocaInst);
+      updateSource = getBuilder()->CreateBitCast(allocaInst, llvm::Type::getInt8PtrTy(getLLVMContext()));
     }
 
     //    extern "C" void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void*

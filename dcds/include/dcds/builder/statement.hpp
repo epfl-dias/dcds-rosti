@@ -92,21 +92,18 @@ class ReadStatement : public Statement {
       : Statement(statementType::READ), source_attr(std::move(source_attribute)), dest_expr(std::move(destination)) {}
 
   const std::string source_attr;
-  // const std::string destination_var;  // to-be changed to localVarExpression.
   const std::shared_ptr<expressions::Expression> dest_expr;
 };
 
 class UpdateStatement : public Statement {
  public:
-  explicit UpdateStatement(std::string destination_attribute, std::string source_variable, VAR_SOURCE_TYPE sourceType)
+  explicit UpdateStatement(std::string destination_attribute, std::shared_ptr<expressions::Expression> source)
       : Statement(statementType::UPDATE),
-        source_type(sourceType),
         destination_attr(std::move(destination_attribute)),
-        source_var(std::move(source_variable)) {}
+        source_expr(std::move(source)) {}
 
-  const VAR_SOURCE_TYPE source_type;
   const std::string destination_attr;
-  const std::string source_var;  // to-be changed to localVarExpression.
+  const std::shared_ptr<expressions::Expression> source_expr;
 };
 
 class InsertStatement : public Statement {

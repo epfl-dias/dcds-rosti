@@ -61,6 +61,8 @@ class StatementBuilder {
                         const std::shared_ptr<expressions::Expression> &destination);
 
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &source);
+  void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                          const std::shared_ptr<expressions::Expression> &source);
 
   void addReturnStatement(const std::string &temporary_var_name);
   void addReturnStatement(const std::shared_ptr<expressions::Expression> &expr);
