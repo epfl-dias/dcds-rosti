@@ -36,11 +36,24 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
   }
 
   if (!(this->parent_function.hasTempVariable(destination))) {
-    throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced source variable referenced: " +
+    throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced destination variable referenced: " +
                                                    destination);
   }
-  auto s = std::make_shared<ReadStatement>(attribute->name, destination);
+
+  auto s = std::make_shared<ReadStatement>(attribute->name, this->parent_function.getTempVariable(destination));
   statements.push_back(s);
+}
+
+void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                                        const std::shared_ptr<expressions::Expression> &destination) {
+  // How do we know if expr is valid?
+  // checks?
+  if (destination->getResultType() != attribute->type) {
+    throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch between attribute and destination variable");
+  }
+
+  auto rs = std::make_shared<ReadStatement>(attribute->name, destination);
+  statements.push_back(rs);
 }
 
 void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,

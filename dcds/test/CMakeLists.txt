@@ -1,7 +1,7 @@
 # Pure, regular C++ files
 set(dcds_test_cxx
         test-builder.cpp
-
+        test-function.cpp
         statements/conditional-statements.cpp
 
 

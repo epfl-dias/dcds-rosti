@@ -450,40 +450,27 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
   if (stmt->stType == dcds::statementType::READ) {
     LOG(INFO) << "StatementType: read";
     auto readStmt = std::static_pointer_cast<ReadStatement>(stmt);
-
     CHECK(builder->hasAttribute(readStmt->source_attr)) << "read attribute does not exists";
 
-    assert(fnCtx.tempVariableMap->contains(readStmt->destination_var));
-    auto readDst = fnCtx.tempVariableMap->operator[](readStmt->destination_var);
+    llvm::Value *destination = this->codegenExpression(builder, fnCtx, readStmt->dest_expr.get());
 
     //    extern "C" void table_read_attribute(
     //    void* _txnManager, uintptr_t _mainRecord,
     //    void* txn, void* dst, uint attributeIdx);
 
-    // TODO: what about type mismatch in read/write attributes?
-    this->gen_call(
-        table_read_attribute,
-        {txnManager, mainRecord, txn, readDst, this->createSizeT(builder->getAttributeIndex(readStmt->source_attr))},
-        Type::getVoidTy(getLLVMContext()));
+    this->gen_call(table_read_attribute,
+                   {txnManager, mainRecord, txn, destination,
+                    this->createSizeT(builder->getAttributeIndex(readStmt->source_attr))},
+                   Type::getVoidTy(getLLVMContext()));
 
   } else if (stmt->stType == dcds::statementType::UPDATE) {
     LOG(INFO) << "StatementType: update";
-
-    // actionVar -> txnVariable to write to
-    // referenceVar -> source.
-
     auto updStmt = std::static_pointer_cast<UpdateStatement>(stmt);
-
     CHECK(builder->hasAttribute(updStmt->destination_attr)) << "write attribute does not exists";
 
     llvm::Value *updateSource;
     if (updStmt->source_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
       assert(fnCtx.tempVariableMap->contains(updStmt->source_var));
-
-      // FIXME: check and verify that if we need the same for the above? the variable itself is from alloca, and has the
-      // store, so maybe we just need bit cast. to-be verified.
-      //  for now, doing the bit-cast, if it works, then works, else remove it.
-      // updateSource = tempVariableMap[updateSb->refVarName];
 
       updateSource = getBuilder()->CreateBitCast(fnCtx.tempVariableMap->operator[](updStmt->source_var),
                                                  llvm::Type::getInt8PtrTy(getLLVMContext()));
@@ -491,22 +478,17 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
       auto source_arg = fnCtx.fn->getArg(fnCtx.fb->getArgumentIndex(updStmt->source_var) + fn_arg_idx_st);
 
       if (fnCtx.fb->getArgument(updStmt->source_var)->is_reference_type) {
-        LOG(INFO) << "The argument is of reference type.";
-        source_arg->dump();
-        source_arg->getType()->dump();
-        LOG(INFO) << "trying to pass it directly";
-        updateSource = source_arg;
+        // cast incoming ptr to void*
+        updateSource = getBuilder()->CreateBitCast(source_arg, llvm::Type::getInt8PtrTy(getLLVMContext()));
 
       } else {
         // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
-
         llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source_arg->getType());
         getBuilder()->CreateStore(source_arg, allocaInst);
 
         // Bit-cast the value to i8*
         updateSource = getBuilder()->CreateBitCast(allocaInst, llvm::Type::getInt8PtrTy(getLLVMContext()));
       }
-
     } else {
       assert(false && "what?");
     }
@@ -803,10 +785,8 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
     std::any defaultValue;
 
     if (a.second->type_category == ATTRIBUTE_TYPE_CATEGORY::PRIMITIVE) {
+      defaultValue = std::static_pointer_cast<SimpleAttribute>(a.second)->getDefaultValue();
       hasValue = defaultValue.has_value();
-      if (hasValue) {
-        defaultValue = std::static_pointer_cast<SimpleAttribute>(a.second)->getDefaultValue();
-      }
     }
 
     LOG(INFO) << "[initializeDsValueStructDefault] " << i << " - Processing: " << a.first << " (" << a.second->type

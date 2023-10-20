@@ -49,6 +49,6 @@ class jit_function_t {
       : name(std::move(_name)), address(_address), returnType(_return_type), args(std::move(_args)) {}
 };
 
-}
+}  // namespace dcds
 
 #endif  // DCDS_COMMON_HPP

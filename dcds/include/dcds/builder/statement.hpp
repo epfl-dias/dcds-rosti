@@ -88,13 +88,12 @@ class ReturnStatement : public Statement {
 
 class ReadStatement : public Statement {
  public:
-  explicit ReadStatement(std::string source_attribute, std::string destination_variable)
-      : Statement(statementType::READ),
-        source_attr(std::move(source_attribute)),
-        destination_var(std::move(destination_variable)) {}
+  explicit ReadStatement(std::string source_attribute, std::shared_ptr<expressions::Expression> destination)
+      : Statement(statementType::READ), source_attr(std::move(source_attribute)), dest_expr(std::move(destination)) {}
 
   const std::string source_attr;
-  const std::string destination_var;  // to-be changed to localVarExpression.
+  // const std::string destination_var;  // to-be changed to localVarExpression.
+  const std::shared_ptr<expressions::Expression> dest_expr;
 };
 
 class UpdateStatement : public Statement {

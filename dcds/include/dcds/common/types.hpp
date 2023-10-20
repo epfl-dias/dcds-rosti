@@ -34,7 +34,6 @@ namespace dcds {
 enum class valueType : uint32_t { INT64, INT32, FLOAT, DOUBLE, RECORD_PTR, VOID, BOOL };
 enum class VAR_SOURCE_TYPE : uint32_t { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTION_ARGUMENT };
 
-
 inline std::ostream &operator<<(std::ostream &os, dcds::valueType ty) {
   // prefix?
   os << "dcds::valueType::";
