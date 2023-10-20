@@ -171,7 +171,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   llvm::Value *codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
                                  const dcds::expressions::Expression *expr);
 
-  llvm::Type *DcdsToLLVMType(dcds::valueType dcds_type);
+  llvm::Type *DcdsToLLVMType(dcds::valueType dcds_type, bool is_reference = false);
 
  private:
   //  std::vector<llvm::Function *> userFunctions;

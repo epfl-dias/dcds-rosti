@@ -39,7 +39,7 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
     throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced source variable referenced: " +
                                                    destination);
   }
-  auto s = std::make_shared<Statement>(dcds::statementType::READ, attribute->name, destination);
+  auto s = std::make_shared<ReadStatement>(attribute->name, destination);
   statements.push_back(s);
 }
 

@@ -33,78 +33,124 @@ namespace dcds {
 class Builder;
 class StatementBuilder;
 
-/// Types of statements for DCDS functions
 enum class statementType { READ, UPDATE, CREATE, YIELD, CONDITIONAL_STATEMENT, METHOD_CALL, LOG_STRING };
+inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
+  os << "dcds::statementType::";
+  switch (ty) {
+    case dcds::statementType::READ:
+      os << "READ";
+      break;
+    case statementType::UPDATE:
+      os << "UPDATE";
+      break;
+    case statementType::CREATE:
+      os << "CREATE";
+      break;
+    case statementType::YIELD:
+      os << "YIELD";
+      break;
+    case statementType::CONDITIONAL_STATEMENT:
+      os << "CONDITIONAL_STATEMENT";
+      break;
+    case statementType::METHOD_CALL:
+      os << "METHOD_CALL";
+      break;
+    case statementType::LOG_STRING:
+      os << "LOG_STRING";
+      break;
+  }
+  return os;
+}
 
-/// Cass representing a statement in DCDS
 class Statement {
- public:
-  ///
-  /// \param type       Type of the statement to be constructed
-  /// \param actionVar  Variable name on which some action will be taken (read/updated).
-  ///                   Not a hard specification for all statements
-  /// \param refVar     Variable name which will be used as reference for the action on
-  ///                   actionVar (will store read/write value). Not a hard specification for all statements
-  explicit Statement(dcds::statementType type, std::string actionVar, std::string refVar)
-      : stType(type), actionVarName(std::move(actionVar)), refVarName(std::move(refVar)) {}
+ protected:
+  explicit Statement(dcds::statementType type) : stType(type) {}
 
-  /// Type of the statement
+ public:
   const dcds::statementType stType;
-  /// Variable name on which some action (read/update) will be taken. Not a hard specification for all statements.
-  const std::string actionVarName;
-  /// Variable name which will be used as reference for the action on action variable (will store read/write value).
-  /// Not a hard specification for all statements
-  const std::string refVarName;
 };
+
+// template <class T>
+// class StatementCRTP{
+//  public:
+//   std::shared_ptr<T> downcast(std::shared_ptr<Statement> s){
+//     return std::static_pointer_cast<T>(s);
+//   }
+// };
 
 class ReturnStatement : public Statement {
  public:
   explicit ReturnStatement(std::shared_ptr<expressions::Expression> _expr)
-      : Statement(statementType::YIELD, "", ""), expr(std::move(_expr)) {}
+      : Statement(statementType::YIELD), expr(std::move(_expr)) {}
 
   const std::shared_ptr<expressions::Expression> expr;
 };
 
+class ReadStatement : public Statement {
+ public:
+  explicit ReadStatement(std::string source_attribute, std::string destination_variable)
+      : Statement(statementType::READ),
+        source_attr(std::move(source_attribute)),
+        destination_var(std::move(destination_variable)) {}
+
+  const std::string source_attr;
+  const std::string destination_var;  // to-be changed to localVarExpression.
+};
+
 class UpdateStatement : public Statement {
  public:
-  explicit UpdateStatement(const std::string& destination, const std::string& source, VAR_SOURCE_TYPE sourceType)
-      : Statement(statementType::UPDATE, destination, source), source_type(sourceType) {}
+  explicit UpdateStatement(std::string destination_attribute, std::string source_variable, VAR_SOURCE_TYPE sourceType)
+      : Statement(statementType::UPDATE),
+        source_type(sourceType),
+        destination_attr(std::move(destination_attribute)),
+        source_var(std::move(source_variable)) {}
 
   const VAR_SOURCE_TYPE source_type;
+  const std::string destination_attr;
+  const std::string source_var;  // to-be changed to localVarExpression.
 };
 
 class InsertStatement : public Statement {
  public:
-  explicit InsertStatement(const std::string& type_name, const std::string& var_name)
-      : Statement(statementType::CREATE, type_name, var_name) {}
+  explicit InsertStatement(std::string _type_name, std::string var_name)
+      : Statement(statementType::CREATE), type_name(std::move(_type_name)), destination_var(std::move(var_name)) {}
+
+  const std::string type_name;
+  const std::string destination_var;  // to-be changed to localVarExpression.
 };
 
 class MethodCallStatement : public Statement {
  public:
   explicit MethodCallStatement(
-      std::shared_ptr<dcds::Builder> object_type, const std::string& reference_variable, std::string _function_name,
-      const std::string& return_destination_variable,
+      std::shared_ptr<dcds::Builder> object_type, std::string reference_variable, std::string _function_name,
+      std::string return_destination_variable,
       std::vector<std::shared_ptr<expressions::LocalVariableExpression>> _function_arguments = {})
-      : Statement(statementType::METHOD_CALL, reference_variable, return_destination_variable),
+      : Statement(statementType::METHOD_CALL),
         function_name(std::move(_function_name)),
         function_arguments(std::move(_function_arguments)),
-        object_type_info(std::move(object_type)) {}
+        object_type_info(std::move(object_type)),
+        referenced_type_variable(std::move(reference_variable)),
+        return_dest_variable(std::move(return_destination_variable)) {}
 
   const std::string function_name;
   const std::vector<std::shared_ptr<expressions::LocalVariableExpression>> function_arguments;
   const std::shared_ptr<dcds::Builder> object_type_info;
+  const std::string referenced_type_variable;
+  const std::string return_dest_variable;
 };
 
 class LogStringStatement : public Statement {
  public:
-  explicit LogStringStatement(const std::string& log_string) : Statement(statementType::LOG_STRING, log_string, "") {}
+  explicit LogStringStatement(std::string msg) : Statement(statementType::LOG_STRING), log_string(std::move(msg)) {}
+
+  const std::string log_string;
 };
 
 class ConditionalStatement : public Statement {
  public:
   explicit ConditionalStatement(expressions::Expression* _expr, std::shared_ptr<StatementBuilder> if_block,
                                 std::shared_ptr<StatementBuilder> else_block)
-      : Statement(statementType::CONDITIONAL_STATEMENT, "", ""),
+      : Statement(statementType::CONDITIONAL_STATEMENT),
         expr(_expr),
         ifBlock(std::move(if_block)),
         elseBLock(std::move(else_block)) {}

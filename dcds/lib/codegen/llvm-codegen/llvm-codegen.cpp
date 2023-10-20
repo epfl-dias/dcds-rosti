@@ -41,22 +41,35 @@ void LLVMCodegen::saveToFile(const std::string &filename) {
 
 void LLVMCodegen::printIR() { theLLVMModule->print(llvm::outs(), nullptr); }
 
-llvm::Type *LLVMCodegen::DcdsToLLVMType(dcds::valueType dcds_type) {
+llvm::Type *LLVMCodegen::DcdsToLLVMType(dcds::valueType dcds_type, bool is_reference) {
+  llvm::Type *ty;
   switch (dcds_type) {
     case dcds::valueType::INT64:
     case dcds::valueType::RECORD_PTR:
-      return llvm::Type::getInt64Ty(getLLVMContext());
+      ty = llvm::Type::getInt64Ty(getLLVMContext());
+      break;
     case dcds::valueType::INT32:
-      return llvm::Type::getInt32Ty(getLLVMContext());
+      ty = llvm::Type::getInt32Ty(getLLVMContext());
+      break;
     case dcds::valueType::DOUBLE:
-      return llvm::Type::getDoubleTy(getLLVMContext());
+      ty = llvm::Type::getDoubleTy(getLLVMContext());
+      break;
     case dcds::valueType::FLOAT:
-      return llvm::Type::getFloatTy(getLLVMContext());
+      ty = llvm::Type::getFloatTy(getLLVMContext());
+      break;
     case dcds::valueType::BOOL:
-      return llvm::Type::getInt1Ty(getLLVMContext());
+      ty = llvm::Type::getInt1Ty(getLLVMContext());
+      break;
     case dcds::valueType::VOID:
-      return llvm::Type::getVoidTy(getLLVMContext());
+      ty = llvm::Type::getVoidTy(getLLVMContext());
+      break;
   }
+  assert(ty != nullptr);
+
+  if (is_reference) {
+    return ty->getPointerTo();
+  }
+  return ty;
 }
 
 void LLVMCodegen::initializeLLVMModule(const std::string &name) {
@@ -436,17 +449,12 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
   // READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, CALL
   if (stmt->stType == dcds::statementType::READ) {
     LOG(INFO) << "StatementType: read";
-    // actionVar -> txnVariable to read from
-    // referenceVar -> destination.
+    auto readStmt = std::static_pointer_cast<ReadStatement>(stmt);
 
-    if (!builder->hasAttribute(stmt->actionVarName)) {
-      assert(false && "read attribute does not exists");
-    }
+    CHECK(builder->hasAttribute(readStmt->source_attr)) << "read attribute does not exists";
 
-    // auto readFromAttribute = builder.getAttribute(sb->actionVarName);
-    assert(builder->hasAttribute(stmt->actionVarName));
-    assert(fnCtx.tempVariableMap->contains(stmt->refVarName));
-    auto readDst = fnCtx.tempVariableMap->operator[](stmt->refVarName);
+    assert(fnCtx.tempVariableMap->contains(readStmt->destination_var));
+    auto readDst = fnCtx.tempVariableMap->operator[](readStmt->destination_var);
 
     //    extern "C" void table_read_attribute(
     //    void* _txnManager, uintptr_t _mainRecord,
@@ -455,7 +463,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     // TODO: what about type mismatch in read/write attributes?
     this->gen_call(
         table_read_attribute,
-        {txnManager, mainRecord, txn, readDst, this->createSizeT(builder->getAttributeIndex(stmt->actionVarName))},
+        {txnManager, mainRecord, txn, readDst, this->createSizeT(builder->getAttributeIndex(readStmt->source_attr))},
         Type::getVoidTy(getLLVMContext()));
 
   } else if (stmt->stType == dcds::statementType::UPDATE) {
@@ -464,25 +472,24 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     // actionVar -> txnVariable to write to
     // referenceVar -> source.
 
-    auto updateSb = std::static_pointer_cast<UpdateStatement>(stmt);
+    auto updStmt = std::static_pointer_cast<UpdateStatement>(stmt);
 
-    // auto writeToAttribute = builder.getAttribute(sb->actionVarName);
-    assert(builder->hasAttribute(stmt->actionVarName));
+    CHECK(builder->hasAttribute(updStmt->destination_attr)) << "write attribute does not exists";
 
     llvm::Value *updateSource;
-    if (updateSb->source_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
-      assert(fnCtx.tempVariableMap->contains(stmt->refVarName));
+    if (updStmt->source_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
+      assert(fnCtx.tempVariableMap->contains(updStmt->source_var));
 
       // FIXME: check and verify that if we need the same for the above? the variable itself is from alloca, and has the
       // store, so maybe we just need bit cast. to-be verified.
       //  for now, doing the bit-cast, if it works, then works, else remove it.
       // updateSource = tempVariableMap[updateSb->refVarName];
 
-      updateSource = getBuilder()->CreateBitCast(fnCtx.tempVariableMap->operator[](updateSb->refVarName),
+      updateSource = getBuilder()->CreateBitCast(fnCtx.tempVariableMap->operator[](updStmt->source_var),
                                                  llvm::Type::getInt8PtrTy(getLLVMContext()));
-    } else if (updateSb->source_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
+    } else if (updStmt->source_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
       // NOTE: because are update function expects a void* to the src, we need to create a temporary allocation.
-      auto source_arg = fnCtx.fn->getArg(fnCtx.fb->getArgumentIndex(updateSb->refVarName) + fn_arg_idx_st);
+      auto source_arg = fnCtx.fn->getArg(fnCtx.fb->getArgumentIndex(updStmt->source_var) + fn_arg_idx_st);
 
       llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(source_arg->getType());
       getBuilder()->CreateStore(source_arg, allocaInst);
@@ -497,13 +504,14 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     //    extern "C" void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void*
     //    txnPtr, void* src, uint attributeIdx);
 
-    this->gen_call(
-        table_write_attribute,
-        {txnManager, mainRecord, txn, updateSource, this->createSizeT(builder->getAttributeIndex(stmt->actionVarName))},
-        Type::getVoidTy(getLLVMContext()));
+    this->gen_call(table_write_attribute,
+                   {txnManager, mainRecord, txn, updateSource,
+                    this->createSizeT(builder->getAttributeIndex(updStmt->destination_attr))},
+                   Type::getVoidTy(getLLVMContext()));
 
   } else if (stmt->stType == dcds::statementType::LOG_STRING) {
-    this->createPrintString(stmt->actionVarName);
+    auto logStmt = std::static_pointer_cast<LogStringStatement>(stmt);
+    this->createPrintString(logStmt->log_string);
   } else if (stmt->stType == dcds::statementType::YIELD) {
     LOG(INFO) << "StatementType: return";
 
@@ -531,17 +539,16 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     getBuilder()->CreateBr(fnCtx.returnBlock);
 
   } else if (stmt->stType == dcds::statementType::CREATE) {
-    // actionVarName -> subType
-    // refVarName -> variable to save the result in
+    auto insStmt = std::static_pointer_cast<InsertStatement>(stmt);
 
     // we need to call the constructor of subType
     // should be `builder.getName() + "_constructor"`
-    assert(builder->hasRegisteredType(stmt->actionVarName));
-    auto subtype = builder->getRegisteredType(stmt->actionVarName);
+    assert(builder->hasRegisteredType(insStmt->type_name));
+    auto subtype = builder->getRegisteredType(insStmt->type_name);
     auto constructorName = subtype->getName() + "_constructor_inner";
     assert(userFunctions.contains(constructorName));
-    assert(fnCtx.tempVariableMap->contains(stmt->refVarName));
-    auto dst = fnCtx.tempVariableMap->operator[](stmt->refVarName);
+    assert(fnCtx.tempVariableMap->contains(insStmt->destination_var));
+    auto dst = fnCtx.tempVariableMap->operator[](insStmt->destination_var);
 
     llvm::Value *dsContainer = this->gen_call(userFunctions[constructorName], {txnManager, txn});
 
@@ -551,10 +558,6 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
   } else if (stmt->stType == dcds::statementType::METHOD_CALL) {
     LOG(INFO) << "StatementType: METHOD_CALL";
-
-    // actionVar -> source variable
-    // referenceVar -> write dst.
-
     auto methodStmt = std::static_pointer_cast<MethodCallStatement>(stmt);
 
     // {ds_name}_{function_name}_inner
@@ -567,10 +570,11 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     if (userFunctions[function_name]->getReturnType() == Type::getVoidTy(getLLVMContext())) {
       doesReturn = false;
     }
-    if (!doesReturn && !(methodStmt->refVarName.empty())) {
+    if (!doesReturn && !(methodStmt->return_dest_variable.empty())) {
       assert(false && "callee expects return but function does not return");
     } else if (doesReturn) {
-      assert(fnCtx.tempVariableMap->contains(stmt->refVarName) && "expected return but tempVariable not present");
+      assert(fnCtx.tempVariableMap->contains(methodStmt->return_dest_variable) &&
+             "expected return but tempVariable not present");
     }
 
     // NOTE: (methodStmt->refVarName.empty() && doesReturn):  function returns but value is unused
@@ -582,14 +586,16 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     std::vector<llvm::Value *> callArgs;
     callArgs.push_back(txnManager);
 
-    assert(fnCtx.tempVariableMap->contains(stmt->actionVarName));
-    llvm::Value *referencedRecord = getBuilder()->CreateLoad(llvm::Type::getInt64Ty(getLLVMContext()),
-                                                             fnCtx.tempVariableMap->operator[](stmt->actionVarName));
+    assert(fnCtx.tempVariableMap->contains(methodStmt->referenced_type_variable));
+    llvm::Value *referencedRecord =
+        getBuilder()->CreateLoad(llvm::Type::getInt64Ty(getLLVMContext()),
+                                 fnCtx.tempVariableMap->operator[](methodStmt->referenced_type_variable));
     callArgs.push_back(referencedRecord);
 
     callArgs.push_back(txn);
 
     for (auto &fArg : methodStmt->function_arguments) {
+      // FIXME: there might be issue if the function expects pass by reference?
       llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, fArg.get());
 
       if (llvm::isa<llvm::AllocaInst>(exprResult)) {
@@ -606,7 +612,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
     llvm::Value *ret = this->gen_call(userFunctions[function_name], callArgs);
     if (doesReturn) {
-      getBuilder()->CreateStore(ret, fnCtx.tempVariableMap->operator[](stmt->refVarName));
+      getBuilder()->CreateStore(ret, fnCtx.tempVariableMap->operator[](methodStmt->return_dest_variable));
     }
 
   } else if (stmt->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
@@ -749,7 +755,7 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
   std::vector<llvm::Type *> struct_vars;
   for (const auto &a : builder->attributes) {
     // simpleType to type, else have a ptr to it.
-    LOG(INFO) << "attr: " << a.first;
+    LOG(INFO) << "attr: " << a.first << a.second->type;
     struct_vars.push_back(DcdsToLLVMType(a.second->type));
   }
 
@@ -776,6 +782,7 @@ Value *LLVMCodegen::initializeDsContainerStruct(Value *txnManager, Value *storag
 }
 
 Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
+  assert(dsRecordValueStructType);
   llvm::Value *structValue = UndefValue::get(dsRecordValueStructType);
   auto *irBuilder = getBuilder();
 
@@ -791,8 +798,8 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
       }
     }
 
-    LOG(INFO) << "[initializeDsValueStructDefault] Processing: " << a.first
-              << " | has_value: " << defaultValue.has_value();
+    LOG(INFO) << "[initializeDsValueStructDefault] " << i << " - Processing: " << a.first << " (" << a.second->type
+              << ") - has_value: " << defaultValue.has_value();
 
     llvm::Value *fieldValue;
 
@@ -840,9 +847,8 @@ Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
   irBuilder->CreateStore(structValue, structPtr);
 
   //  return structPtr;
-  return getBuilder()->CreateBitCast(structPtr, llvm::Type::getInt8PtrTy(getLLVMContext()));
-
   //  return structValue;
+  return getBuilder()->CreateBitCast(structPtr, llvm::Type::getInt8PtrTy(getLLVMContext()));
 }
 
 llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Value *table_name) {
