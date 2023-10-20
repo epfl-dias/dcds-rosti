@@ -218,6 +218,14 @@ class Builder : remove_copy {
   std::shared_ptr<Builder> clone(std::string name);
 
  private:
+  template <class lambda>
+  inline void for_each_function(lambda&& func) {
+    for (auto& [f_name, fptr] : this->functions) {
+      func(fptr);
+    }
+  }
+
+ private:
   std::shared_ptr<DCDSContext> context;
   const std::string dataStructureName;
 

@@ -103,6 +103,19 @@ class StatementBuilder {
   auto getFunction() { return &parent_function; }
 
  private:
+  template <class lambda>
+  inline void for_each_statement(lambda &&func) {
+    for (const auto &s : this->statements) {
+      func(s);
+      if (s->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
+        auto conditional = std::static_pointer_cast<ConditionalStatement>(s);
+        conditional->ifBlock->for_each_statement(func);
+        conditional->elseBLock->for_each_statement(func);
+      }
+    }
+  }
+
+ private:
   bool doesReturn = false;
   bool doesHaveMethodCalls = false;
   size_t child_blocks = 0;
