@@ -147,7 +147,7 @@ uintptr_t insertMainRecord(void* table, void* txn, void* data) {
   LOG(INFO) << "insertMainRecord: args: " << table << " | " << txn << " | " << data;
 
   auto x = static_cast<dcds::storage::Table*>(table)->insertRecord(static_cast<dcds::txn::Txn*>(txn), data);
-  LOG(INFO) << "insertMainRecord: ret: " << x.getBase();
+  LOG(INFO) << "insertMainRecord[" << static_cast<dcds::storage::Table*>(table)->name() << "] ret: " << x.getBase();
   // LOG(INFO) << "[insertMainRecord] x.getTable(): " << x.getTable()->name();
 
   return x.getBase();

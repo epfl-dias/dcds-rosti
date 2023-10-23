@@ -94,8 +94,11 @@ class IsNotNullExpression : public UnaryExpression {
 class LocalVariableExpression : public UnaryExpression {
  protected:
   explicit LocalVariableExpression(std::string variable_name, dcds::valueType variable_type,
-                                   VAR_SOURCE_TYPE source_type)
-      : var_name(std::move(variable_name)), var_type(variable_type), var_src_type(source_type) {}
+                                   VAR_SOURCE_TYPE source_type, bool is_writable)
+      : var_name(std::move(variable_name)),
+        var_type(variable_type),
+        var_src_type(source_type),
+        is_var_writable(is_writable) {}
 
  public:
   [[nodiscard]] auto getName() { return var_name; }
@@ -110,12 +113,13 @@ class LocalVariableExpression : public UnaryExpression {
   const std::string var_name;
   const dcds::valueType var_type;
   const VAR_SOURCE_TYPE var_src_type;
+  const bool is_var_writable;
 };
 
 class TemporaryVariableExpression : public LocalVariableExpression {
  public:
   explicit TemporaryVariableExpression(std::string variable_name, dcds::valueType variable_type, std::any default_value)
-      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE),
+      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE, true),
         var_default_value(std::move(default_value)) {}
 
   explicit TemporaryVariableExpression(std::string variable_name, dcds::valueType variable_type)
@@ -123,7 +127,8 @@ class TemporaryVariableExpression : public LocalVariableExpression {
 
   // for composite-types.
   explicit TemporaryVariableExpression(std::string variable_name, std::shared_ptr<Builder> type)
-      : LocalVariableExpression(std::move(variable_name), valueType::RECORD_PTR, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE),
+      : LocalVariableExpression(std::move(variable_name), valueType::RECORD_PTR, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE,
+                                true),
         objectType(std::move(type)) {}
 
   void* accept(ExpressionVisitor* v) override;
@@ -136,7 +141,8 @@ class TemporaryVariableExpression : public LocalVariableExpression {
 class FunctionArgumentExpression : public LocalVariableExpression {
  public:
   explicit FunctionArgumentExpression(std::string variable_name, dcds::valueType variable_type, bool pass_by_reference)
-      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT),
+      : LocalVariableExpression(std::move(variable_name), variable_type, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT,
+                                pass_by_reference),
         is_reference_type(pass_by_reference) {}
 
   void* accept(ExpressionVisitor* v) override;

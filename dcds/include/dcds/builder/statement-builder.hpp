@@ -74,27 +74,16 @@ class StatementBuilder {
   std::shared_ptr<expressions::TemporaryVariableExpression> addInsertStatement(
       const std::shared_ptr<Builder> &object_type, const std::string &variable_name);
 
+  // without-return + with/without args
   void addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
-                     const std::string &function_name, const std::string &return_destination_variable,
-                     std::convertible_to<std::string> auto... args) {
-    // NOTE: good background-reading on parameter-packs:
-    // https://www.scs.stanford.edu/~dm/blog/param-pack.html#function-parameter-packs
-    std::vector<std::string> arg_list;
-    // filter out for the empty.
-    for (const std::string &a : {args...}) {
-      if (!(a.empty())) {
-        arg_list.emplace_back(a);
-      }
-    }
-    this->addMethodCall(object_type, reference_variable, function_name, return_destination_variable, arg_list);
+                     const std::string &function_name, std::vector<std::string> args = {}) {
+    return this->addMethodCall(object_type, reference_variable, function_name, "", std::move(args));
   }
 
-  void addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
-                     const std::string &function_name, const std::string &return_destination_variable);
-
+  // with-return + with/without args
   void addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
                      const std::string &function_name, const std::string &return_destination_variable,
-                     const std::vector<std::string> &args);
+                     std::vector<std::string> args = {});
 
   conditional_blocks addConditionalBranch(dcds::expressions::Expression *expr);
 

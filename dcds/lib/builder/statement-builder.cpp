@@ -156,14 +156,8 @@ std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addI
 }
 
 void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
-                                     const std::string &function_name, const std::string &return_destination_variable) {
-  this->addMethodCall(object_type, reference_variable, function_name, return_destination_variable,
-                      std::vector<std::string>{});
-}
-
-void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
                                      const std::string &function_name, const std::string &return_destination_variable,
-                                     const std::vector<std::string> &args) {
+                                     std::vector<std::string> function_args) {
   valueType referenceVarType;
   if (this->parent_function.hasTempVariable(reference_variable)) {
     auto var = this->parent_function.getTempVariable(reference_variable);
@@ -185,27 +179,21 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
                                                    ") does not exists in the type: " + object_type->getName());
   }
 
-  const auto &expected_args = object_type->getFunction(function_name)->getArguments();
-  std::vector<std::string> arg_list;
-  // filter out for the empty.
-  for (const std::string &a : args) {
-    if (!(a.empty())) {
-      arg_list.emplace_back(a);
-    }
-  }
+  auto method = object_type->getFunction(function_name);
+  const auto &expected_args = method->getArguments();
 
-  if (arg_list.size() != expected_args.size()) {
+  std::erase_if(function_args, [&](const auto &item) { return item.empty(); });
+
+  if (function_args.size() != expected_args.size()) {
     throw dcds::exceptions::dcds_dynamic_exception(
         "number of function arguments does not matched expected number of arguments by the target function."
         " expected: " +
-        std::to_string(object_type->getFunction(function_name)->getArguments().size()) +
-        " provided: " + std::to_string(arg_list.size()));
+        std::to_string(expected_args.size()) + " provided: " + std::to_string(function_args.size()));
   }
 
-  // std::vector<std::pair<std::string, dcds::VAR_SOURCE_TYPE>> arg_variables;
   std::vector<std::shared_ptr<expressions::LocalVariableExpression>> arg_vars;
   auto i = 0;
-  for (const std::string &arg_name : arg_list) {
+  for (const std::string &arg_name : function_args) {
     if (!arg_name.empty()) {
       if (this->parent_function.hasTempVariable(arg_name)) {
         auto varg = this->parent_function.getTempVariable(arg_name);
@@ -213,21 +201,13 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
         if (expected_args[i]->getType() != varg->getType()) {
           throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for argument " + arg_name);
         }
-
-        // arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::TEMPORARY_VARIABLE);
-
         arg_vars.emplace_back(std::make_shared<expressions::TemporaryVariableExpression>(*varg));
-        //        arg_vars.emplace_back(varg);
-
       } else if (this->parent_function.hasArgument(arg_name)) {
         auto varg = this->parent_function.findArgument(arg_name)->get();
         if (expected_args[i]->getType() != varg->getType()) {
           throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for argument " + arg_name);
         }
-
         arg_vars.emplace_back(std::make_shared<expressions::FunctionArgumentExpression>(*varg));
-        // arg_vars.emplace_back(varg);
-        // arg_variables.emplace_back(arg_name, VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
       } else {
         throw dcds::exceptions::dcds_dynamic_exception(
             "Argument is neither a temporary variable, nor a function argument: " + arg_name);
@@ -236,10 +216,33 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
     i++;
   }
 
-  //  auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name,
-  //                                                  return_destination_variable, std::move(arg_variables));
-  auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name,
-                                                  return_destination_variable, std::move(arg_vars));
+  // return destination
+  std::shared_ptr<expressions::LocalVariableExpression> return_dest = nullptr;
+  if (!(return_destination_variable.empty())) {
+    if (this->parent_function.hasTempVariable(return_destination_variable)) {
+      return_dest = this->parent_function.getTempVariable(return_destination_variable);
+    } else if (this->parent_function.hasArgument(return_destination_variable)) {
+      return_dest = *(this->parent_function.findArgument(return_destination_variable));
+      if (!(return_dest->is_var_writable)) {
+        throw dcds::exceptions::dcds_invalid_type_exception(
+            "Function argument is not a reference type/ cannot save return value to a function argument passed by "
+            "value.");
+      }
+
+    } else {
+      throw dcds::exceptions::dcds_dynamic_exception(
+          "Argument is neither a temporary variable, nor a function argument: " + return_destination_variable);
+    }
+
+    if (return_dest->getType() != method->getReturnValueType()) {
+      LOG(INFO) << return_dest->getType();
+      LOG(INFO) << method->getReturnValueType();
+      throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for return destination.");
+    }
+  }
+
+  auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name, return_dest,
+                                                  std::move(arg_vars));
   statements.push_back(rs);
   doesHaveMethodCalls = true;
 }

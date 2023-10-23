@@ -119,20 +119,24 @@ class MethodCallStatement : public Statement {
  public:
   explicit MethodCallStatement(
       std::shared_ptr<dcds::Builder> object_type, std::string reference_variable, std::string _function_name,
-      std::string return_destination_variable,
+      // std::string return_destination_variable,
+      std::shared_ptr<expressions::Expression> return_destination,
       std::vector<std::shared_ptr<expressions::LocalVariableExpression>> _function_arguments = {})
       : Statement(statementType::METHOD_CALL),
         function_name(std::move(_function_name)),
         function_arguments(std::move(_function_arguments)),
         object_type_info(std::move(object_type)),
         referenced_type_variable(std::move(reference_variable)),
-        return_dest_variable(std::move(return_destination_variable)) {}
+        return_dest(std::move(return_destination)),
+        has_return_dest(return_dest.operator bool()) {}
 
   const std::string function_name;
   const std::vector<std::shared_ptr<expressions::LocalVariableExpression>> function_arguments;
   const std::shared_ptr<dcds::Builder> object_type_info;
   const std::string referenced_type_variable;
-  const std::string return_dest_variable;
+  // const std::string return_dest_variable;
+  const std::shared_ptr<expressions::Expression> return_dest;
+  const bool has_return_dest;
 };
 
 class LogStringStatement : public Statement {

@@ -550,11 +550,9 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     if (userFunctions[function_name]->getReturnType() == Type::getVoidTy(getLLVMContext())) {
       doesReturn = false;
     }
-    if (!doesReturn && !(methodStmt->return_dest_variable.empty())) {
+
+    if (!doesReturn && methodStmt->has_return_dest) {
       assert(false && "callee expects return but function does not return");
-    } else if (doesReturn) {
-      assert(fnCtx.tempVariableMap->contains(methodStmt->return_dest_variable) &&
-             "expected return but tempVariable not present");
     }
 
     // NOTE: (methodStmt->refVarName.empty() && doesReturn):  function returns but value is unused
@@ -592,7 +590,10 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
     llvm::Value *ret = this->gen_call(userFunctions[function_name], callArgs);
     if (doesReturn) {
-      getBuilder()->CreateStore(ret, fnCtx.tempVariableMap->operator[](methodStmt->return_dest_variable));
+      // getBuilder()->CreateStore(ret, fnCtx.tempVariableMap->operator[](methodStmt->return_dest_variable));
+
+      llvm::Value *ret_dest_expr = this->codegenExpression(builder, fnCtx, methodStmt->return_dest.get());
+      getBuilder()->CreateStore(ret, ret_dest_expr);
     }
 
   } else if (stmt->stType == dcds::statementType::CONDITIONAL_STATEMENT) {

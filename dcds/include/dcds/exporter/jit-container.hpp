@@ -55,6 +55,9 @@ class JitContainer {
  public:
   template <typename... Args>
   std::any op(const std::string &op_name, Args... args) {
+    // NOTE: good background-reading on parameter-packs:
+    // https://www.scs.stanford.edu/~dm/blog/param-pack.html#function-parameter-packs
+
     LOG(INFO) << "OP CALLED: " << op_name;
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
     // FIXME: verify if the number of args is same as the args required for the function.
