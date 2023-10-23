@@ -67,10 +67,10 @@ void* SingleVersionRowStore::allocateRecordMemory() const {
 void SingleVersionRowStore::freeRecordMemory(void* mem) { free(mem); }
 
 record_reference_t SingleVersionRowStore::insertRecord(dcds::txn::Txn* txn, const void* data) {
-  assert(txn);
-  assert(txn->read_only == false && "RO txn inserting ???");
+  // txn can be null as we generate single-threaded DS also.
+  assert(!txn || (txn && txn->read_only == false && "RO txn inserting ???"));
   void* mem = allocateRecordMemory();
-  auto* meta = new (mem) record_metadata_t(txn->txnTs.start_time);
+  auto* meta = new (mem) record_metadata_t(txn ? txn->txnTs.start_time : 0);
   void* dataMemory = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mem) + sizeof(record_metadata_t));
 
   memcpy(dataMemory, data, record_size_data_only);
