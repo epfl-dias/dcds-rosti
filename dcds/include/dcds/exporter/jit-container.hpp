@@ -59,6 +59,8 @@ class JitContainer {
     // https://www.scs.stanford.edu/~dm/blog/param-pack.html#function-parameter-packs
 
     LOG(INFO) << "OP CALLED: " << op_name;
+    assert(codegen_engine->getAvailableFunctions().contains(op_name) && "unknown op called");
+
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
     // FIXME: verify if the number of args is same as the args required for the function.
     switch (fn->returnType) {

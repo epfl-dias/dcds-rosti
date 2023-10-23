@@ -28,6 +28,7 @@
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
 #include "dcds/builder/function-builder.hpp"
+#include "dcds/builder/optimizer/builder-opt-passes.hpp"
 #include "dcds/builder/statement-builder.hpp"
 #include "dcds/common/common.hpp"
 #include "dcds/exporter/jit-container.hpp"

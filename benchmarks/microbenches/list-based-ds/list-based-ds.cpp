@@ -25,32 +25,29 @@
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
 
-#include "un-generated/queue.hpp"
+#include "parser-generated/linked-list.hpp"
+
+static void test_linkedList_stack() {
+  auto ll = dcds_generated::Stack();
+
+  ll.build();
+  ll.optimize();
+  ll.test();
+}
+
+static void test_linkedList_fifo() {
+  auto ll = dcds_generated::FIFO();
+
+  ll.build();
+  ll.optimize();
+  ll.test();
+}
 
 int main(int argc, char** argv) {
-  // LOG(INFO) << "listBasedDS";
-  UnGeneratedQueue defaultNSQueue;
-  // LOG(INFO) << "[main] init-done";
-  // LOG(INFO) << "defaultNSQueue: size: " << defaultNSQueue.size();
-  // LOG(INFO) << "-------";
-  //    UnGeneratedQueue nSQueue("separated");
-  //    // LOG(INFO) << "nSQueue: size: " << nSQueue.size();
-
-  // LOG(INFO) << "###########";
-  defaultNSQueue.printQueue();
-  defaultNSQueue.push(10);
-  // LOG(INFO) << "###########";
-  defaultNSQueue.printQueue();
-  defaultNSQueue.push(11);
-  // LOG(INFO) << "###########";
-  defaultNSQueue.printQueue();
-  defaultNSQueue.push(10);
-  // LOG(INFO) << "###########";
-  defaultNSQueue.printQueue();
-  defaultNSQueue.push(12);
-  // LOG(INFO) << "###########";
-  defaultNSQueue.printQueue();
-
-  // LOG(INFO) << "------- DONE";
+  dcds::InitializeLog(argc, argv);
+  LOG(INFO) << "listBasedDS";
+  test_linkedList_stack();
+  test_linkedList_fifo();
+  LOG(INFO) << "------- DONE";
   return 0;
 }

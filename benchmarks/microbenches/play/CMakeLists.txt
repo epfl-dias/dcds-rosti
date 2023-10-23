@@ -18,7 +18,7 @@ target_link_libraries(play
         LLVM::LLVM
         dcds)
 
-target_compile_features(play PUBLIC cxx_std_20)
+target_compile_features(play PUBLIC cxx_std_23)
 
 dcds_target_enable_default_warnings(play)
 

@@ -31,7 +31,7 @@ namespace dcds::expressions {
 class BinaryExpression : public Expression {
  public:
   BinaryExpression(Expression* left, Expression* right) : _left(left), _right(right) {}
-  [[nodiscard]] int getNumOperands() const override { return 2; };
+  [[nodiscard]] int getNumOperands() const override { return 2; }
   [[nodiscard]] bool isUnaryExpression() const override { return false; }
   [[nodiscard]] bool isBinaryExpression() const override { return true; }
 

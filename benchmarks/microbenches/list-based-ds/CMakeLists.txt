@@ -15,7 +15,7 @@ target_link_libraries(list-based-ds
         dcds
         list-based-datastructures)
 
-target_compile_features(list-based-ds PUBLIC cxx_std_20)
+target_compile_features(list-based-ds PUBLIC cxx_std_23)
 
 dcds_target_enable_default_warnings(list-based-ds)
 

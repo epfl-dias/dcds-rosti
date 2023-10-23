@@ -1,7 +1,6 @@
 # Pure, regular C++ files
 set(list-based-datastructures_cxx
-        lib/parser-generated/list.cpp
-        lib/un-generated/queue.cpp
+        lib/parser-generated/linked-list.cpp
         )
 
 add_library(list-based-datastructures SHARED
@@ -17,16 +16,19 @@ target_include_directories(list-based-datastructures
         )
 
 target_link_libraries_system(list-based-datastructures
+        benchmark::benchmark
         absl::log
         cuckoo::cuckoo
-        benchmark::benchmark
+        tbbmalloc
+        tbbmalloc_proxy
         )
 
 target_link_libraries(list-based-datastructures
         PUBLIC
         vtune::vtune
+        LLVM::LLVM
         dcds
         ${CMAKE_DL_LIBS}
         )
 
-target_compile_features(list-based-datastructures PUBLIC cxx_std_20)
+target_compile_features(list-based-datastructures PUBLIC cxx_std_23)

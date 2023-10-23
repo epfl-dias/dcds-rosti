@@ -23,12 +23,11 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 
-#include <iostream>
 #include <any>
-#include <dcds/common/types.hpp>
 #include <dcds/builder/builder.hpp>
 #include <dcds/builder/function-builder.hpp>
 #include <dcds/builder/statement-builder.hpp>
+#include <dcds/common/types.hpp>
 #include <dcds/context/DCDSContext.hpp>
 #include <dcds/exporter/jit-container.hpp>
 #include <dcds/util/logging.hpp>
@@ -39,7 +38,6 @@
 #include "dcds/builder/expressions/constant-expressions.hpp"
 #include "dcds/builder/expressions/expressions.hpp"
 #include "dcds/builder/expressions/unary-expressions.hpp"
-
 #include "dcds/builder/optimizer/builder-opt-passes.hpp"
 
 static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder) {
@@ -56,17 +54,14 @@ static bool generateLinkedListNode(const std::shared_ptr<dcds::Builder>& builder
   return true;
 }
 
-static void addPopFrontWithReference(std::shared_ptr<dcds::Builder>& builder){
-
+static void addPopFrontWithReference(std::shared_ptr<dcds::Builder>& builder) {
   auto fn = builder->createFunction("pop_front_reference", dcds::valueType::BOOL);
   fn->addArgument("pop_value", dcds::valueType::INT64, true);
-
 
   auto stmtBuilder = fn->getStatementBuilder();
 
   fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-
 
   // gen: if(tmp != nullptr)
   auto conditionalBlocks =
@@ -74,28 +69,28 @@ static void addPopFrontWithReference(std::shared_ptr<dcds::Builder>& builder){
 
   // ifBlock
   {
-      // save the payload into the pop value.
-      conditionalBlocks.ifBlock->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "pop_value");
+    // save the payload into the pop value.
+    conditionalBlocks.ifBlock->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload",
+                                             "pop_value");
 
-      // get next of the current_head:tmp
-      fn->addTempVariable("tmp_next", dcds::valueType::RECORD_PTR);
-      conditionalBlocks.ifBlock->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_next", "tmp_next");
+    // get next of the current_head:tmp
+    fn->addTempVariable("tmp_next", dcds::valueType::RECORD_PTR);
+    conditionalBlocks.ifBlock->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_next", "tmp_next");
 
-      // Update the head.
-      conditionalBlocks.ifBlock->addUpdateStatement(builder->getAttribute("head"), "tmp_next");
+    // Update the head.
+    conditionalBlocks.ifBlock->addUpdateStatement(builder->getAttribute("head"), "tmp_next");
 
-      // TODO: delete the tmp (dangling record now)
-      // stmtBuilder->addDeleteStatement("tmp");
+    // TODO: delete the tmp (dangling record now)
+    // stmtBuilder->addDeleteStatement("tmp");
 
-      conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
+    conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
   }
 
   // elseBlock
   {
-      // head is null, return false -> no pop.
-      conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
+    // head is null, return false -> no pop.
+    conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
   }
-
 }
 
 static void addFront(std::shared_ptr<dcds::Builder>& builder) {
@@ -107,7 +102,6 @@ static void addFront(std::shared_ptr<dcds::Builder>& builder) {
 
   auto stmtBuilder = fn->getStatementBuilder();
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-
 
   fn->addTempVariable("tmp_payload_ret", dcds::valueType::INT64);
   stmtBuilder->addMethodCall(builder->getRegisteredType("LL_NODE"), "tmp_head", "get_payload", "tmp_payload_ret");
@@ -159,14 +153,14 @@ static void addPushFront(std::shared_ptr<dcds::Builder>& builder) {
   stmtBuilder->addReturnVoidStatement();
 }
 
-static void fnUsage(std::shared_ptr<dcds::Builder> &builder){
+static void fnUsage(std::shared_ptr<dcds::Builder>& builder) {
   dcds::BuilderOptPasses buildOptimizer(builder);
   buildOptimizer.runAll();
 }
 
 static void generateLinkedList() {
   auto builder = std::make_shared<dcds::Builder>("LinkedList");
-  //builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
+  //  builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
   generateLinkedListNode(builder->createType("LL_NODE"));
 
   // list will have a node type, and two attribute of head/tail.
@@ -188,7 +182,6 @@ static void generateLinkedList() {
   builder->build();
   LOG(INFO) << "generateLinkedList -- build-after";
 
-
   LOG(INFO) << "generateLinkedList -- create-instance-before";
   auto instance = builder->createInstance();
   LOG(INFO) << "generateLinkedList -- create-instance-after";
@@ -209,9 +202,7 @@ static void generateLinkedList() {
   instance->op("push_front", 99);
   instance->op("front");
 
-
-
-  //pop_front_reference
+  // pop_front_reference
   uint64_t val = 0;
   instance->op("pop_front_reference", &val);
   LOG(INFO) << val;
@@ -219,7 +210,6 @@ static void generateLinkedList() {
   LOG(INFO) << val;
   instance->op("pop_front_reference", &val);
   LOG(INFO) << val;
-
 
   LOG(INFO) << "generateLinkedList -- DONE";
 }
@@ -241,8 +231,8 @@ static void generateNode() {
   instance->op("get_payload");
 }
 
-template<typename A, typename B>
-void EXPECT_EQ(A a, B b){
+template <typename A, typename B>
+void EXPECT_EQ(A a, B b) {
   assert(a == b);
 }
 
