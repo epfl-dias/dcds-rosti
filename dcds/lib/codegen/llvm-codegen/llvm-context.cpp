@@ -83,6 +83,15 @@ void LLVMCodegenContext::registerAllFunctions() {
   registerFunction("insertMainRecord", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type});
 }
 
+FunctionCallee LLVMCodegenContext::getFunction_printf() const {
+  Type *int32_type = Type::getInt32Ty(getModule()->getContext());
+  PointerType *char_ptr_type = PointerType::get(Type::getInt8Ty(getModule()->getContext()), 0);
+
+  // register printf
+  llvm::FunctionType *printfType = llvm::FunctionType::get(int32_type, {char_ptr_type}, true);
+  return getModule()->getOrInsertFunction("printf", printfType);
+}
+
 void LLVMCodegenContext::createPrintString(const std::string &str) {
   auto stringPtr = this->createStringConstant(str, "");
   this->gen_call(prints, {stringPtr});

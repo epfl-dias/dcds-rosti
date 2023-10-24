@@ -19,45 +19,41 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <benchmark/benchmark.h>
+#ifndef DCDS_DOUBLY_LINKED_LIST_HPP
+#define DCDS_DOUBLY_LINKED_LIST_HPP
 
-#include <dcds/util/logging.hpp>
-#include <iostream>
-#include <libcuckoo/cuckoohash_map.hh>
+#include "dcds/dcds.hpp"
 
-#include "parser-generated/doubly-linked-list.hpp"
-#include "parser-generated/linked-list.hpp"
+namespace dcds_generated {
 
-static void test_linkedList_stack() {
-  auto ll = dcds_generated::Stack();
+class DoublyLinkedList {
+ public:
+  constexpr static auto ds_name = "DoublyLinkedList";
+  constexpr static auto ds_node_name = "DLL_NODE";
 
-  ll.build();
-  ll.optimize();
-  ll.test();
-}
+ public:
+  DoublyLinkedList();
 
-static void test_linkedList_fifo() {
-  auto ll = dcds_generated::FIFO();
+  void build();
+  void optimize();
+  void test();
 
-  ll.build();
-  ll.optimize();
-  ll.test();
-}
+ private:
+  void generateLinkedListNode();
+  void createFunction_empty();
+  void createFunction_pushFront();
+  void createFunction_popFront();
 
-static void test_doubly_linkedList() {
-  auto ll = dcds_generated::DoublyLinkedList();
+  void createFunction_pushBack();
+  void createFunction_popBack();
 
-  ll.build();
-  ll.optimize();
-  ll.test();
-}
+  void createFunction_extract();
+  void createFunction_touch();
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "listBasedDS";
-  test_linkedList_stack();
-  test_linkedList_fifo();
-  test_doubly_linkedList();
-  LOG(INFO) << "------- DONE";
-  return 0;
-}
+ private:
+  std::shared_ptr<dcds::Builder> builder;
+};
+
+}  // namespace dcds_generated
+
+#endif  // DCDS_DOUBLY_LINKED_LIST_HPP

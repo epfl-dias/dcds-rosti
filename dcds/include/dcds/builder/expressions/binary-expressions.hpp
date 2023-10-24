@@ -61,6 +61,27 @@ class SubtractExpression : public BinaryExpression {
   void* accept(ExpressionVisitor* v) override;
 };
 
+class EqualExpression : public BinaryExpression {
+ public:
+  explicit EqualExpression(Expression* left, Expression* right) : BinaryExpression(left, right) {}
+  explicit EqualExpression(const std::shared_ptr<Expression>& left, const std::shared_ptr<Expression>& right)
+      : BinaryExpression(left.get(), right.get()) {}
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] valueType getResultType() const final { return dcds::valueType::BOOL; }
+};
+class NotEqualExpression : public BinaryExpression {
+ public:
+  explicit NotEqualExpression(Expression* left, Expression* right) : BinaryExpression(left, right) {}
+  explicit NotEqualExpression(const std::shared_ptr<Expression>& left, const std::shared_ptr<Expression>& right)
+      : BinaryExpression(left.get(), right.get()) {}
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] valueType getResultType() const final { return dcds::valueType::BOOL; }
+};
+
 }  // namespace dcds::expressions
 
 #endif  // DCDS_BINARY_EXPRESSIONS_HPP

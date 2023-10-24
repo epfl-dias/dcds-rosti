@@ -128,7 +128,7 @@ class LLVMCodegenContext {
   [[nodiscard]] llvm::StructType *CreateCustomStruct(const std::vector<llvm::Type *> &innerTypes) const;
 
   void createPrintString(const std::string &str);
-
+  llvm::FunctionCallee getFunction_printf() const;
   /**
    * Does not involve AllocaInst, but still is a memory position
    * NOTE: 1st elem of Struct is 0!!

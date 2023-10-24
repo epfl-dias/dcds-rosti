@@ -55,6 +55,7 @@ class StatementBuilder {
 
  public:
   void addLogStatement(const std::string &log_string);
+  void addLogStatement(const std::string &log_string, const std::vector<std::shared_ptr<expressions::Expression>> &);
 
   void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &destination);
   void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,

@@ -142,8 +142,11 @@ class MethodCallStatement : public Statement {
 class LogStringStatement : public Statement {
  public:
   explicit LogStringStatement(std::string msg) : Statement(statementType::LOG_STRING), log_string(std::move(msg)) {}
+  explicit LogStringStatement(std::string msg, std::vector<std::shared_ptr<expressions::Expression>> _args)
+      : Statement(statementType::LOG_STRING), log_string(std::move(msg)), args(std::move(_args)) {}
 
   const std::string log_string;
+  const std::vector<std::shared_ptr<expressions::Expression>> args;
 };
 
 class ConditionalStatement : public Statement {

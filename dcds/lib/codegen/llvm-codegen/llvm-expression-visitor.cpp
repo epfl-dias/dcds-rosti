@@ -184,3 +184,30 @@ void* LLVMExpressionVisitor::visit(const expressions::BoolConstant& expr) {
     return codegenEngine->createFalse();
   }
 }
+void* LLVMExpressionVisitor::visit(const expressions::NullPtrConstant& expr) {
+  // is this really a nullptr?
+  // because we have record_ptr mostly, which are 0, so return 0 i think.
+  //  return llvm::ConstantPointerNull::get(Type::getInt8PtrTy(this->codegenEngine->getLLVMContext()));
+  return codegenEngine->createInt64(0);
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
+  LOG(INFO) << "LLVMExpressionVisitor::EqualExpression::visit";
+  auto builder = codegenEngine->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+  CHECK(leftValue->getType()->getTypeID() == rightValue->getType()->getTypeID()) << "Type mismatch";
+
+  return builder->CreateICmpEQ(leftValue, rightValue);
+}
+void* LLVMExpressionVisitor::visit(const expressions::NotEqualExpression& expr) {
+  LOG(INFO) << "LLVMExpressionVisitor::NotEqualExpression::visit";
+  auto builder = codegenEngine->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+  CHECK(leftValue->getType()->getTypeID() == rightValue->getType()->getTypeID()) << "Type mismatch";
+
+  return builder->CreateICmpNE(leftValue, rightValue);
+}

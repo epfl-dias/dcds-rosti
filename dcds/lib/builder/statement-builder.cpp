@@ -135,6 +135,11 @@ void StatementBuilder::addLogStatement(const std::string &log_string) {
   auto rs = std::make_shared<LogStringStatement>(log_string);
   statements.push_back(rs);
 }
+void StatementBuilder::addLogStatement(const std::string &log_string,
+                                       const std::vector<std::shared_ptr<expressions::Expression>> &expr) {
+  auto rs = std::make_shared<LogStringStatement>(log_string, expr);
+  statements.push_back(rs);
+}
 
 std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addInsertStatement(
     const std::string &registered_type_name, const std::string &variable_name) {

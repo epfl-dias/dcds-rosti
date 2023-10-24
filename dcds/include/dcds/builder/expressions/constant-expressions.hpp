@@ -28,7 +28,7 @@ namespace dcds::expressions {
 
 class Constant : public UnaryExpression {
  public:
-  enum class ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE };
+  enum class ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE, NULLPTR };
   explicit Constant(ConstantType constantType) : type(constantType) {}
 
   [[nodiscard]] virtual ConstantType getConstantType() const { return type; }
@@ -93,6 +93,17 @@ class DoubleConstant : public Constant {
 
  private:
   double val;
+};
+
+class NullPtrConstant : public Constant {
+ public:
+  explicit NullPtrConstant() : Constant(Constant::ConstantType::NULLPTR) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::RECORD_PTR; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  //  [[nodiscard]] auto getValue() const { return 0; }
 };
 
 }  // namespace dcds::expressions

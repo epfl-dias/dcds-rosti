@@ -491,7 +491,19 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
   } else if (stmt->stType == dcds::statementType::LOG_STRING) {
     auto logStmt = std::static_pointer_cast<LogStringStatement>(stmt);
-    this->createPrintString(logStmt->log_string);
+    auto stringPtr = this->createStringConstant(logStmt->log_string, "");
+    std::vector<llvm::Value *> generated_expr{stringPtr};
+
+    for (auto &e : logStmt->args) {
+      auto v = this->codegenExpression(builder, fnCtx, e.get());
+      if (v->getType()->isPointerTy()) {
+        v = getBuilder()->CreateLoad(DcdsToLLVMType(e->getResultType()), v);
+      }
+      generated_expr.emplace_back(v);
+    }
+
+    getBuilder()->CreateCall(this->getFunction_printf(), generated_expr);
+
   } else if (stmt->stType == dcds::statementType::YIELD) {
     LOG(INFO) << "StatementType: return";
 
@@ -637,13 +649,17 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
   LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
 
   switch (var_type) {
-    case dcds::valueType::INT64:
-    case dcds::valueType::RECORD_PTR: {
+    case dcds::valueType::INT64: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt64Ty(getLLVMContext()), nullptr, var_name);
       if (has_value) {
         auto value = createInt64(std::any_cast<uint64_t>(init_value));
         getBuilder()->CreateStore(value, vr);
       }
+      return vr;
+    }
+    case dcds::valueType::RECORD_PTR: {
+      auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt64Ty(getLLVMContext()), nullptr, var_name);
+      getBuilder()->CreateStore(createInt64(UINT64_C(0)), vr);
       return vr;
     }
     case dcds::valueType::INT32: {
