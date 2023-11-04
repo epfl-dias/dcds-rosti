@@ -117,7 +117,7 @@ void LLVMCodegen::initializePassManager() {
   theLLVMFPM->doInitialization();
 }
 
-void LLVMCodegen::build(dcds::Builder *builder) {
+void LLVMCodegen::build(dcds::Builder *builder, bool is_nested_type) {
   if (!builder) {
     builder = this->top_level_builder;
   }
@@ -132,19 +132,19 @@ void LLVMCodegen::build(dcds::Builder *builder) {
   this->createDsStructType(builder);
 
   LOG(INFO) << "[LLVMCodegen::build()] buildConstructor";
-  this->buildConstructor(*builder);
+  this->buildConstructor(*builder, is_nested_type);
 
   LOG(INFO) << "[LLVMCodegen::build()] BuildFunctions";
-  this->buildFunctions(builder);
+  this->buildFunctions(builder, is_nested_type);
   LOG(INFO) << "[LLVMCodegen::build()] DONE";
 }
 
-void LLVMCodegen::buildFunctions(dcds::Builder *builder) {
+void LLVMCodegen::buildFunctions(dcds::Builder *builder, bool is_nested_type) {
   LOG(INFO) << "[LLVMCodegen] buildFunctions: # of functions: " << builder->functions.size();
 
   // later: parallelize this loop, but do take care of the context insertion points in parallel function build.
   for (auto &fb : builder->functions) {
-    this->buildOneFunction(builder, fb.second);
+    this->buildOneFunction(builder, fb.second, is_nested_type);
   }
 }
 
@@ -289,14 +289,11 @@ llvm::Function *LLVMCodegen::buildOneFunction_outer(dcds::Builder *builder, std:
   // CcBuilder::injectTxnEnd
 }
 
-void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb) {
+void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb, bool is_nested_type) {
   LOG(INFO) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
 
   // FIXME: How to ensure that this function returns in all paths? and returns with correct type in all paths?
   // FIXME: what about scoping of temporary variables??
-  // FIXME: this would create nested transactions! we need to make sure we dont call txn if there is recursive function.
-
-  bool isMainDs = (builder == this->top_level_builder);
 
   // NOTE: as we don't know the function inner return paths,
   //  lets create a wrapper function which will do the txn stuff,
@@ -304,7 +301,7 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
 
   auto fn_inner = buildOneFunction_inner(builder, fb);
 
-  if (isMainDs) {
+  if (!is_nested_type) {
     // ------ GEN FN_OUTER ------
     // build outer function which would be exposed in symbol table
     auto fn_outer = buildOneFunction_outer(builder, fb, fn_inner);
@@ -318,7 +315,6 @@ void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<Funct
     std::vector<llvm::Type *> fn_outer_args{ptrType, uintPtrType};
 
     // Only wrap va-args for the exposed functions as it is purely used by jit-container only.
-
     // so we have a function R f(void*,void*,void*, A,B,C)
     // we want it wrapped to R f(void*,void*,void*,...)
 
@@ -369,10 +365,10 @@ llvm::Value *LLVMCodegen::codegenExpression(dcds::Builder *builder, function_bui
 }
 
 void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx,
-                                                      std::shared_ptr<Statement> &stmt) {
+                                                      Statement *stmt) {
   LOG(INFO) << "buildStatement_ConditionalStatement";
 
-  auto conditionalStatement = std::static_pointer_cast<ConditionalStatement>(stmt);
+  auto conditionalStatement = reinterpret_cast<ConditionalStatement *>(stmt);
   assert(!conditionalStatement->ifBlock->statements.empty());
 
   llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, conditionalStatement->expr);
@@ -436,20 +432,17 @@ void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, fu
   // NOTE: do we need PHI node (due to SSA) or it can be automatic? and if we do, then how to do it automatically.
 }
 
-void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context &fnCtx,
-                                 std::shared_ptr<Statement> &stmt) {
+void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt) {
   // FIXME: what about scoping of temporary variables??
   LOG(INFO) << "[LLVMCodegen] buildStatement";
 
   auto txnManager = fnCtx.fn->getArg(0);
   auto mainRecord = fnCtx.fn->getArg(1);
   auto txn = fnCtx.fn->getArg(2);
-  size_t fn_arg_idx_st = 3;
 
   // READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, CALL
   if (stmt->stType == dcds::statementType::READ) {
-    LOG(INFO) << "StatementType: read";
-    auto readStmt = std::static_pointer_cast<ReadStatement>(stmt);
+    auto readStmt = reinterpret_cast<ReadStatement *>(stmt);
     CHECK(builder->hasAttribute(readStmt->source_attr)) << "read attribute does not exists";
 
     llvm::Value *destination = this->codegenExpression(builder, fnCtx, readStmt->dest_expr.get());
@@ -464,12 +457,10 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
                    Type::getVoidTy(getLLVMContext()));
 
   } else if (stmt->stType == dcds::statementType::UPDATE) {
-    LOG(INFO) << "StatementType: update";
-    auto updStmt = std::static_pointer_cast<UpdateStatement>(stmt);
+    auto updStmt = reinterpret_cast<UpdateStatement *>(stmt);
     CHECK(builder->hasAttribute(updStmt->destination_attr)) << "write attribute does not exists";
 
     llvm::Value *updateSource;
-
     llvm::Value *source = this->codegenExpression(builder, fnCtx, updStmt->source_expr.get());
 
     if (source->getType()->isPointerTy()) {
@@ -490,7 +481,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
                    Type::getVoidTy(getLLVMContext()));
 
   } else if (stmt->stType == dcds::statementType::LOG_STRING) {
-    auto logStmt = std::static_pointer_cast<LogStringStatement>(stmt);
+    auto logStmt = reinterpret_cast<LogStringStatement *>(stmt);
     auto stringPtr = this->createStringConstant(logStmt->log_string, "");
     std::vector<llvm::Value *> generated_expr{stringPtr};
 
@@ -505,9 +496,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     getBuilder()->CreateCall(this->getFunction_printf(), generated_expr);
 
   } else if (stmt->stType == dcds::statementType::YIELD) {
-    LOG(INFO) << "StatementType: return";
-
-    auto returnStmt = std::static_pointer_cast<ReturnStatement>(stmt);
+    auto returnStmt = reinterpret_cast<ReturnStatement *>(stmt);
 
     if (returnStmt->expr) {
       llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, returnStmt->expr.get());
@@ -531,7 +520,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     getBuilder()->CreateBr(fnCtx.returnBlock);
 
   } else if (stmt->stType == dcds::statementType::CREATE) {
-    auto insStmt = std::static_pointer_cast<InsertStatement>(stmt);
+    auto insStmt = reinterpret_cast<InsertStatement *>(stmt);
 
     // we need to call the constructor of subType
     // should be `builder.getName() + "_constructor"`
@@ -549,13 +538,13 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     getBuilder()->CreateStore(newRecord, dst);
 
   } else if (stmt->stType == dcds::statementType::METHOD_CALL) {
-    LOG(INFO) << "StatementType: METHOD_CALL";
-    auto methodStmt = std::static_pointer_cast<MethodCallStatement>(stmt);
+    auto methodStmt = reinterpret_cast<MethodCallStatement *>(stmt);
 
     // {ds_name}_{function_name}_inner
     // 'inner' because txn is already here from wrapped outer function.
 
-    std::string function_name = methodStmt->object_type_info->getName() + "_" + methodStmt->function_name + "_inner";
+    std::string function_name =
+        methodStmt->function_instance->builder->getName() + "_" + methodStmt->function_instance->getName() + "_inner";
 
     assert(userFunctions.contains(function_name));
     bool doesReturn = true;
@@ -581,7 +570,6 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
         getBuilder()->CreateLoad(llvm::Type::getInt64Ty(getLLVMContext()),
                                  fnCtx.tempVariableMap->operator[](methodStmt->referenced_type_variable));
     callArgs.push_back(referencedRecord);
-
     callArgs.push_back(txn);
 
     for (auto &fArg : methodStmt->function_arguments) {
@@ -618,21 +606,23 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilder> &fb,
                                                   const std::vector<llvm::Type *> &pre_args,
                                                   const std::string &name_prefix, const std::string &name_suffix,
-                                                  llvm::GlobalValue::LinkageTypes linkageType) {
+                                                  llvm::GlobalValue::LinkageTypes linkageType,
+                                                  llvm::Type *override_return_type) {
   //  LOG(INFO) << "genFunctionSignature: " << fb->_name << " | prefix: " << name_prefix << " | suffix: " <<
   //  name_suffix;
   std::vector<llvm::Type *> argTypes(pre_args);
-  llvm::Type *returnType;
+  llvm::Type *returnType = override_return_type;
 
   for (const auto &arg : fb->function_args) {
     argTypes.push_back(DcdsToLLVMType(arg->getType(), arg->is_reference_type));
   }
 
-  if (fb->returnValueType == dcds::valueType::VOID) {
-    returnType = llvm::Type::getVoidTy(getLLVMContext());
-  } else {
-    // LOG(INFO) << "fb->returnValueType: " << fb->returnValueType;
-    returnType = DcdsToLLVMType(fb->returnValueType);
+  if (!override_return_type) {
+    if (fb->returnValueType == dcds::valueType::VOID) {
+      returnType = llvm::Type::getVoidTy(getLLVMContext());
+    } else {
+      returnType = DcdsToLLVMType(fb->returnValueType);
+    }
   }
 
   auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
@@ -753,7 +743,7 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
   std::vector<llvm::Type *> struct_vars;
   for (const auto &a : builder->attributes) {
     // simpleType to type, else have a ptr to it.
-    LOG(INFO) << "attr: " << a.first << a.second->type;
+    LOG(INFO) << "attr: " << a.first << "::" << a.second->type;
     struct_vars.push_back(DcdsToLLVMType(a.second->type));
   }
 
@@ -984,47 +974,44 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
   return fn;
 }
 
-void LLVMCodegen::buildConstructor(dcds::Builder &builder) {
+void LLVMCodegen::buildConstructor(dcds::Builder &builder, bool is_nested_type) {
   // FIXME: get namespace prefix from context? buildContext or runtimeContext?
   //  maybe take it from runtime context to enable cross-DS or intra-DS txns.
   std::string namespace_prefix = "default_namespace";
 
-  bool isMainDs = (&builder == this->top_level_builder);
-  auto linkageType =
-      isMainDs ? llvm::GlobalValue::LinkageTypes::ExternalLinkage : llvm::GlobalValue::LinkageTypes::PrivateLinkage;
+  auto linkageType = is_nested_type ? llvm::GlobalValue::LinkageTypes::PrivateLinkage
+                                    : llvm::GlobalValue::LinkageTypes::ExternalLinkage;
 
   auto namespaceLlvmConstant = this->createStringConstant(namespace_prefix, "txn_namespace_prefix");
 
   auto *fn_constructor_inner = buildConstructorInner(builder);
 
-  auto fn_type = llvm::FunctionType::get(fn_constructor_inner->getReturnType(), std::vector<llvm::Type *>{}, false);
-  auto function_name = builder.getName() + "_constructor";
-  auto fn = llvm::Function::Create(fn_type, linkageType, function_name, theLLVMModule.get());
-  userFunctions.emplace(function_name, fn);
+  if (!is_nested_type) {
+    auto fn_type = llvm::FunctionType::get(fn_constructor_inner->getReturnType(), std::vector<llvm::Type *>{}, false);
+    auto function_name = builder.getName() + "_constructor";
+    auto fn = llvm::Function::Create(fn_type, linkageType, function_name, theLLVMModule.get());
+    userFunctions.emplace(function_name, fn);
 
-  auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);
-  getBuilder()->SetInsertPoint(fn_bb);
+    auto fn_bb = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn);
+    getBuilder()->SetInsertPoint(fn_bb);
 
-  Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
+    Value *fn_res_getTxnManger = this->gen_call(getTxnManager, {namespaceLlvmConstant});
 
-  // FIXME: do we actually need txn here?
-  //  if yes, then create a  inner_function for composed calls so there are no nested transactions,
-  //  otherwise remove it from here.
+    // Begin Txn
+    Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger, this->createFalse()});
 
-  // Begin Txn
-  Value *fn_res_beginTxn = this->gen_call(beginTxn, {fn_res_getTxnManger, this->createFalse()});
+    // Call constructor_inner
+    llvm::Value *inner_fn_res = this->gen_call(fn_constructor_inner, {fn_res_getTxnManger, fn_res_beginTxn});
 
-  // Call constructor_inner
-  llvm::Value *inner_fn_res = this->gen_call(fn_constructor_inner, {fn_res_getTxnManger, fn_res_beginTxn});
+    // Commit Txn
+    this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
 
-  // Commit Txn
-  this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
+    //  this->gen_call(printPtr, {returnDs});
 
-  //  this->gen_call(printPtr, {returnDs});
+    getBuilder()->CreateRet(inner_fn_res);
 
-  getBuilder()->CreateRet(inner_fn_res);
-
-  llvmVerifyFunction(fn);
+    llvmVerifyFunction(fn);
+  }
 
   LOG(INFO) << "buildConstructor DONE";
 }

@@ -38,15 +38,15 @@ void BuilderOptPasses::opt_pass_remove_unused_functions_from_composite_types(boo
   }
 
   builder->for_each_function([&](const std::shared_ptr<FunctionBuilder>& fb) {
-    fb->entryPoint->for_each_statement([&](const std::shared_ptr<Statement>& stmt) {
+    fb->entryPoint->for_each_statement([&](const Statement* stmt) {
       switch (stmt->stType) {
         case statementType::METHOD_CALL: {
-          auto methodCall = std::static_pointer_cast<MethodCallStatement>(stmt);
-          auto typeName = methodCall->object_type_info->getName();
+          auto methodCall = reinterpret_cast<const MethodCallStatement*>(stmt);
+          auto typeName = methodCall->function_instance->builder->getName();
           CHECK(type_fn_usage.contains(typeName))
               << "Method call to an unregistered type in builder? builder: " << builder->getName()
-              << ", unregistered_type: " << methodCall->object_type_info->getName();
-          type_fn_usage[typeName].insert(methodCall->function_name);
+              << ", unregistered_type: " << methodCall->function_instance->builder->getName();
+          type_fn_usage[typeName].insert(methodCall->function_instance->getName());
           break;
         }
         case statementType::CONDITIONAL_STATEMENT:
@@ -55,6 +55,10 @@ void BuilderOptPasses::opt_pass_remove_unused_functions_from_composite_types(boo
         case statementType::UPDATE:
         case statementType::YIELD:
         case statementType::LOG_STRING:
+          break;
+
+        case statementType::CC_LOCK_SHARED:
+        case statementType::CC_LOCK_EXCLUSIVE:
           break;
       }
     });
@@ -91,10 +95,10 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
   }
 
   _builder->for_each_function([&](const std::shared_ptr<FunctionBuilder>& fb) {
-    fb->entryPoint->for_each_statement([&](const std::shared_ptr<Statement>& stmt) {
+    fb->entryPoint->for_each_statement([&](const Statement* stmt) {
       switch (stmt->stType) {
         case statementType::READ: {
-          auto readStmt = std::static_pointer_cast<ReadStatement>(stmt);
+          auto readStmt = reinterpret_cast<const ReadStatement*>(stmt);
           auto action_attribute = readStmt->source_attr;
           assert(stats.contains(action_attribute));
           stats[action_attribute].n_usage++;
@@ -103,7 +107,7 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
           break;
         }
         case statementType::UPDATE: {
-          auto updStmt = std::static_pointer_cast<UpdateStatement>(stmt);
+          auto updStmt = reinterpret_cast<const UpdateStatement*>(stmt);
           auto action_attribute = updStmt->destination_attr;
           assert(stats.contains(action_attribute));
           stats[action_attribute].n_usage++;
@@ -118,6 +122,10 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
         case statementType::CONDITIONAL_STATEMENT:
         case statementType::YIELD:
         case statementType::LOG_STRING:
+          break;
+
+        case statementType::CC_LOCK_SHARED:
+        case statementType::CC_LOCK_EXCLUSIVE:
           break;
       }
     });

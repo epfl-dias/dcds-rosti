@@ -54,12 +54,15 @@ class StatementBuilder {
       : name(std::move(_name)), parent_function(parentFunction), parent_block(parentBlock) {}
 
  public:
+  void print(std::ostream &out, size_t indent_level = 0);
+
+ public:
   void addLogStatement(const std::string &log_string);
   void addLogStatement(const std::string &log_string, const std::vector<std::shared_ptr<expressions::Expression>> &);
 
   void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &destination);
   void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
-                        const std::shared_ptr<expressions::Expression> &destination);
+                        const std::shared_ptr<expressions::LocalVariableExpression> &destination);
 
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &source);
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
@@ -96,36 +99,58 @@ class StatementBuilder {
   auto getParentBlock() { return parent_block; }
   auto getFunction() { return &parent_function; }
 
+  void extractReadSet_recursive(rw_set_t &read_set, rw_set_t &write_set);
+
  private:
   template <class lambda>
   inline void for_each_statement(lambda &&func) {
+    if (this->statements.empty()) return;
     for (const auto &s : this->statements) {
       func(s);
       if (s->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
-        auto conditional = std::static_pointer_cast<ConditionalStatement>(s);
+        auto conditional = reinterpret_cast<const ConditionalStatement *>(s);
         conditional->ifBlock->for_each_statement(func);
         conditional->elseBLock->for_each_statement(func);
       }
     }
   }
+  //  template <class lambda>
+  //  inline void for_each_statement(lambda &&func) const {
+  //    for (const auto &s : this->statements) {
+  //      if(this->statements.empty())
+  //        return;
+  //      func(s);
+  //      if (s->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
+  //        auto conditional = reinterpret_cast<const ConditionalStatement*>(s);
+  //        conditional->ifBlock->for_each_statement(func);
+  //        conditional->elseBLock->for_each_statement(func);
+  //      }
+  //    }
+  //  }
+
+ private:
+  std::shared_ptr<StatementBuilder> clone_deep();
 
  private:
   bool doesReturn = false;
   bool doesHaveMethodCalls = false;
   size_t child_blocks = 0;
-  //  std::deque<std::shared_ptr<StatementBuilder>> child_branches;
-  std::deque<conditional_blocks> child_branches;
+  std::deque<Statement *> statements;
 
   // NOTE: ideally, temporary variables should come here,
   // and then if not in the scope, it should be checked recursively in the call graph above.
 
  private:
   const std::string name;
-  std::deque<std::shared_ptr<Statement>> statements;
 
   FunctionBuilder &parent_function;
   StatementBuilder *parent_block;
+
+  // public:
+  //  friend std::ostream &operator<<(std::ostream &out, const StatementBuilder &sb);
 };
+
+// std::ostream &operator<<(std::ostream &out, const StatementBuilder &sb);
 
 }  // namespace dcds
 

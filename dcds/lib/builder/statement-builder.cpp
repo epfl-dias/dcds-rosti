@@ -40,19 +40,19 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
                                                    destination);
   }
 
-  auto s = std::make_shared<ReadStatement>(attribute->name, this->parent_function.getTempVariable(destination));
+  auto s = new ReadStatement(attribute->name, this->parent_function.getTempVariable(destination));
   statements.push_back(s);
 }
 
 void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
-                                        const std::shared_ptr<expressions::Expression> &destination) {
+                                        const std::shared_ptr<expressions::LocalVariableExpression> &destination) {
   // How do we know if expr is valid?
   // checks?
   if (destination->getResultType() != attribute->type) {
     throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch between attribute and destination variable");
   }
 
-  auto rs = std::make_shared<ReadStatement>(attribute->name, destination);
+  auto rs = new ReadStatement(attribute->name, destination);
   statements.push_back(rs);
 }
 
@@ -79,7 +79,7 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
     source_expr = this->parent_function.getTempVariable(source);
   }
 
-  auto s = std::make_shared<UpdateStatement>(attribute->name, source_expr);
+  auto s = new UpdateStatement(attribute->name, source_expr);
   statements.push_back(s);
 }
 
@@ -91,7 +91,7 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
     throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch between attribute and source expression");
   }
 
-  auto s = std::make_shared<UpdateStatement>(attribute->name, source);
+  auto s = new UpdateStatement(attribute->name, source);
   statements.push_back(s);
 }
 
@@ -103,7 +103,7 @@ void StatementBuilder::addReturnStatement(const std::shared_ptr<expressions::Exp
         "Return type mismatch between return variable and declared return type");
   }
 
-  auto rs = std::make_shared<ReturnStatement>(expr);
+  auto rs = new ReturnStatement(expr);
   statements.push_back(rs);
   this->doesReturn = true;
 }
@@ -126,18 +126,18 @@ void StatementBuilder::addReturnVoidStatement() {
         "Return type mismatch between return variable and declared return type");
   }
 
-  auto rs = std::make_shared<ReturnStatement>(nullptr);
+  auto rs = new ReturnStatement(nullptr);
   statements.push_back(rs);
-  this->doesReturn = true;
+  this->doesReturn = false;  // FIXME: ??
 }
 
 void StatementBuilder::addLogStatement(const std::string &log_string) {
-  auto rs = std::make_shared<LogStringStatement>(log_string);
+  auto rs = new LogStringStatement(log_string);
   statements.push_back(rs);
 }
 void StatementBuilder::addLogStatement(const std::string &log_string,
                                        const std::vector<std::shared_ptr<expressions::Expression>> &expr) {
-  auto rs = std::make_shared<LogStringStatement>(log_string, expr);
+  auto rs = new LogStringStatement(log_string, expr);
   statements.push_back(rs);
 }
 
@@ -150,7 +150,7 @@ std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addI
   // this would call the constructor of the registered_type,
   // and then assigns the returned record_reference to the variable name,
 
-  auto rs = std::make_shared<InsertStatement>(registered_type_name, variable_name);
+  auto rs = new InsertStatement(registered_type_name, variable_name);
   statements.push_back(rs);
   return resultVar;
 }
@@ -246,8 +246,8 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
     }
   }
 
-  auto rs = std::make_shared<MethodCallStatement>(object_type, reference_variable, function_name, return_dest,
-                                                  std::move(arg_vars));
+  auto rs = new MethodCallStatement(object_type->getFunction(function_name), reference_variable, return_dest,
+                                    std::move(arg_vars));
   statements.push_back(rs);
   doesHaveMethodCalls = true;
 }
@@ -257,12 +257,159 @@ StatementBuilder::conditional_blocks StatementBuilder::addConditionalBranch(dcds
 
   auto ifBranch = std::make_shared<StatementBuilder>(this->parent_function, this);
   auto elseBranch = std::make_shared<StatementBuilder>(this->parent_function, this);
-  this->child_blocks++;
+  this->child_blocks += 2;
 
-  child_branches.emplace_back(ifBranch, elseBranch);
+  // child_branches.emplace_back(ifBranch, elseBranch);
 
-  auto rs = std::make_shared<ConditionalStatement>(expr, ifBranch, elseBranch);
+  auto rs = new ConditionalStatement(expr, ifBranch, elseBranch);
   statements.push_back(rs);
 
   return conditional_blocks{ifBranch, elseBranch};
+}
+
+void StatementBuilder::extractReadSet_recursive(rw_set_t &read_set, rw_set_t &write_set) {
+  this->for_each_statement([&](const Statement *stmt) {
+    auto typeName = this->parent_function.builder->getName();
+    LOG(INFO) << "extractReadSet_recursive: " << typeName << "::" << this->parent_function.getName() << ": "
+              << stmt->stType;
+
+    // What about dependent read-write?
+
+    if (stmt->stType == statementType::CONDITIONAL_STATEMENT) {
+      // recurse.
+      auto conditional = reinterpret_cast<const ConditionalStatement *>(stmt);
+      conditional->ifBlock->extractReadSet_recursive(read_set, write_set);
+      conditional->elseBLock->extractReadSet_recursive(read_set, write_set);
+    } else if (stmt->stType == statementType::READ) {
+      auto readStmt = reinterpret_cast<const ReadStatement *>(stmt);
+      read_set[typeName].insert(readStmt->source_attr);
+    } else if (stmt->stType == statementType::UPDATE) {
+      auto updStmt = reinterpret_cast<const UpdateStatement *>(stmt);
+      write_set[typeName].insert(updStmt->destination_attr);
+    } else if (stmt->stType == statementType::METHOD_CALL) {
+      auto method = reinterpret_cast<const MethodCallStatement *>(stmt);
+      method->function_instance->entryPoint->extractReadSet_recursive(read_set, write_set);
+    }
+    //    else {
+    //      LOG(INFO) << "[extractReadSet_recursive] Ignoring statement type: " << stmt->stType;
+    //    }
+  });
+}
+
+static void indent_p(std::ostream &out, size_t indent_level) {
+  for (auto i = 0; i < indent_level; i++) {
+    out << "\t";
+  }
+}
+
+void StatementBuilder::print(std::ostream &out, size_t indent_level) {
+  for (const auto &s : this->statements) {
+    indent_p(out, indent_level);
+    out << "[" << s->stType << "]\t";
+
+    if (s->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
+      auto conditional = reinterpret_cast<const ConditionalStatement *>(s);
+      // auto conditional = std::static_pointer_cast<ConditionalStatement>(s);
+      out << std::endl;
+      auto curr_indent = indent_level + 1;
+      indent_p(out, curr_indent);
+      out << "if: " << conditional->expr->toString() << std::endl;
+
+      indent_p(out, curr_indent);
+      out << "then:" << std::endl;
+      conditional->ifBlock->print(out, curr_indent + 1);
+      if (!(conditional->elseBLock->statements.empty())) {
+        indent_p(out, curr_indent);
+        out << "else:" << std::endl;
+        conditional->elseBLock->print(out, curr_indent + 1);
+      }
+
+    } else if (s->stType == dcds::statementType::READ) {
+      auto st = reinterpret_cast<const ReadStatement *>(s);
+      // auto st = std::static_pointer_cast<ReadStatement>(s);
+      //      LOG(INFO) << "HERE";
+      //      LOG(INFO) << st;
+      //      LOG(INFO) << st->dest_expr.operator bool();
+      //      LOG(INFO) << st->dest_expr->getName();
+      out << "src: " << st->source_attr << ", dst: " << st->dest_expr->toString();
+
+    } else if (s->stType == statementType::UPDATE) {
+      auto st = reinterpret_cast<const UpdateStatement *>(s);
+      // auto st = std::static_pointer_cast<UpdateStatement>(s);
+      out << "src: " << st->source_expr->toString() << ", dst: " << st->destination_attr;
+
+    } else if (s->stType == statementType::CREATE) {
+      auto st = reinterpret_cast<const InsertStatement *>(s);
+      // auto st = std::static_pointer_cast<InsertStatement>(s);
+      out << st->destination_var << " = " << st->type_name << "()";
+
+    } else if (s->stType == dcds::statementType::METHOD_CALL) {
+      auto st = reinterpret_cast<const MethodCallStatement *>(s);
+      // auto st = std::static_pointer_cast<MethodCallStatement>(s);
+      if (st->has_return_dest) {
+        out << st->return_dest->toString() << " = ";
+      }
+      out << st->referenced_type_variable << "(" << st->function_instance->builder->getName() << ")";
+      out << "->" << st->function_instance->getName() << "(";
+      for (auto i = 0; i < st->function_arguments.size(); i++) {
+        out << st->function_arguments[i]->toString();
+        if (i != st->function_arguments.size() - 1) {
+          out << ", ";
+        }
+      }
+      out << ")" << std::endl;
+      st->function_instance->print(out, indent_level + 1);
+
+    } else if (s->stType == dcds::statementType::YIELD) {
+      auto st = reinterpret_cast<const ReturnStatement *>(s);
+      // auto st = std::static_pointer_cast<ReturnStatement>(s);
+      if (st->expr)  // non-void return
+        out << st->expr->toString();
+      else
+        out << "VOID";
+
+    } else if (s->stType == dcds::statementType::CC_LOCK_EXCLUSIVE ||
+               s->stType == dcds::statementType::CC_LOCK_SHARED) {
+      auto st = reinterpret_cast<const LockStatement *>(s);
+      // auto st = std::static_pointer_cast<LockStatement>(s);
+      out << " attribute: " << st->type_name << "::" << st->attribute;
+    }
+
+    out << std::endl;
+  }
+}
+
+std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
+  // NOTE: this is not a clean way, if we can avoid this, that would be the best option! didn't go through copy
+  // constructor route as quite doubtful on it for now.
+  LOG(INFO) << "here";
+
+  // do we need new name for it?
+  auto ret = std::make_shared<StatementBuilder>(this->parent_function, this->parent_block, this->name);
+
+  ret->child_blocks = this->child_blocks;
+  ret->doesReturn = this->doesReturn;
+  ret->doesHaveMethodCalls = this->doesHaveMethodCalls;
+
+  // copy statements
+  // what if statements within are keeping something important or shared ptr? shouldnt it call clone method of
+  // statement?
+  LOG(INFO) << "sz: " << this->statements.size();
+
+  for (auto st : this->statements) {
+    LOG(INFO) << "Cloning : " << st->stType;
+    if (st->stType == statementType::CONDITIONAL_STATEMENT) {
+      auto cd = reinterpret_cast<ConditionalStatement *>(st);
+
+      ret->statements.emplace_back(new ConditionalStatement(const_cast<dcds::expressions::Expression *>(cd->expr),
+                                                            cd->ifBlock->clone_deep(),
+                                                            cd->elseBLock ? cd->elseBLock->clone_deep() : nullptr));
+
+    } else {
+      ret->statements.emplace_back(st->clone());
+    }
+  }
+  LOG(INFO) << "here-done";
+
+  return ret;
 }

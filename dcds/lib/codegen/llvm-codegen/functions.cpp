@@ -172,9 +172,10 @@ uintptr_t extractRecordFromDsContainer(void* container) {
 void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* dst, size_t attributeIdx) {
   auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
   auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
-  LOG(INFO) << "[table_read_attribute] mainRecordActual: " << _mainRecord;
   auto storageTable = mainRecord.getTable();
   auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
+
+  LOG(INFO) << "[table_read_attribute][" << storageTable->name() << "] mainRecordActual: " << _mainRecord;
 
   // required args:
   // - mainRecord,

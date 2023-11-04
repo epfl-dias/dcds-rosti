@@ -31,6 +31,8 @@
 
 namespace dcds {
 
+std::atomic<size_t> Builder::type_id_src = 0;
+
 static inline void isValidFunctionName(const std::string& functionName) {
   LOG(INFO) << "[isValidFunctionName]: " + functionName;
   if (functionName.starts_with("get_") || functionName.starts_with("set_")) {
@@ -56,6 +58,13 @@ std::shared_ptr<FunctionBuilder> Builder::createFunction(const std::string& func
   auto f = std::make_shared<FunctionBuilder>(this, functionName, returnType);
   this->functions.emplace(functionName, f);
   return f;
+}
+void Builder::addFunction(std::shared_ptr<FunctionBuilder>& f) {
+  if (this->functions.contains(f->getName())) {
+    throw dcds::exceptions::dcds_dynamic_exception("Function with same name already exists");
+  }
+  assert(f->builder->getTypeID() == this->getTypeID());
+  this->functions.emplace(f->getName(), f);
 }
 
 void Builder::generateGetter(const std::shared_ptr<dcds::SimpleAttribute>& attribute) {
@@ -106,31 +115,26 @@ void Builder::generateSetter(const std::string& attribute_name) {
   this->generateSetter(std::static_pointer_cast<SimpleAttribute>(attribute));
 }
 
-void Builder::build_no_jit() {
-  LOG(INFO) << "Generating \"" << this->getName() << "\" data structure";
-  LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
-
-  // FIXME: for composed types, this should cascade also.
-
-  // FIXME:
-  //  if(!codegen_engine){
-  //    codegen_engine = context->getCodegenEngine();
-  //  }
+void Builder::build_no_jit(std::shared_ptr<Codegen>& engine, bool is_nested_type) {
+  // FIXME: do we need this to clone the sub-type builders?
 
   if (!registered_subtypes.empty()) {
-    LOG(INFO) << "Building sub-types first";
-    // if there are registered subtypes, should be built them separate, or as you go?
     for (auto& rt : registered_subtypes) {
+      LOG(INFO) << "Building sub-type: " << rt.first;
       rt.second->context = context;
-      assert(rt.second.get());
-      codegen_engine->build(rt.second.get());
+      assert(rt.second);
+      rt.second->build_no_jit(engine, true);
     }
   }
 
-  codegen_engine->build(this);
+  // after all the syb types have been built, build this.
+  engine->build(this, is_nested_type);
 }
 
 void Builder::build() {
+  LOG(INFO) << "Generating \"" << this->getName() << "\" data structure";
+  LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
+
   if (is_jit_generated) {
     throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
   }
@@ -139,8 +143,7 @@ void Builder::build() {
     codegen_engine = std::make_shared<LLVMCodegen>(this);
   }
 
-  this->build_no_jit();
-  //  codegen_engine->build(this);
+  this->build_no_jit(codegen_engine, false);
 
   LOG(INFO) << "[Builder::build()] -- jit-before";
   codegen_engine->jitCompileAndLoad();

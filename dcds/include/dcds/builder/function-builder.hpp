@@ -143,22 +143,11 @@ class FunctionBuilder : remove_copy {
     //    LOG(INFO) << "\t# of statements: " << statements.size();
   }
 
- private:
-  std::shared_ptr<FunctionBuilder> cloneShared(dcds::Builder *ds_builder) {
-    auto f = std::make_shared<FunctionBuilder>(ds_builder, this->_name, this->returnValueType);
+ public:
+  std::pair<rw_set_t, rw_set_t> extractReadWriteSet();
 
-    for (const auto &fa : this->function_args) {
-      f->function_args.emplace_back(std::make_shared<expressions::FunctionArgumentExpression>(*(fa)));
-    }
-    for (const auto &tv : this->temp_variables) {
-      f->temp_variables.emplace(tv.first, std::make_shared<expressions::TemporaryVariableExpression>(*(tv.second)));
-    }
-    assert(false && " todo clone statements");
-    //    for (auto &s : this->statements) {
-    //      f->statements.emplace_back(std::make_shared<Statement>(*s));
-    //    }
-    return f;
-  }
+ private:
+  std::shared_ptr<FunctionBuilder> cloneShared(dcds::Builder *ds_builder = nullptr);
 
  private:
   inline void isValidVarAddition(const std::string &name) {
@@ -186,14 +175,24 @@ class FunctionBuilder : remove_copy {
 
  private:
   dcds::Builder *builder;  // convert to shared_ptr
-  const std::string _name;
+
+  std::string _name;
+  const size_t function_id;
   const dcds::valueType returnValueType;
 
   std::vector<std::shared_ptr<expressions::FunctionArgumentExpression>> function_args;
   std::map<std::string, std::shared_ptr<expressions::TemporaryVariableExpression>> temp_variables;
   std::shared_ptr<StatementBuilder> entryPoint;
-  //  std::deque<std::shared_ptr<Statement>> statements;
+
   bool _is_always_inline = false;
+
+  size_t cloned_src_id{};
+
+ public:
+  void print(std::ostream &out, size_t indent_level = 0);
+
+ private:
+  static std::atomic<size_t> id_src;
 };
 
 }  // namespace dcds

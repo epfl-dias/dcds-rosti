@@ -53,6 +53,7 @@ class JitContainer;
 class Builder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;
+  friend class FunctionBuilder;
   friend class BuilderOptPasses;
 
  public:
@@ -60,11 +61,12 @@ class Builder : remove_copy {
   /// \param builderContext        DCDS Context for this builder
   /// \param name    Name of the data structure for this builder
   explicit Builder(std::shared_ptr<dcds::DCDSContext>& builderContext, std::string name)
-      : context(builderContext), dataStructureName(std::move(name)) {}
+      : context(builderContext), dataStructureName(std::move(name)), type_id(type_id_src.fetch_add(1)) {}
 
   ///
   /// \param name    Name of the data structure for this builder
-  explicit Builder(std::string name) : context({}), dataStructureName(std::move(name)) {}
+  explicit Builder(std::string name)
+      : context({}), dataStructureName(std::move(name)), type_id(type_id_src.fetch_add(1)) {}
 
   ///
   /// \return Name of the data structure for this builder
@@ -103,6 +105,9 @@ class Builder : remove_copy {
       return false;
     }
   }
+
+ private:
+  void addFunction(std::shared_ptr<FunctionBuilder> &f);
 
  public:
   //  auto addConstructorWithArguments(const std::string& attribute_name){
@@ -202,7 +207,7 @@ class Builder : remove_copy {
   // CODEGEN
  public:
   void build();
-  void build_no_jit();
+
   JitContainer* createInstance();
 
   void addHint(hints::BuilderHints hint) {
@@ -227,6 +232,8 @@ class Builder : remove_copy {
   }
 
  private:
+  void build_no_jit(std::shared_ptr<Codegen> &codegen_engine, bool is_nested_type = false);
+ private:
   std::shared_ptr<DCDSContext> context;
   const std::string dataStructureName;
 
@@ -242,6 +249,14 @@ class Builder : remove_copy {
 
  private:
   bool is_multi_threaded = true;
+
+  const size_t type_id;
+
+ public:
+  auto getTypeID() const { return type_id; }
+
+ private:
+  static std::atomic<size_t> type_id_src;
 };
 
 }  // namespace dcds

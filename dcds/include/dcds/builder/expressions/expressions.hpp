@@ -22,6 +22,9 @@
 #ifndef DCDS_EXPRESSIONS_HPP
 #define DCDS_EXPRESSIONS_HPP
 
+#include <sstream>
+#include <string>
+
 #include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 
@@ -46,6 +49,8 @@ class Expression {
   [[nodiscard]] virtual valueType getResultType() const = 0;  // Method to get the result type
 
   virtual void *accept(ExpressionVisitor *v) = 0;
+
+  virtual std::string toString() const = 0;
 
  public:
   // Utilities

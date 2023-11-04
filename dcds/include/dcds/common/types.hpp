@@ -36,7 +36,7 @@ enum class VAR_SOURCE_TYPE : uint32_t { DS_ATTRIBUTE, TEMPORARY_VARIABLE, FUNCTI
 
 inline std::ostream &operator<<(std::ostream &os, dcds::valueType ty) {
   // prefix?
-  os << "dcds::valueType::";
+  // os << "dcds::valueType::";
   switch (ty) {
     case dcds::valueType::INT64:
       os << "INT64";

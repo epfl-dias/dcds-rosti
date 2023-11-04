@@ -82,31 +82,6 @@ class RecordReference {
 
 using record_reference_t = RecordReference;
 
-// class RecordReference {
-//  public:
-//   auto operator()() { return record; }
-//   auto operator->() { return record; }
-//
-//   explicit RecordReference() : record() {}
-//
-//   RecordReference &operator=(RecordReference other) {
-//     this->record.swap(other.record);
-//     return *this;
-//   }
-//
-//  private:
-//   explicit RecordReference(std::shared_ptr<record_metadata_t> r) : record(std::move(r)) {}
-//
-//   uintptr_t getRawPtr(){
-//     return reinterpret_cast<uintptr_t>(record.get());
-//   }
-//
-//  private:
-//   std::shared_ptr<record_metadata_t> record;
-//
-//   friend class Table;
-// };
-
 // Row store (single version)
 class Table {
  public:

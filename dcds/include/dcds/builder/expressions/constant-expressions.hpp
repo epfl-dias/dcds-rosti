@@ -28,7 +28,7 @@ namespace dcds::expressions {
 
 class Constant : public UnaryExpression {
  public:
-  enum class ConstantType { INT, INT64, BOOL, FLOAT, DOUBLE, NULLPTR };
+  enum class ConstantType { INT32, INT64, BOOL, FLOAT, DOUBLE, NULLPTR };
   explicit Constant(ConstantType constantType) : type(constantType) {}
 
   [[nodiscard]] virtual ConstantType getConstantType() const { return type; }
@@ -48,6 +48,7 @@ class Int64Constant : public Constant {
   void* accept(ExpressionVisitor* v) override;
 
   [[nodiscard]] auto getValue() const { return val; }
+  [[nodiscard]] std::string toString() const override { return "INT64_C{" + std::to_string(val) + "}"; }
 
  private:
   int64_t val;
@@ -62,6 +63,7 @@ class BoolConstant : public Constant {
   void* accept(ExpressionVisitor* v) override;
 
   [[nodiscard]] auto getValue() const { return val; }
+  [[nodiscard]] std::string toString() const override { return "BOOL_C{" + std::string{val ? "true" : "false"} + "}"; }
 
  private:
   bool val;
@@ -76,6 +78,7 @@ class FloatConstant : public Constant {
   void* accept(ExpressionVisitor* v) override;
 
   [[nodiscard]] auto getValue() const { return val; }
+  [[nodiscard]] std::string toString() const override { return "FLOAT_C{" + std::to_string(val) + "}"; }
 
  private:
   float val;
@@ -91,6 +94,8 @@ class DoubleConstant : public Constant {
 
   [[nodiscard]] auto getValue() const { return val; }
 
+  [[nodiscard]] std::string toString() const override { return "DOUBLE_C{" + std::to_string(val) + "}"; }
+
  private:
   double val;
 };
@@ -102,6 +107,8 @@ class NullPtrConstant : public Constant {
   [[nodiscard]] valueType getResultType() const override { return valueType::RECORD_PTR; }
 
   void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] std::string toString() const override { return "NULLPTR_C"; }
 
   //  [[nodiscard]] auto getValue() const { return 0; }
 };

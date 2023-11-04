@@ -28,7 +28,7 @@ namespace dcds {
 
 class Codegen {
  public:
-  virtual void build(dcds::Builder* _builder) = 0;
+  virtual void build(dcds::Builder* _builder, bool is_nested_type = false) = 0;
   virtual void jitCompileAndLoad() = 0;
   virtual void runOptimizationPasses() = 0;
 

@@ -106,7 +106,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
     this->availableFunctions.clear();
   }
 
-  void build(dcds::Builder *builder) override;
+  void build(dcds::Builder *builder, bool is_nested_type) override;
   void saveToFile(const std::string &filename) override;
   void jitCompileAndLoad() override;
 
@@ -140,11 +140,11 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   void createDsStructType(dcds::Builder *builder);
   Value *initializeDsValueStructDefault(dcds::Builder &builder);
 
-  void buildConstructor(dcds::Builder &builder);
+  void buildConstructor(dcds::Builder &builder, bool is_nested_type);
   llvm::Function *buildConstructorInner(dcds::Builder &builder);
   void buildDestructor();
-  void buildFunctions(dcds::Builder *builder);
-  void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
+  void buildFunctions(dcds::Builder *builder, bool is_nested_type);
+  void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb, bool is_nested_type);
   llvm::Function *buildOneFunction_inner(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
   llvm::Function *buildOneFunction_outer(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
                                          llvm::Function *fn_inner);
@@ -154,7 +154,8 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   llvm::Function *genFunctionSignature(
       std::shared_ptr<FunctionBuilder> &fb, const std::vector<llvm::Type *> &pre_args = {},
       const std::string &name_prefix = "", const std::string &name_suffix = "",
-      llvm::GlobalValue::LinkageTypes linkageType = llvm::GlobalValue::LinkageTypes::ExternalLinkage);
+      llvm::GlobalValue::LinkageTypes linkageType = llvm::GlobalValue::LinkageTypes::ExternalLinkage,
+      llvm::Type *override_return_type = nullptr);
 
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
@@ -164,9 +165,8 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
                          std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn, llvm::BasicBlock *basicBlock,
                          std::map<std::string, llvm::Value *> &tempVariableMap);
 
-  void buildStatement(dcds::Builder *builder, function_build_context &fnCtx, std::shared_ptr<Statement> &stmt);
-  void buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx,
-                                           std::shared_ptr<Statement> &stmt);
+  void buildStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
+  void buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
 
   llvm::Value *codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
                                  const dcds::expressions::Expression *expr);

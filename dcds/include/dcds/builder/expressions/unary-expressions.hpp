@@ -57,6 +57,8 @@ class IsEvenExpression : public UnaryExpression {
 
   void* accept(ExpressionVisitor* v) override;
 
+  [[nodiscard]] std::string toString() const override;
+
  private:
   Expression* expr;
 };
@@ -71,6 +73,7 @@ class IsNullExpression : public UnaryExpression {
   [[nodiscard]] Expression* getExpression() const override { return expr; }
 
   void* accept(ExpressionVisitor* v) override;
+  [[nodiscard]] std::string toString() const override;
 
  private:
   Expression* expr;
@@ -86,6 +89,7 @@ class IsNotNullExpression : public UnaryExpression {
   [[nodiscard]] Expression* getExpression() const override { return expr; }
 
   void* accept(ExpressionVisitor* v) override;
+  [[nodiscard]] std::string toString() const override;
 
  private:
   Expression* expr;
@@ -108,6 +112,7 @@ class LocalVariableExpression : public UnaryExpression {
   [[nodiscard]] valueType getResultType() const override { return var_type; }
 
   [[nodiscard]] Expression* getExpression() const override { assert(false && "how come here?"); }
+  [[nodiscard]] std::string toString() const override;
 
  public:
   const std::string var_name;
@@ -132,6 +137,7 @@ class TemporaryVariableExpression : public LocalVariableExpression {
         objectType(std::move(type)) {}
 
   void* accept(ExpressionVisitor* v) override;
+  [[nodiscard]] std::string toString() const override;
 
  public:
   const std::any var_default_value{};
@@ -146,7 +152,9 @@ class FunctionArgumentExpression : public LocalVariableExpression {
         is_reference_type(pass_by_reference) {}
 
   void* accept(ExpressionVisitor* v) override;
+  [[nodiscard]] std::string toString() const override;
 
+ public:
   const bool is_reference_type;
 };
 
