@@ -107,8 +107,7 @@ void LLVMCodegenContext::createPrintString(const std::string &str) {
 // }
 
 llvm::Value *LLVMCodegenContext::createStringConstant(const std::string &value, const std::string &var_name) const {
-  // FIXME: Currently a hack, no idea if it is good thing to do like this or do it the proper way.
-  return getBuilder()->CreateGlobalStringPtr(value);
+  return getBuilder()->CreateGlobalStringPtr(value, var_name, 0, getModule());
 }
 
 llvm::StructType *LLVMCodegenContext::getVaListStructType() {
@@ -330,9 +329,6 @@ void LLVMCodegenContext::registerFunction(const char *funcName, Function *func) 
 void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm::Type *returnType,
                                           const std::vector<llvm::Type *> &args, bool always_inline,
                                           llvm::GlobalValue::LinkageTypes linkageType) {
-  //  auto fn_type = llvm::FunctionType::get(returnType, argTypes, false);
-  //  auto fn =llvm::Function::Create(fn_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, fb->_name,
-  //  theLLVMModule.get()); fn->addFnAttr(llvm::Attribute::AlwaysInline);
   LOG(INFO) << "[LLVMCodegenContext] registerFunction: ver2: " << function_name;
 
   assert(returnType);
