@@ -16,6 +16,8 @@ set(dcds_cxx
         lib/codegen/llvm-codegen/llvm-jit.cpp
         lib/codegen/llvm-codegen/functions.cpp
         lib/codegen/llvm-codegen/llvm-expression-visitor.cpp
+        lib/codegen/llvm-codegen/llvm-utils-conditionals.cpp
+        lib/codegen/llvm-codegen/llvm-utils-loops.cpp
 
         # Common
         lib/common/exceptions.cpp

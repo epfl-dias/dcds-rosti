@@ -64,6 +64,12 @@
 
 std::string getFunctionName(void *f);
 
+class While;
+class DoWhile;
+class if_branch;
+
+using value_t = llvm::Value *;
+
 class LLVMCodegenContext {
  private:
   const std::string moduleName;
@@ -179,6 +185,12 @@ class LLVMCodegenContext {
 
   /*virtual*/ llvm::Value *gen_call(llvm::Function *func, const std::vector<llvm::Value *> &args) const;
 
+  While gen_while(std::function<value_t()> cond);
+  [[nodiscard]] DoWhile gen_do(std::function<void()> whileBody);
+
+  if_branch gen_if(value_t cond);
+  if_branch gen_if(value_t cond, llvm::BasicBlock *afterBB);
+
   template <typename, typename = void>
   static constexpr bool is_type_complete_v = false;
 
@@ -190,10 +202,10 @@ class LLVMCodegenContext {
     } else if constexpr (std::is_pointer_v<T>) {
       //      LOG(INFO) << "Void*";
       if constexpr (std::is_void_v<std::remove_cv_t<std::remove_pointer_t<T>>>) {
-        // No void ptr type in llvm ir
+        // No void ptr type in llvm IR
         return llvm::PointerType::getUnqual(toLLVM<char>());
       } else if (!is_type_complete_v<std::remove_pointer_t<T>>) {
-        // No void ptr type in llvm ir
+        // No void ptr type in llvm IR
         return llvm::PointerType::getUnqual(toLLVM<char>());
       } else {
         return llvm::PointerType::getUnqual(toLLVM<std::remove_cv_t<std::remove_pointer_t<T>>>());

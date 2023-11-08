@@ -27,6 +27,8 @@
 #include <vector>
 
 #include "dcds/codegen/llvm-codegen/functions.hpp"
+#include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
+#include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 
 using namespace llvm;
 
@@ -453,6 +455,13 @@ llvm::Value *LLVMCodegenContext::createStringArray(const std::vector<std::string
 
   return stringArray;
 }
+
+While LLVMCodegenContext::gen_while(std::function<value_t()> cond) { return {std::move(cond), this}; }
+
+DoWhile LLVMCodegenContext::gen_do(std::function<void()> whileBody) { return {std::move(whileBody), this}; }
+
+if_branch LLVMCodegenContext::gen_if(value_t cond) { return {cond, this}; }
+if_branch LLVMCodegenContext::gen_if(value_t cond, llvm::BasicBlock *afterBB) { return {cond, this, afterBB}; }
 
 std::string getFunctionName(void *f) {
   Dl_info info{};

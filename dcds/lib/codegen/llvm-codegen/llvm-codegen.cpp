@@ -30,6 +30,8 @@
 #include "dcds/codegen/llvm-codegen/expression-codegen/llvm-expression-visitor.hpp"
 #include "dcds/codegen/llvm-codegen/functions.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-jit.hpp"
+#include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
+#include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 
 namespace dcds {
 
@@ -207,7 +209,7 @@ llvm::Function *LLVMCodegen::buildOneFunction_inner(dcds::Builder *builder, std:
   getBuilder()->SetInsertPoint(fn_inner_BB);
 
   // 3- allocate temporary variables.
-  LOG(INFO) << "codegen- temporary variables";
+  LOG(INFO) << "codegen-temporary variables";
   auto variableCodeMap = this->allocateTemporaryVariables(fb, fn_inner_BB);
 
   // 4- codegen all statements
@@ -445,7 +447,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     auto readStmt = reinterpret_cast<ReadStatement *>(stmt);
     CHECK(builder->hasAttribute(readStmt->source_attr)) << "read attribute does not exists";
 
-    llvm::Value *destination = this->codegenExpression(builder, fnCtx, readStmt->dest_expr.get());
+    llvm::Value *destination = this->codegenExpression(fnCtx, readStmt->dest_expr.get());
 
     //    extern "C" void table_read_attribute(
     //    void* _txnManager, uintptr_t _mainRecord,
@@ -461,7 +463,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     CHECK(builder->hasAttribute(updStmt->destination_attr)) << "write attribute does not exists";
 
     llvm::Value *updateSource;
-    llvm::Value *source = this->codegenExpression(builder, fnCtx, updStmt->source_expr.get());
+    llvm::Value *source = this->codegenExpression(fnCtx, updStmt->source_expr.get());
 
     if (source->getType()->isPointerTy()) {
       updateSource = getBuilder()->CreateBitCast(source, llvm::Type::getInt8PtrTy(getLLVMContext()));
@@ -486,7 +488,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     std::vector<llvm::Value *> generated_expr{stringPtr};
 
     for (auto &e : logStmt->args) {
-      auto v = this->codegenExpression(builder, fnCtx, e.get());
+      auto v = this->codegenExpression(fnCtx, e.get());
       if (v->getType()->isPointerTy()) {
         v = getBuilder()->CreateLoad(DcdsToLLVMType(e->getResultType()), v);
       }
@@ -499,8 +501,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     auto returnStmt = reinterpret_cast<ReturnStatement *>(stmt);
 
     if (returnStmt->expr) {
-      llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, returnStmt->expr.get());
-
+      llvm::Value *exprResult = this->codegenExpression(fnCtx, returnStmt->expr.get());
       llvm::Value *retValue;
 
       if (exprResult->getType()->isPointerTy()) {
@@ -574,7 +575,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
 
     for (auto &fArg : methodStmt->function_arguments) {
       // FIXME: there might be issue if the function expects pass by reference?
-      llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, fArg.get());
+      llvm::Value *exprResult = this->codegenExpression(fnCtx, fArg.get());
 
       if (llvm::isa<llvm::AllocaInst>(exprResult)) {
         // Temporary variables might be AllocaInst, and need to be loaded before use or passing to function by value.
@@ -608,8 +609,6 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
                                                   const std::string &name_prefix, const std::string &name_suffix,
                                                   llvm::GlobalValue::LinkageTypes linkageType,
                                                   llvm::Type *override_return_type) {
-  //  LOG(INFO) << "genFunctionSignature: " << fb->_name << " | prefix: " << name_prefix << " | suffix: " <<
-  //  name_suffix;
   std::vector<llvm::Type *> argTypes(pre_args);
   llvm::Type *returnType = override_return_type;
 
@@ -636,7 +635,8 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
 
 llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valueType var_type, std::any init_value) {
   bool has_value = init_value.has_value();
-  LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << " | has_value: " << has_value;
+  LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << "::" << var_type
+            << " | has_value: " << has_value;
 
   switch (var_type) {
     case dcds::valueType::INT64: {

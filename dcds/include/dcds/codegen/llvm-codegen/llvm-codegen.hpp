@@ -168,8 +168,7 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   void buildStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
   void buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
 
-  llvm::Value *codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
-                                 const dcds::expressions::Expression *expr);
+  llvm::Value *codegenExpression(function_build_context &fnCtx, const dcds::expressions::Expression *expr);
 
   llvm::Type *DcdsToLLVMType(dcds::valueType dcds_type, bool is_reference = false);
 
