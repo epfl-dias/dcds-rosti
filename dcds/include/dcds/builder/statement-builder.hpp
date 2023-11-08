@@ -99,7 +99,7 @@ class StatementBuilder {
   auto getParentBlock() { return parent_block; }
   auto getFunction() { return &parent_function; }
 
-  void extractReadSet_recursive(rw_set_t &read_set, rw_set_t &write_set);
+  void extractReadWriteSet_recursive(rw_set_t &read_set, rw_set_t &write_set);
 
  private:
   template <class lambda>

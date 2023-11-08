@@ -146,6 +146,8 @@ class FunctionBuilder : remove_copy {
  public:
   std::pair<rw_set_t, rw_set_t> extractReadWriteSet();
 
+  bool isReadOnly();
+
  private:
   std::shared_ptr<FunctionBuilder> cloneShared(dcds::Builder *ds_builder = nullptr);
 

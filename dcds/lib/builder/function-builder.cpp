@@ -66,9 +66,14 @@ std::pair<rw_set_t, rw_set_t> FunctionBuilder::extractReadWriteSet() {
   rw_set_t read_set;   // <typeName, std:set<attributeName>>
   rw_set_t write_set;  // <typeName, std::set<attributeName>>
 
-  this->entryPoint->extractReadSet_recursive(read_set, write_set);
+  this->entryPoint->extractReadWriteSet_recursive(read_set, write_set);
 
   return {read_set, write_set};
+}
+
+bool FunctionBuilder::isReadOnly() {
+  auto [readSet, writeSet] = this->extractReadWriteSet();
+  return writeSet.empty();
 }
 
 static void indent_p(std::ostream &out, size_t indent_level) {

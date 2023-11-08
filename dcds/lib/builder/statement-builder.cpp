@@ -267,10 +267,10 @@ StatementBuilder::conditional_blocks StatementBuilder::addConditionalBranch(dcds
   return conditional_blocks{ifBranch, elseBranch};
 }
 
-void StatementBuilder::extractReadSet_recursive(rw_set_t &read_set, rw_set_t &write_set) {
+void StatementBuilder::extractReadWriteSet_recursive(rw_set_t &read_set, rw_set_t &write_set) {
   this->for_each_statement([&](const Statement *stmt) {
     auto typeName = this->parent_function.builder->getName();
-    LOG(INFO) << "extractReadSet_recursive: " << typeName << "::" << this->parent_function.getName() << ": "
+    LOG(INFO) << "extractReadWriteSet_recursive: " << typeName << "::" << this->parent_function.getName() << ": "
               << stmt->stType;
 
     // What about dependent read-write?
@@ -278,8 +278,8 @@ void StatementBuilder::extractReadSet_recursive(rw_set_t &read_set, rw_set_t &wr
     if (stmt->stType == statementType::CONDITIONAL_STATEMENT) {
       // recurse.
       auto conditional = reinterpret_cast<const ConditionalStatement *>(stmt);
-      conditional->ifBlock->extractReadSet_recursive(read_set, write_set);
-      conditional->elseBLock->extractReadSet_recursive(read_set, write_set);
+      conditional->ifBlock->extractReadWriteSet_recursive(read_set, write_set);
+      conditional->elseBLock->extractReadWriteSet_recursive(read_set, write_set);
     } else if (stmt->stType == statementType::READ) {
       auto readStmt = reinterpret_cast<const ReadStatement *>(stmt);
       read_set[typeName].insert(readStmt->source_attr);
@@ -288,7 +288,7 @@ void StatementBuilder::extractReadSet_recursive(rw_set_t &read_set, rw_set_t &wr
       write_set[typeName].insert(updStmt->destination_attr);
     } else if (stmt->stType == statementType::METHOD_CALL) {
       auto method = reinterpret_cast<const MethodCallStatement *>(stmt);
-      method->function_instance->entryPoint->extractReadSet_recursive(read_set, write_set);
+      method->function_instance->entryPoint->extractReadWriteSet_recursive(read_set, write_set);
     }
     //    else {
     //      LOG(INFO) << "[extractReadSet_recursive] Ignoring statement type: " << stmt->stType;
