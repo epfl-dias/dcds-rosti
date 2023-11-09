@@ -43,7 +43,8 @@ enum class statementType {
   METHOD_CALL,
   LOG_STRING,
   CC_LOCK_SHARED,
-  CC_LOCK_EXCLUSIVE
+  CC_LOCK_EXCLUSIVE,
+  TEMP_VAR_ASSIGN
 };
 inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
   os << "statementType::";
@@ -76,6 +77,9 @@ inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
     case statementType::CC_LOCK_EXCLUSIVE:
       os << "CC_LOCK_EXCLUSIVE";
       break;
+    case statementType::TEMP_VAR_ASSIGN:
+      os << "TEMP_VAR_ASSIGN";
+      break;
   }
   return os;
 }
@@ -101,6 +105,20 @@ class Statement {
 //     return std::static_pointer_cast<T>(s);
 //   }
 // };
+
+class TempVarAssignStatement : public Statement {
+ public:
+  explicit TempVarAssignStatement(std::shared_ptr<expressions::Expression> _source, std::shared_ptr<expressions::LocalVariableExpression> destination)
+      : Statement(statementType::TEMP_VAR_ASSIGN), dest(std::move(destination)), source(std::move(_source)) {}
+  TempVarAssignStatement(const TempVarAssignStatement&) = default;
+
+  const std::shared_ptr<expressions::LocalVariableExpression> dest;
+  const std::shared_ptr<expressions::Expression> source;
+
+
+  [[nodiscard]] Statement* clone() const override { return new TempVarAssignStatement(*this); }
+  ~TempVarAssignStatement() override = default;
+};
 
 class ReturnStatement : public Statement {
  public:

@@ -482,6 +482,12 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
                     this->createSizeT(builder->getAttributeIndex(updStmt->destination_attr))},
                    Type::getVoidTy(getLLVMContext()));
 
+  } else if(stmt->stType == dcds::statementType::TEMP_VAR_ASSIGN){
+    auto tempVarAssignSt = reinterpret_cast<TempVarAssignStatement *>(stmt);
+    llvm::Value *source = this->codegenExpression(fnCtx, tempVarAssignSt->source.get());
+    llvm::Value *destination = this->codegenExpression(fnCtx, tempVarAssignSt->dest.get());
+    getBuilder()->CreateStore(destination, source);
+
   } else if (stmt->stType == dcds::statementType::LOG_STRING) {
     auto logStmt = reinterpret_cast<LogStringStatement *>(stmt);
     auto stringPtr = this->createStringConstant(logStmt->log_string, "");
