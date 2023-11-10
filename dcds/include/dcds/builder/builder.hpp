@@ -49,12 +49,14 @@ class BuilderOptPasses;
 class Codegen;
 class LLVMCodegen;
 class JitContainer;
+class CCInjector;
 
 class Builder : remove_copy {
   friend class Codegen;
   friend class LLVMCodegen;
   friend class FunctionBuilder;
   friend class BuilderOptPasses;
+  friend class CCInjector;
 
  public:
   ///
@@ -107,7 +109,7 @@ class Builder : remove_copy {
   }
 
  private:
-  void addFunction(std::shared_ptr<FunctionBuilder> &f);
+  void addFunction(std::shared_ptr<FunctionBuilder>& f);
 
  public:
   //  auto addConstructorWithArguments(const std::string& attribute_name){
@@ -206,6 +208,8 @@ class Builder : remove_copy {
 
   // CODEGEN
  public:
+  void injectCC();
+
   void build();
 
   JitContainer* createInstance();
@@ -232,7 +236,11 @@ class Builder : remove_copy {
   }
 
  private:
-  void build_no_jit(std::shared_ptr<Codegen> &codegen_engine, bool is_nested_type = false);
+  void build_no_jit(std::shared_ptr<Codegen>& codegen_engine, bool is_nested_type = false);
+
+ private:
+  std::shared_ptr<CCInjector> cc_injector;
+
  private:
   std::shared_ptr<DCDSContext> context;
   const std::string dataStructureName;

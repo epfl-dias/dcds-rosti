@@ -50,6 +50,7 @@ class FunctionBuilder : remove_copy {
   friend class Builder;
   friend class StatementBuilder;
   friend class BuilderOptPasses;
+  friend class CCInjector;
 
  public:
   explicit FunctionBuilder(dcds::Builder *ds_builder, std::string functionName);

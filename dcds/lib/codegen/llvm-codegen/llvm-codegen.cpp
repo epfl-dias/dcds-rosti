@@ -192,11 +192,18 @@ llvm::Function *LLVMCodegen::wrapFunctionVariadicArgs(llvm::Function *inner_func
 llvm::Function *LLVMCodegen::buildOneFunction_inner(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb) {
   auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
   auto uintPtrType = IntegerType::getInt64Ty(getLLVMContext());
+  auto boolType = IntegerType::getInt1Ty(getLLVMContext());
+
   auto fn_name_prefix = builder->getName() + "_";
 
-  // pre_args: { txnManager*, mainRecord, txnPtr }
-  auto fn_inner = this->genFunctionSignature(fb, {ptrType, uintPtrType, ptrType}, fn_name_prefix, "_inner",
-                                             llvm::GlobalValue::LinkageTypes::PrivateLinkage);
+  // pre_args: { txnManager*, mainRecord, txnPtr, ^^retValPtr^^ }
+  std::vector<llvm::Type *> pre_args{ptrType, uintPtrType, ptrType};
+  if (fb->returnValueType != valueType::VOID) {
+    pre_args.push_back(this->DcdsToLLVMType(fb->getReturnValueType(), true));
+  }
+
+  auto fn_inner = this->genFunctionSignature(fb, pre_args, fn_name_prefix, "_inner",
+                                             llvm::GlobalValue::LinkageTypes::PrivateLinkage, boolType);
 
   userFunctions.emplace(fn_inner->getName().str(), fn_inner);
 
@@ -238,37 +245,55 @@ llvm::Function *LLVMCodegen::buildOneFunction_outer(dcds::Builder *builder, std:
   auto fn_outer_BB = llvm::BasicBlock::Create(getLLVMContext(), "entry", fn_outer);
   getBuilder()->SetInsertPoint(fn_outer_BB);
 
-  // ###### BeginTxn
   auto txnManager = fn_outer->getArg(0);
   auto mainRecord = fn_outer->getArg(1);
   Value *txnPtr;
 
-  if (genCC) {
-    txnPtr = this->gen_call(beginTxn, {fn_outer->getArg(0), this->createFalse()});
-  } else {
-    // FIXME: possible issue because in storage, if it takes txn by reference, or even if it tries to do something, it
-    //  may cause issue. we need to either propagate this to storage also, or have storage functions oblivious to txn.
-    txnPtr = llvm::ConstantPointerNull::get(ptrType);
+  auto arg_is_readOnly = fb->isReadOnly() ? this->createTrue() : this->createFalse();
+  llvm::Value *function_ret_value_arg;
+  llvm::Value *is_success;
+
+  if (fb->returnValueType != valueType::VOID) {
+    function_ret_value_arg = allocateOneVar("function_ret_value_arg", fb->getReturnValueType(), {});
   }
 
-  // create call to inner_function here.
-  // start from 2, as 0-1 are already taken (outer.txnManager, out.mainRecord).
-  std::vector<llvm::Value *> inner_args{txnManager, mainRecord, txnPtr};
-  for (auto i = 2; i < fn_outer->arg_size(); i++) {
-    inner_args.push_back(fn_outer->getArg(i));
-  }
+  this->gen_do([&]() {
+        if (genCC) {
+          txnPtr = this->gen_call(beginTxn, {fn_outer->getArg(0), arg_is_readOnly});
+        } else {
+          txnPtr = llvm::ConstantPointerNull::get(ptrType);
+        }
 
-  auto inner_ret = getBuilder()->CreateCall(fn_inner, inner_args);
+        // create call to inner_function here.
+        // start from 2, as 0-1 are already taken (outer.txnManager, out.mainRecord).
+        std::vector<llvm::Value *> inner_args{txnManager, mainRecord, txnPtr};
+        if (fb->returnValueType != valueType::VOID) {
+          inner_args.push_back(function_ret_value_arg);
+        }
+        for (auto i = 2; i < fn_outer->arg_size(); i++) {
+          inner_args.push_back(fn_outer->getArg(i));
+        }
 
-  // ###### Commit Txn
-  if (genCC) {
-    this->gen_call(commitTxn, {txnManager, txnPtr});
-  }
+        // this function returns true/false for success/false, but here we anyway call endTxn, so depend on that.
+        getBuilder()->CreateCall(fn_inner, inner_args);
 
-  if (fn_inner->getReturnType()->getTypeID() == llvm::Type::getVoidTy(getLLVMContext())->getTypeID()) {
+        if (genCC) {
+          is_success = this->gen_call(endTxn, {txnManager, txnPtr}, Type::getInt1Ty(getLLVMContext()));
+        }
+      })
+      .gen_while([&]() {
+        if (genCC)
+          return getBuilder()->CreateNot(is_success);
+        else {
+          return static_cast<llvm::Value *>(this->createFalse());
+        }
+      });
+
+  if (fb->returnValueType == valueType::VOID) {
     getBuilder()->CreateRetVoid();
   } else {
-    getBuilder()->CreateRet(inner_ret);
+    auto retLoadInst = getBuilder()->CreateLoad(this->DcdsToLLVMType(fb->getReturnValueType()), function_ret_value_arg);
+    getBuilder()->CreateRet(retLoadInst);
   }
 
   dcds::LLVMCodegen::llvmVerifyFunction(fn_outer);
@@ -277,23 +302,12 @@ llvm::Function *LLVMCodegen::buildOneFunction_outer(dcds::Builder *builder, std:
 
   // Optimizations:
   //   easy: if an attribute is only accessed in a single function across DS, then you don't need CC either on that one.
-  //   hard: if the group-sequence of attribute is common across all functions,
-  //   then encapsulate them as a single CC-variable.
-
-  // rw_set = fb->getReadWriteSet();
-  // CcBuilder::injectCC(rw_set)
-  // CcBuilder::injectTxnBegin
-
-  // ALSO, start a txn here, so that it could be passed everywhere!!
-
-  // CcBuilder::injectTxnEnd
 }
 
 void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb, bool is_nested_type) {
   LOG(INFO) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
 
-  // FIXME: How to ensure that this function returns in all paths? and returns with correct type in all paths?
-  // FIXME: what about scoping of temporary variables??
+  // FIXME: scoping of temporary variables??
 
   // NOTE: as we don't know the function inner return paths,
   //  lets create a wrapper function which will do the txn stuff,
@@ -336,23 +350,25 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
                                     std::map<std::string, llvm::Value *> &tempVariableMap) {
   auto returnBB = llvm::BasicBlock::Create(getLLVMContext(), "return", fn);
   auto fnCtx = function_build_context(fb, sb, fn, &tempVariableMap, returnBB);
-  if (fb->returnValueType != dcds::valueType::VOID) {
-    fnCtx.retval_variable_name = builder->getName() + "_" + fb->getName() + "_retval";
-  }
+
+  // Allocate the return variable: success-state: not_abort
+  fnCtx.retval_variable_name = builder->getName() + "_" + fb->getName() + "_retval";
+
+  auto retValAlloc = allocateOneVar(fnCtx.retval_variable_name, valueType::BOOL, true);
+  tempVariableMap.emplace(fnCtx.retval_variable_name, retValAlloc);
 
   for (auto &s : sb->statements) {
     this->buildStatement(builder, fnCtx, s);
   }
 
   // ----- GEN RETURN BLOCK
+  // always return if the inner was successful or not.
+  // WAIT, if it is single-threaded, we don't need this!
   getBuilder()->SetInsertPoint(returnBB);
-  if (fb->returnValueType == dcds::valueType::VOID) {
-    getBuilder()->CreateRetVoid();
-  } else {
-    llvm::Value *retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(),
-                                                     fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
-    getBuilder()->CreateRet(retValue);
-  }
+  llvm::Value *retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(),
+                                                   fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+  getBuilder()->CreateRet(retValue);
+
   returnBB->moveAfter(&(fn->back()));
   // ----- GEN RETURN BLOCK END
 }
@@ -472,17 +488,17 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
       llvm::Value *retValue;
 
       if (exprResult->getType()->isPointerTy()) {
-        retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), exprResult);
+        retValue = getBuilder()->CreateLoad(this->DcdsToLLVMType(fnCtx.fb->getReturnValueType()), exprResult);
       } else {
         retValue = exprResult;
       }
-
       // Option 2:
       // if (llvm::isa<llvm::AllocaInst>(exprResult)) {
       //   auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
       //   retValue = getBuilder()->CreateLoad(fnCtx.fn->getReturnType(), allocaInst);
       // }
-      getBuilder()->CreateStore(retValue, fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+
+      getBuilder()->CreateStore(retValue, fnCtx.fn->getArg(3));
     }
 
     getBuilder()->CreateBr(fnCtx.returnBlock);
@@ -515,20 +531,13 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
         methodStmt->function_instance->builder->getName() + "_" + methodStmt->function_instance->getName() + "_inner";
 
     assert(userFunctions.contains(function_name));
-    bool doesReturn = true;
-    if (userFunctions[function_name]->getReturnType() == Type::getVoidTy(getLLVMContext())) {
-      doesReturn = false;
-    }
-
-    if (!doesReturn && methodStmt->has_return_dest) {
-      assert(false && "callee expects return but function does not return");
-    }
 
     // NOTE: (methodStmt->refVarName.empty() && doesReturn):  function returns but value is unused
 
     // construct arguments. every inner function expects:
     // ptrType, uintPtrType, ptrType (txnManager, mainRecord:subtype, txnPtr)
     // mainRecord is the one supplied in callStatement
+    // optionally 4th arg, if the function returns, then a returnValue pointer.
 
     std::vector<llvm::Value *> callArgs;
     callArgs.push_back(txnManager);
@@ -539,6 +548,31 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
                                  fnCtx.tempVariableMap->operator[](methodStmt->referenced_type_variable));
     callArgs.push_back(referencedRecord);
     callArgs.push_back(txn);
+
+    // --- call statement return value
+    bool doesReturn = true;
+    llvm::Value *returnValueArg;
+    llvm::Value *ret_dest_expr;
+
+    if (methodStmt->function_instance->getReturnValueType() == valueType::VOID) {
+      doesReturn = false;
+    }
+
+    CHECK((!(methodStmt->has_return_dest)) || (methodStmt->has_return_dest && doesReturn))
+        << "callee(" << fnCtx.fb->getName() << ") expects return but function("
+        << methodStmt->function_instance->getName() << ") does not return";
+
+    if (doesReturn) {
+      ret_dest_expr = this->codegenExpression(fnCtx, methodStmt->return_dest.get());
+      if (isa<PointerType>(ret_dest_expr->getType())) {
+        returnValueArg = ret_dest_expr;
+      } else {
+        returnValueArg = allocateOneVar(methodStmt->function_instance->getName() + "_return_dest",
+                                        methodStmt->function_instance->getReturnValueType());
+      }
+      callArgs.push_back(returnValueArg);
+    }
+    // ------
 
     for (auto &fArg : methodStmt->function_arguments) {
       // FIXME: there might be issue if the function expects pass by reference?
@@ -557,15 +591,41 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
     }
 
     llvm::Value *ret = this->gen_call(userFunctions[function_name], callArgs);
-    if (doesReturn) {
-      // getBuilder()->CreateStore(ret, fnCtx.tempVariableMap->operator[](methodStmt->return_dest_variable));
+    auto genIf = this->gen_if(getBuilder()->CreateNot(ret))([&]() {
+      getBuilder()->CreateStore(createFalse(), fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+      getBuilder()->CreateBr(fnCtx.returnBlock);
+    });
 
-      llvm::Value *ret_dest_expr = this->codegenExpression(builder, fnCtx, methodStmt->return_dest.get());
-      getBuilder()->CreateStore(ret, ret_dest_expr);
+    if (doesReturn) {
+      if (!(isa<PointerType>(ret_dest_expr->getType()))) {
+        auto retLoadIns = getBuilder()->CreateLoad(
+            this->DcdsToLLVMType(methodStmt->function_instance->getReturnValueType()), returnValueArg);
+        getBuilder()->CreateStore(retLoadIns, ret_dest_expr);
+      }
     }
 
   } else if (stmt->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
     this->buildStatement_ConditionalStatement(builder, fnCtx, stmt);
+  } else if (stmt->stType == dcds::statementType::CC_LOCK_SHARED ||
+             stmt->stType == dcds::statementType::CC_LOCK_EXCLUSIVE) {
+    LOG(INFO) << "StatementType: " << stmt->stType;
+
+    auto lockStmt = reinterpret_cast<LockStatement *>(stmt);
+
+    // FIXME: is the mainRecord the record we want to lock?
+
+    // void* _txnManager, void* txnPtr, uintptr_t record, size_t attributeIdx
+    llvm::Value *ret = this->gen_call(
+        lockStmt->stType == dcds::statementType::CC_LOCK_SHARED ? lock_shared : lock_exclusive,
+        {txnManager, txn, mainRecord /*, this->createSizeT(builder->getAttributeIndex(lockStmt->attribute))*/},
+        DcdsToLLVMType(valueType::BOOL));
+
+    // (ret == false) goto returnBB;
+    auto genIf = this->gen_if(getBuilder()->CreateNot(ret))([&]() {
+      getBuilder()->CreateStore(createFalse(), fnCtx.tempVariableMap->operator[](fnCtx.retval_variable_name));
+      getBuilder()->CreateBr(fnCtx.returnBlock);
+    });
+
   } else {
     assert(false);
   }
@@ -660,17 +720,7 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
 std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                              llvm::BasicBlock *basicBlock) {
   std::map<std::string, llvm::Value *> variableCodeMap;
-
   auto allocaBuilder = llvm::IRBuilder<>(basicBlock, basicBlock->end());
-
-  // fnCtx.retval_variable_name = builder->getName() + "_" + fn->getName().str() + "_retval";
-  if (fb->returnValueType != dcds::valueType::VOID) {
-    auto retval_variable_name = fb->builder->getName() + "_" + fb->getName() + "_retval";
-    LOG(INFO) << "Allocating retval: " << retval_variable_name;
-
-    auto retValAlloc = allocateOneVar(retval_variable_name, fb->getReturnValueType(), {});
-    variableCodeMap.emplace(retval_variable_name, retValAlloc);
-  }
 
   LOG(INFO) << "Allocating function's temp vars: " << fb->temp_variables.size();
 
@@ -906,7 +956,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder, bool is_nested_type) 
     llvm::Value *inner_fn_res = this->gen_call(fn_constructor_inner, {fn_res_getTxnManger, fn_res_beginTxn});
 
     // Commit Txn
-    this->gen_call(commitTxn, {fn_res_getTxnManger, fn_res_beginTxn});
+    this->gen_call(endTxn, {fn_res_getTxnManger, fn_res_beginTxn}, Type::getInt1Ty(getLLVMContext()));
 
     //  this->gen_call(printPtr, {returnDs});
 

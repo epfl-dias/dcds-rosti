@@ -21,6 +21,7 @@
 
 #include "dcds/transaction/transaction-manager.hpp"
 
+#include "dcds/storage/table.hpp"
 #include "dcds/util/logging.hpp"
 
 namespace dcds::txn {
@@ -35,6 +36,8 @@ txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
   return new Txn(txnIdGenerator.getTxnTs(), is_read_only);
 }
 
+bool TransactionManager::endTransaction(txn_ptr_t txn) { return true; }
+
 bool TransactionManager::commitTransaction(txn_ptr_t txn) {
   txn->commit_ts = txnIdGenerator.getCommitTs();
   txn->status = TXN_STATUS::COMMITTED;
@@ -44,5 +47,15 @@ bool TransactionManager::abortTransaction(txn_ptr_t txn) {
   // undo changes.
   return false;
 }
+
+bool LockShared(txn_ptr_t txn, storage::record_reference_t rid) {
+  // blocked on wait
+  // return true when granted
+  // false if txn rolled back / abort
+
+  return true;
+}
+
+bool lockExclusive(txn_ptr_t txn, storage::record_reference_t rid) { return true; }
 
 }  // namespace dcds::txn

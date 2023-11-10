@@ -37,6 +37,7 @@ class StatementBuilder {
   friend class Codegen;
   friend class LLVMCodegen;
   friend class BuilderOptPasses;
+  friend class CCInjector;
 
  public:
   struct conditional_blocks {

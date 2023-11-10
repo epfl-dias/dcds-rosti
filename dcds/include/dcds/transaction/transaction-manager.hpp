@@ -50,6 +50,9 @@ class TransactionManager {
 
  public:
   txn_ptr_t beginTransaction(bool is_read_only);
+  bool endTransaction(txn_ptr_t txn);
+
+ private:
   bool commitTransaction(txn_ptr_t txn);
   bool abortTransaction(txn_ptr_t txn);
 

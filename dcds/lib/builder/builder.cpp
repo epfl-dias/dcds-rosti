@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "dcds/builder/function-builder.hpp"
+#include "dcds/builder/optimizer/cc-injector.hpp"
 #include "dcds/builder/statement-builder.hpp"
 #include "dcds/codegen/codegen.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
@@ -183,6 +184,15 @@ std::shared_ptr<Builder> Builder::clone(std::string name) {
   }
 
   return tmp;
+}
+
+void Builder::injectCC() {
+  if (!(this->cc_injector)) {
+    this->cc_injector = std::make_shared<CCInjector>(this);
+  }
+
+  // TODO: check this is called only once. could be done during build instead of providing separate function.
+  this->cc_injector->inject();
 }
 
 }  // namespace dcds

@@ -34,8 +34,7 @@ struct ts_t {
   xid_t t_min : 63;
 
   explicit ts_t() : deleted(0), t_min(0) {}
-
-  explicit ts_t(xid_t tmin) : deleted(0), t_min(tmin) {}
+  explicit ts_t(xid_t xact_min) : deleted(0), t_min(xact_min) {}
 };
 
 class RecordMetaData {
@@ -47,37 +46,33 @@ class RecordMetaData {
 };
 
 class RecordMetaData_SingleVersion : RecordMetaData {
-  // timestamps
-  // if MVCC, then deltaList
-
  public:
-  RecordMetaData_SingleVersion() {}
+  RecordMetaData_SingleVersion() = default;
+  explicit RecordMetaData_SingleVersion(xid_t) {}
 
-  RecordMetaData_SingleVersion(xid_t) {}
+  //  template <class lambda>
+  //  inline void withLatch(lambda &&func) {
+  //    this->latch.acquire();
+  //    func(this);
+  //    this->latch.release();
+  //  }
 
-  template <class lambda>
-  inline void withLatch(lambda &&func) {
-    this->latch.acquire();
-    func(this);
-    this->latch.release();
-  }
-
-  // NOTE: the purpose of having separate functions write/read with latch:
-  //  writeWithLatch: additionally log changes in case of abort.
-  //  readWithLatch: future optimization for optimistic reads.
-  template <class lambda>
-  inline void writeWithLatch(lambda &&func) {
-    this->latch.acquire();
-    func(this);
-    this->latch.release();
-  }
-
-  template <class lambda>
-  inline void readWithLatch(lambda &&func) {
-    this->latch.acquire();
-    func(this);
-    this->latch.release();
-  }
+  //  // NOTE: the purpose of having separate functions write/read with latch:
+  //  //  writeWithLatch: additionally log changes in case of abort.
+  //  //  readWithLatch: future optimization for optimistic reads.
+  //  template <class lambda>
+  //  inline void writeWithLatch(lambda &&func) {
+  //    this->latch.acquire();
+  //    func(this);
+  //    this->latch.release();
+  //  }
+  //
+  //  template <class lambda>
+  //  inline void readWithLatch(lambda &&func) {
+  //    this->latch.acquire();
+  //    func(this);
+  //    this->latch.release();
+  //  }
 };
 
 //    class RecordMetaData_MultiVersion : RecordMetaData {

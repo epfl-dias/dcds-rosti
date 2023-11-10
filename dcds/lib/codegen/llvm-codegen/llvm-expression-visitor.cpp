@@ -142,7 +142,10 @@ void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) 
 void* LLVMExpressionVisitor::visit(const expressions::FunctionArgumentExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::FunctionArgumentExpression::visit";
   assert(expr.var_src_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
-  constexpr size_t fn_arg_idx_st = 3;  // because we have three automatic arguments to each function.
+
+  bool doesReturn = fnCtx->fb->getReturnValueType() != valueType::VOID;
+  size_t fn_arg_idx_st = doesReturn ? 4 : 3;  // if it does return, then 3 is the retVal ptr.
+
   auto source_arg = fnCtx->fn->getArg(fnCtx->fb->getArgumentIndex(expr.var_name) + fn_arg_idx_st);
   return source_arg;
 }

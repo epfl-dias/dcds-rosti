@@ -45,7 +45,8 @@ extern "C" void* c4(char* attributeNames);
 
 extern "C" void* getTxnManager(const char* txn_namespace = "default_namespace");
 extern "C" void* beginTxn(void* txnManager, bool isReadOnly);
-extern "C" bool commitTxn(void* txnManager, void* txnPtr);
+// extern "C" bool commitTxn(void* txnManager, void* txnPtr);
+extern "C" bool endTxn(void* txnManager, void* txnPtr);
 
 extern "C" uintptr_t insertMainRecord(void* table, void* txn, void* data);
 
@@ -62,5 +63,9 @@ extern "C" void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, v
                                      size_t attributeIdx);
 extern "C" void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* src,
                                       uint attributeIdx);
+
+extern "C" bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record);
+extern "C" bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record);
+extern "C" bool unlock_all(void* _txnManager, void* txnPtr);
 
 #endif  // DCDS_FUNCTIONS_HPP

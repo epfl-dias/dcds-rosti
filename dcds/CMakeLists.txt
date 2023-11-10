@@ -8,6 +8,7 @@ set(dcds_cxx
         lib/builder/statement-builder.cpp
         lib/builder/expressions/expressions.cpp
         lib/builder/builder-opt-passes.cpp
+        lib/builder/cc-injector.cpp
 
         # Codegen
         lib/codegen/codegen.cpp

@@ -135,11 +135,19 @@ void* beginTxn(void* txnManager, bool isReadOnly) {
   return txnPtr;
 }
 
-bool commitTxn(void* txnManager, void* txnPtr) {
-  LOG(INFO) << "commitTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
+// bool commitTxn(void* txnManager, void* txnPtr) {
+//   LOG(INFO) << "commitTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
+//   auto x =
+//       static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
+//   LOG(INFO) << "commitTxn: ret: " << x;
+//   return x;
+// }
+
+bool endTxn(void* txnManager, void* txnPtr) {
+  LOG(INFO) << "endTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
   auto x =
-      static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
-  LOG(INFO) << "commitTxn: ret: " << x;
+      static_cast<dcds::txn::TransactionManager*>(txnManager)->endTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
+  LOG(INFO) << "endTxn: ret: " << x;
   return x;
 }
 
@@ -221,3 +229,16 @@ void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPt
   //    dsTable->updateAttribute(*txn, dsRc, writeVariable, attributeIndex);
   //  });
 }
+
+bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record) {
+  LOG(INFO) << "lock_shared: " << record;
+  return true;
+}
+bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record) {
+  LOG(INFO) << "lock_exclusive: " << record;
+  return true;
+}
+bool unlock_all(void* _txnManager, void* txnPtr) { return true; }
+
+// bool unlock_shared(void* _txnManager, uintptr_t record, void* txnPtr){}
+// bool unlock_exclusive(void* _txnManager, uintptr_t record, void* txnPtr){}

@@ -54,6 +54,8 @@ void LinkedList::optimize() {
   dcds::BuilderOptPasses buildOptimizer(builder);
   buildOptimizer.runAll();
   LOG(INFO) << "LinkedList::optimize() -- end";
+
+  builder->injectCC();
 }
 void LinkedList::generateLinkedListNode() {
   if (builder->hasRegisteredType(ds_node_name)) {
@@ -210,6 +212,7 @@ void Stack::test() {
 FIFO::FIFO() : LinkedList("LL_FIFO") {
   this->createFunction_push();
   this->createFunction_pop();
+  builder->injectCC();
 }
 void FIFO::createFunction_push() {
   /*
