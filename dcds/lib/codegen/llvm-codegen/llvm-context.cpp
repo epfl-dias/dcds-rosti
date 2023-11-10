@@ -29,6 +29,7 @@
 #include "dcds/codegen/llvm-codegen/functions.hpp"
 #include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
+#include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 
 using namespace llvm;
 
@@ -462,6 +463,8 @@ DoWhile LLVMCodegenContext::gen_do(std::function<void()> whileBody) { return {st
 
 if_branch LLVMCodegenContext::gen_if(value_t cond) { return {cond, this}; }
 if_branch LLVMCodegenContext::gen_if(value_t cond, llvm::BasicBlock *afterBB) { return {cond, this, afterBB}; }
+
+PhiNode LLVMCodegenContext::gen_phi() { return PhiNode{this}; }
 
 std::string getFunctionName(void *f) {
   Dl_info info{};

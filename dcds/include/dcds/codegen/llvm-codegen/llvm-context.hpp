@@ -67,6 +67,7 @@ std::string getFunctionName(void *f);
 class While;
 class DoWhile;
 class if_branch;
+class PhiNode;
 
 using value_t = llvm::Value *;
 
@@ -190,6 +191,8 @@ class LLVMCodegenContext {
 
   if_branch gen_if(value_t cond);
   if_branch gen_if(value_t cond, llvm::BasicBlock *afterBB);
+
+  PhiNode gen_phi();
 
   template <typename, typename = void>
   static constexpr bool is_type_complete_v = false;

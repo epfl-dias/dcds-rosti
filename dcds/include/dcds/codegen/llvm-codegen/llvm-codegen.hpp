@@ -134,9 +134,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
 
   void codegenHelloWorld();
 
-  void createDsContainerStruct(dcds::Builder *builder);
-  Value *initializeDsContainerStruct(Value *txnManager, Value *storageTable, Value *mainRecord);
-
   void createDsStructType(dcds::Builder *builder);
   Value *initializeDsValueStructDefault(dcds::Builder &builder);
 
@@ -173,7 +170,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   llvm::Type *DcdsToLLVMType(dcds::valueType dcds_type, bool is_reference = false);
 
  private:
-  //  std::vector<llvm::Function *> userFunctions;
   std::map<std::string, llvm::Function *> userFunctions;
   std::unordered_map<std::string, llvm::Value *> temporaryVariableIRMap;
 
@@ -184,15 +180,11 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   std::unique_ptr<Module> theLLVMModule;
 
  private:
-  StructType *dsContainerStructType{};
+  // StructType *dsContainerStructType{};
   StructType *dsRecordValueStructType{};
 
  private:
   std::unique_ptr<LLVMJIT> jitter;
-
-  //  struct function_builder_context {
-  //    // temporary_variables
-  //  };
 
   // private:
   //  CodeExporter raw_code_exporter;

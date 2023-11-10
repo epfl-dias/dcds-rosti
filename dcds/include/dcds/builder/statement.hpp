@@ -108,13 +108,13 @@ class Statement {
 
 class TempVarAssignStatement : public Statement {
  public:
-  explicit TempVarAssignStatement(std::shared_ptr<expressions::Expression> _source, std::shared_ptr<expressions::LocalVariableExpression> destination)
+  explicit TempVarAssignStatement(std::shared_ptr<expressions::Expression> _source,
+                                  std::shared_ptr<expressions::LocalVariableExpression> destination)
       : Statement(statementType::TEMP_VAR_ASSIGN), dest(std::move(destination)), source(std::move(_source)) {}
   TempVarAssignStatement(const TempVarAssignStatement&) = default;
 
   const std::shared_ptr<expressions::LocalVariableExpression> dest;
   const std::shared_ptr<expressions::Expression> source;
-
 
   [[nodiscard]] Statement* clone() const override { return new TempVarAssignStatement(*this); }
   ~TempVarAssignStatement() override = default;

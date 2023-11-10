@@ -32,6 +32,7 @@
 #include "dcds/codegen/llvm-codegen/llvm-jit.hpp"
 #include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
+#include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 
 namespace dcds {
 
@@ -126,9 +127,6 @@ void LLVMCodegen::build(dcds::Builder *builder, bool is_nested_type) {
   LOG(INFO) << "[LLVMCodegen] Building: " << builder->getName();
 
   codegenHelloWorld();
-
-  LOG(INFO) << "[LLVMCodegen::build()] createDsContainerStruct";
-  this->createDsContainerStruct(builder);
 
   LOG(INFO) << "[LLVMCodegen::build()] createDsStructType";
   this->createDsStructType(builder);
@@ -359,8 +357,7 @@ void LLVMCodegen::buildFunctionBody(dcds::Builder *builder, std::shared_ptr<Func
   // ----- GEN RETURN BLOCK END
 }
 
-llvm::Value *LLVMCodegen::codegenExpression(dcds::Builder *builder, function_build_context &fnCtx,
-                                            const dcds::expressions::Expression *expr) {
+llvm::Value *LLVMCodegen::codegenExpression(function_build_context &fnCtx, const dcds::expressions::Expression *expr) {
   dcds::expressions::LLVMExpressionVisitor exprVisitor(this, &fnCtx);
   auto val = const_cast<dcds::expressions::Expression *>(expr)->accept(&exprVisitor);
   return static_cast<llvm::Value *>(val);
@@ -368,75 +365,39 @@ llvm::Value *LLVMCodegen::codegenExpression(dcds::Builder *builder, function_bui
 
 void LLVMCodegen::buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx,
                                                       Statement *stmt) {
-  LOG(INFO) << "buildStatement_ConditionalStatement";
-
   auto conditionalStatement = reinterpret_cast<ConditionalStatement *>(stmt);
-  assert(!conditionalStatement->ifBlock->statements.empty());
-
-  llvm::Value *exprResult = this->codegenExpression(builder, fnCtx, conditionalStatement->expr);
+  CHECK(!conditionalStatement->ifBlock->statements.empty())
+      << "Build conditional statement requested but then block is empty";
 
   auto hasElseBlock = !(conditionalStatement->elseBLock->statements.empty());
   auto isLastStatementInBlock = (fnCtx.sb->statements.back() == stmt);
 
-  llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fnCtx.fn);
-  llvm::BasicBlock *elseBlock = hasElseBlock ? llvm::BasicBlock::Create(getLLVMContext(), "else", fnCtx.fn) : nullptr;
-  llvm::BasicBlock *mergeBlock =
-      isLastStatementInBlock ? nullptr : llvm::BasicBlock::Create(getLLVMContext(), "merge", fnCtx.fn);
+  llvm::Value *exprResult = this->codegenExpression(fnCtx, conditionalStatement->expr);
 
-  if (hasElseBlock) {
-    getBuilder()->CreateCondBr(exprResult, thenBlock, elseBlock);
-  } else {
-    // isLastStatementInBlock? then what, cant go to return, want to go to next block ideally.
-    getBuilder()->CreateCondBr(exprResult, thenBlock, mergeBlock);
-  }
-
-  {
-    // Build statements for if block
-    getBuilder()->SetInsertPoint(thenBlock);
-    //    LOG(INFO) << "Creating if branch of " << fnCtx.fb->getName()
-    //              << " | #st: " << conditionalStatement->ifBlock->statements.size();
-
-    // create copy of the context for the contained statementBuilder
+  auto genIf = this->gen_if(exprResult, isLastStatementInBlock ? fnCtx.returnBlock : nullptr)([&]() {
     function_build_context fnCtx_IfBlock(fnCtx);
     fnCtx_IfBlock.sb = conditionalStatement->ifBlock;
 
     for (auto &if_stmt : conditionalStatement->ifBlock->statements) {
       this->buildStatement(builder, fnCtx_IfBlock, if_stmt);
     }
+  });
 
-    if (!(fnCtx_IfBlock.sb->doesReturn) && !isLastStatementInBlock) {
-      getBuilder()->CreateBr(mergeBlock);
-    }
+  if (hasElseBlock) {
+    genIf.gen_else([&]() {
+      function_build_context fnCtx_elseBlock(fnCtx);
+      fnCtx_elseBlock.sb = conditionalStatement->elseBLock;
+
+      for (auto &elseStmt : conditionalStatement->elseBLock->statements) {
+        this->buildStatement(builder, fnCtx_elseBlock, elseStmt);
+      }
+    });
   }
-
-  // Build statements for else block
-  if (!conditionalStatement->elseBLock->statements.empty()) {
-    //    LOG(INFO) << "Creating else branch of " << fnCtx.fb->getName()
-    //              << " | #st: " << conditionalStatement->elseBLock->statements.size();
-
-    // create copy of the context for the contained statementBuilder
-    function_build_context fnCtx_elseBlock(fnCtx);
-    fnCtx_elseBlock.sb = conditionalStatement->elseBLock;
-
-    getBuilder()->SetInsertPoint(elseBlock);
-    for (auto &elseStmt : conditionalStatement->elseBLock->statements) {
-      this->buildStatement(builder, fnCtx_elseBlock, elseStmt);
-    }
-    if (!(fnCtx_elseBlock.sb->doesReturn) && !isLastStatementInBlock) {
-      getBuilder()->CreateBr(mergeBlock);
-    }
-  }
-
-  if (!isLastStatementInBlock) {
-    getBuilder()->SetInsertPoint(mergeBlock);
-  }
-
-  // NOTE: do we need PHI node (due to SSA) or it can be automatic? and if we do, then how to do it automatically.
 }
 
 void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt) {
   // FIXME: what about scoping of temporary variables??
-  LOG(INFO) << "[LLVMCodegen] buildStatement";
+  LOG(INFO) << "[LLVMCodegen] buildStatement: " << stmt->stType;
 
   auto txnManager = fnCtx.fn->getArg(0);
   auto mainRecord = fnCtx.fn->getArg(1);
@@ -482,7 +443,7 @@ void LLVMCodegen::buildStatement(dcds::Builder *builder, function_build_context 
                     this->createSizeT(builder->getAttributeIndex(updStmt->destination_attr))},
                    Type::getVoidTy(getLLVMContext()));
 
-  } else if(stmt->stType == dcds::statementType::TEMP_VAR_ASSIGN){
+  } else if (stmt->stType == dcds::statementType::TEMP_VAR_ASSIGN) {
     auto tempVarAssignSt = reinterpret_cast<TempVarAssignStatement *>(stmt);
     llvm::Value *source = this->codegenExpression(fnCtx, tempVarAssignSt->source.get());
     llvm::Value *destination = this->codegenExpression(fnCtx, tempVarAssignSt->dest.get());
@@ -716,27 +677,11 @@ std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std
   for (auto &v : fb->temp_variables) {
     auto var_name = v.first;
     auto var_type = v.second->var_type;
-    auto init_value = v.second->var_default_value;
-
     auto vr = allocateOneVar(var_name, var_type, v.second->var_default_value);
     variableCodeMap.emplace(var_name, vr);
   }
 
   return variableCodeMap;
-}
-
-void LLVMCodegen::createDsContainerStruct(dcds::Builder *builder) {
-  // NOTE: do not change the format of the struct, otherwise,
-  // also change in the jit-container (and maybe code-exporter to match it).
-  std::string ds_struct_name = "struct_container_" + builder->getName() + "_t";
-  bool is_packed = false;
-  auto ptrType = IntegerType::getInt8PtrTy(getLLVMContext());
-  auto sizeTType = IntegerType::getInt64Ty(getLLVMContext());
-
-  // {txnManager, mainRecord}
-  std::vector<llvm::Type *> struct_vars = {ptrType, sizeTType};
-
-  this->dsContainerStructType = StructType::create(getLLVMContext(), struct_vars, ds_struct_name, is_packed);
 }
 
 void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
@@ -754,25 +699,6 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
   }
 
   dsRecordValueStructType = StructType::create(getLLVMContext(), struct_vars, ds_struct_name, is_packed);
-}
-
-Value *LLVMCodegen::initializeDsContainerStruct(Value *txnManager, Value *storageTable, Value *mainRecord) {
-  //  LOG(INFO) << "dsContainerStructType: " << dsContainerStructType->getName().data();
-  Value *structValue = llvm::UndefValue::get(dsContainerStructType);
-  // LOG(INFO) << "dsContainerStructType--1";
-
-  // txnManager, table, mainRecord
-  structValue = getBuilder()->CreateInsertValue(structValue, txnManager, {0});
-  // LOG(INFO) << "dsContainerStructType--2";
-  structValue = getBuilder()->CreateInsertValue(structValue, storageTable, {1});
-  // LOG(INFO) << "dsContainerStructType--3";
-  structValue = getBuilder()->CreateInsertValue(structValue, mainRecord, {2});
-  // LOG(INFO) << "dsContainerStructType--4";
-
-  llvm::AllocaInst *structPtr = getBuilder()->CreateAlloca(dsContainerStructType);
-  getBuilder()->CreateStore(structValue, structPtr);
-
-  return structPtr;
 }
 
 Value *LLVMCodegen::initializeDsValueStructDefault(dcds::Builder &builder) {
@@ -858,9 +784,6 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
 
   llvm::Value *tableNameCharPtr = getBuilder()->CreateBitCast(table_name, llvm::Type::getInt8PtrTy(getLLVMContext()));
 
-  //  Value *c1Res = this->gen_call(c1, {tableNameCharPtr});
-  //  Value *c2Res = this->gen_call(c2, {numAttributes});
-
   Type *cppEnumType = Type::getInt32Ty(getLLVMContext());
   ArrayType *enumArrayType = ArrayType::get(cppEnumType, builder.attributes.size());
 
@@ -868,7 +791,6 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
   std::vector<std::string> names;
 
   for (const auto &a : builder.attributes) {
-    // valueTypeArray.push_back(ConstantInt::get(cppEnumType, a.second->type));
     valueTypeArray.push_back(ConstantInt::get(cppEnumType, std::to_underlying(a.second->type)));
     names.push_back(a.first);
   }
@@ -880,13 +802,9 @@ llvm::Function *LLVMCodegen::buildInitTablesFn(dcds::Builder &builder, llvm::Val
                          ConstantInt::get(Type::getInt32Ty(getLLVMContext()), 0)};
   Value *elementPtrAttributeType = getBuilder()->CreateGEP(enumArrayType, allocaInstAttributeTypes, gepIndices);
 
-  // Value *c3Res = this->gen_call(c3, {elementPtrAttributeType});
-
   llvm::Value *attributeNames = createStringArray(names, builder.getName() + "_attr_");
-  // attributeNames->getType()->dump();
   llvm::Value *attributeNamesFirstCharPtr = getBuilder()->CreateExtractValue(attributeNames, {0});
 
-  // Value *c4Res = this->gen_call(c4, {attributeNamesFirstCharPtr});
   llvm::Value *resultPtr = this->gen_call(
       createTablesInternal, {tableNameCharPtr, elementPtrAttributeType, attributeNamesFirstCharPtr, numAttributes});
 
@@ -935,32 +853,12 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
     Value *fn_res_doesTableExists =
         this->gen_call(doesTableExists, {tableNameLlvmConstant}, Type::getInt1Ty(getLLVMContext()));
 
-    //  // Create a conditional branch based on the external function's result
-    llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(getLLVMContext(), "then", fn);
-    llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(getLLVMContext(), "else", fn);
-    llvm::BasicBlock *mergeBlock = llvm::BasicBlock::Create(getLLVMContext(), "merge", fn);
-    getBuilder()->CreateCondBr(fn_res_doesTableExists, thenBlock, elseBlock);
+    auto phiNode = gen_phi();
 
-    getBuilder()->SetInsertPoint(thenBlock);
-    // Add logic for thenBlock
-    //  if: table exits, get pointer to it.
-    Value *thenValue = this->gen_call(getTable, {tableNameLlvmConstant});
-    getBuilder()->CreateBr(mergeBlock);
+    this->gen_if(fn_res_doesTableExists)([&]() { phiNode.emplace(this->gen_call(getTable, {tableNameLlvmConstant})); })
+        .gen_else([&]() { phiNode.emplace(this->gen_call(fn_initTables, {})); });
 
-    // Add logic for elseBlock
-    //  else : create tables which return the table*.
-    getBuilder()->SetInsertPoint(elseBlock);
-    Value *elseValue = gen_call(fn_initTables, {});
-    getBuilder()->CreateBr(mergeBlock);
-
-    // Set insertion point to the merge block
-    getBuilder()->SetInsertPoint(mergeBlock);
-
-    // Phi node to merge the values from "then" and "else" blocks
-    llvm::PHINode *phiNode = getBuilder()->CreatePHI(llvm::Type::getInt8PtrTy(getLLVMContext()), 2);
-    phiNode->addIncoming(thenValue, thenBlock);
-    phiNode->addIncoming(elseValue, elseBlock);
-    llvm::Value *tablePtrValue = phiNode;
+    llvm::Value *tablePtrValue = phiNode.get();
 
     // insert a record in table here.
     llvm::Value *defaultInsValues = this->initializeDsValueStructDefault(builder);
@@ -970,8 +868,6 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
     mainRecordRef = this->createInt64(UINT64_C(0));
   }
   llvm::Value *returnDs = this->gen_call(createDsContainer, {arg_txnManger, mainRecordRef});
-
-  //  this->gen_call(printPtr, {returnDs});
 
   getBuilder()->CreateRet(returnDs);
 
@@ -1045,10 +941,9 @@ void LLVMCodegen::codegenHelloWorld() {
 
 void LLVMCodegen::testHelloWorld() {
   assert(this->jitter);
-  LOG(INFO) << "getRawAddress(\"helloworld\")";
-  LOG(INFO) << this->jitter->getRawAddress("helloworld");
+  LOG(INFO) << "[testHelloWorld] GetRawAddress(\"helloworld\")" << this->jitter->getRawAddress("helloworld");
 
-  LOG(INFO) << "test helloWorld";
+  LOG(INFO) << "[testHelloWorld] Test helloWorld: ";
   reinterpret_cast<void (*)()>(this->jitter->getRawAddress("helloworld"))();
 }
 
