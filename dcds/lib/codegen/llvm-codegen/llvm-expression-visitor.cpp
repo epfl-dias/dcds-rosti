@@ -73,12 +73,23 @@ void* LLVMExpressionVisitor::visit(const expressions::IsNotNullExpression& expr)
   return isNotNull;
 }
 
+llvm::Value* LLVMExpressionVisitor::loadValueIfRequired(llvm::Value* in, dcds::valueType dcds_value_type) {
+  auto* ret = in;
+  if (ret->getType()->isPointerTy()) {
+    ret = codegenEngine->getBuilder()->CreateLoad(codegenEngine->DcdsToLLVMType(dcds_value_type), in);
+  }
+  return ret;
+}
+
 void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::AddExpression::visit";
   auto builder = codegenEngine->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
 
   if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
     return builder->CreateAdd(leftValue, rightValue);
@@ -95,6 +106,10 @@ void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) 
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
   if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
     return builder->CreateSub(leftValue, rightValue);
   } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
@@ -108,7 +123,6 @@ void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) 
   LOG(INFO) << "LLVMExpressionVisitor::IsEvenExpression::visit";
   auto builder = codegenEngine->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(isEven.getExpression()->accept(this));
-  assert(subExprEval->getType()->isIntegerTy());
 
   if (!(llvm::isa<llvm::IntegerType>(subExprEval->getType()))) {
     subExprEval->getType()->dump();

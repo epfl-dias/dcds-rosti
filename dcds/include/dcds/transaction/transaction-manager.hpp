@@ -57,6 +57,9 @@ class TransactionManager {
   bool abortTransaction(txn_ptr_t txn);
 
  private:
+  void releaseAllLocks(txn_ptr_t txn);
+
+ private:
   TxnTsGenerator txnIdGenerator{};
 
   // need some concurrent data structure for storing transactions in sorted manner.

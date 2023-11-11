@@ -23,7 +23,7 @@
 #define DCDS_RECORD_METADATA_HPP
 
 #include "dcds/common/common.hpp"
-#include "dcds/transaction/transaction.hpp"
+// #include "dcds/transaction/transaction.hpp"
 #include "dcds/util/locks/lock.hpp"
 #include "dcds/util/locks/spin-lock.hpp"
 
@@ -39,13 +39,27 @@ struct ts_t {
 
 class RecordMetaData {
   // protected:
- public:
+ private:
   // record_id_t row_id; we do not need record_id for now.
   utils::locks::SpinLock latch;
   utils::locks::Lock write_lock;
+
+ public:
+  inline auto lock() { return write_lock.try_lock(); }
+  inline void unlock() {
+    // need some sanity check if unlock is by who locked it.
+    return write_lock.unlock();
+  }
+
+  template <class lambda>
+  inline void withLatch(lambda &&func) {
+    this->latch.acquire();
+    func(this);
+    this->latch.release();
+  }
 };
 
-class RecordMetaData_SingleVersion : RecordMetaData {
+class RecordMetaData_SingleVersion : public RecordMetaData {
  public:
   RecordMetaData_SingleVersion() = default;
   explicit RecordMetaData_SingleVersion(xid_t) {}

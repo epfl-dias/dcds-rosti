@@ -31,6 +31,7 @@
 #include "dcds/common/common.hpp"
 #include "dcds/storage/attribute-def.hpp"
 #include "dcds/transaction/concurrency-control/record-metadata.hpp"
+#include "dcds/transaction/transaction.hpp"
 #include "dcds/util/packed-ptr.hpp"
 
 namespace dcds::storage {

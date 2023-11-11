@@ -22,6 +22,8 @@
 #ifndef DCDS_TRANSACTION_HPP
 #define DCDS_TRANSACTION_HPP
 
+#include <set>
+
 #include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/txn-utils.hpp"
@@ -37,14 +39,10 @@ class Txn {
   Txn(const Txn& other) = delete;
   Txn& operator=(const Txn& other) = delete;
 
-  Txn(TxnTs txn_ts, bool is_read_only = false) : txnTs(txn_ts), read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
+  explicit Txn(TxnTs txn_ts, bool is_read_only = false)
+      : txnTs(txn_ts), read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
 
  public:
-  // Should be in txn-manager
-  //  static Txn getTxn(bool is_read_only = false);
-  //  static xid_t getTxn(Txn* txnPtr, bool is_read_only = false);
-  //  static std::unique_ptr<Txn> make_unique(bool is_read_only = false);
-
   struct [[maybe_unused]] TxnCmp {
     bool operator()(const Txn& a, const Txn& b) const { return a.txnTs.start_time < b.txnTs.start_time; }
   };
@@ -55,9 +53,14 @@ class Txn {
   const TxnTs txnTs;
   const bool read_only;
 
- private:
+ public:  // fixme;
   [[maybe_unused]] xid_t commit_ts{};
   TXN_STATUS status;
+
+ public:
+  // during beginTxn, pass information about expected number of locks.
+  std::set<uintptr_t> exclusive_locks;
+  std::set<uintptr_t> shared_locks;
 
   friend class TransactionManager;
 

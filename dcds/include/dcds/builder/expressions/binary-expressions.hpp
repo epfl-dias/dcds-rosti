@@ -38,7 +38,7 @@ class BinaryExpression : public Expression {
   [[nodiscard]] Expression* getLeft() const { return _left; }
   [[nodiscard]] Expression* getRight() const { return _right; }
 
- private:
+ protected:
   Expression* _left;
   Expression* _right;
 };
@@ -50,6 +50,12 @@ class AddExpression : public BinaryExpression {
       : BinaryExpression(left.get(), right.get()) {}
 
   void* accept(ExpressionVisitor* v) override;
+
+  valueType getResultType() const override { return this->_left->getResultType(); }
+
+  std::string toString() const override {
+    return std::string{"( " + this->_left->toString() + " + " + this->_right->toString() + ")"};
+  }
 };
 
 class SubtractExpression : public BinaryExpression {

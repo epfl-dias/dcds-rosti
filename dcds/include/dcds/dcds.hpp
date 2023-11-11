@@ -32,6 +32,7 @@
 #include "dcds/builder/statement-builder.hpp"
 #include "dcds/common/common.hpp"
 #include "dcds/exporter/jit-container.hpp"
+#include "dcds/util/logging.hpp"
 
 namespace dcds {
 

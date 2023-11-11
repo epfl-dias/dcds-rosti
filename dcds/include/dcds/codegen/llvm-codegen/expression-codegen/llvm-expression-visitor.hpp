@@ -67,6 +67,9 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
   void* visit(const expressions::TemporaryVariableExpression& expr) override;
 
  private:
+  llvm::Value* loadValueIfRequired(llvm::Value* in, dcds::valueType dcds_value_type);
+
+ private:
   dcds::LLVMCodegen* codegenEngine;
   dcds::LLVMCodegen::function_build_context* fnCtx;
 };
