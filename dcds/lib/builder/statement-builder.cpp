@@ -343,6 +343,10 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       // auto st = std::static_pointer_cast<InsertStatement>(s);
       out << st->destination_var << " = " << st->type_name << "()";
 
+    } else if (s->stType == statementType::TEMP_VAR_ASSIGN) {
+      auto st = reinterpret_cast<const TempVarAssignStatement *>(s);
+      out << st->dest->toString() << " = " << st->source->toString();
+
     } else if (s->stType == dcds::statementType::METHOD_CALL) {
       auto st = reinterpret_cast<const MethodCallStatement *>(s);
       // auto st = std::static_pointer_cast<MethodCallStatement>(s);
