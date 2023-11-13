@@ -26,10 +26,7 @@ target_link_libraries_system(list-based-datastructures
 
 target_link_libraries(list-based-datastructures
         PUBLIC
-        vtune::vtune
-        LLVM::LLVM
         dcds
-        ${CMAKE_DL_LIBS}
         )
 
 target_compile_features(list-based-datastructures PUBLIC cxx_std_23)

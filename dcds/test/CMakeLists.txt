@@ -22,7 +22,6 @@ target_include_directories(dcds_test
 target_link_libraries_system(dcds_test
         absl::log
         cuckoo::cuckoo
-        LLVM::LLVM
         GTest::gtest
         GTest::gtest_main
         )
