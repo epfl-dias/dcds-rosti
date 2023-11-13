@@ -8,6 +8,7 @@ add_executable(play
 target_link_libraries_system(play
         benchmark::benchmark
         absl::log
+        absl::check
         cuckoo::cuckoo
         tbbmalloc
         tbbmalloc_proxy

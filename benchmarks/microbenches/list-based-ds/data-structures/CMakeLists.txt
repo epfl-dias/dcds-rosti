@@ -19,6 +19,7 @@ target_include_directories(list-based-datastructures
 target_link_libraries_system(list-based-datastructures
         benchmark::benchmark
         absl::log
+        absl::check
         cuckoo::cuckoo
         tbbmalloc
         tbbmalloc_proxy

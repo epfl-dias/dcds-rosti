@@ -25,12 +25,9 @@
 
 using namespace dcds_generated;
 
-static void EXPECT_TRUE(std::any v) { assert(std::any_cast<bool>(v)); }
-static void EXPECT_FALSE(std::any v) { assert(std::any_cast<bool>(v) == false); }
-template <typename A, typename B>
-void EXPECT_EQ(A a, B b) {
-  assert(a == b);
-}
+// CHECKs with an any cast wrapper
+static void CHECK_TRUE(std::any v) { CHECK(std::any_cast<bool>(v)); }
+static void CHECK_FALSE(std::any v) { CHECK_EQ(std::any_cast<bool>(v), false); }
 
 LinkedList::LinkedList(std::string _ds_name, std::string _ds_node_name)
     : ds_name(std::move(_ds_name)), ds_node_name(std::move(_ds_node_name)) {
@@ -185,26 +182,26 @@ void Stack::test() {
 
   instance->listAllAvailableFunctions();
 
-  EXPECT_TRUE(instance->op("empty"));
+  CHECK_TRUE(instance->op("empty"));
   instance->op("push", 11);
-  EXPECT_FALSE(instance->op("empty"));
+  CHECK_FALSE(instance->op("empty"));
   instance->op("push", 22);
   instance->op("push", 33);
   instance->op("push", 44);
-  EXPECT_FALSE(instance->op("empty"));
+  CHECK_FALSE(instance->op("empty"));
 
   // pop
   uint64_t val = 0;
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 44);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 33);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 22);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 11);
-  EXPECT_FALSE(instance->op("pop", &val));
-  EXPECT_TRUE(instance->op("empty"));
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 44);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 33);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 22);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 11);
+  CHECK_FALSE(instance->op("pop", &val));
+  CHECK_TRUE(instance->op("empty"));
 
   LOG(INFO) << "Stack::test() -- end";
 }
@@ -324,26 +321,26 @@ void FIFO::test() {
   instance->listAllAvailableFunctions();
 
   // push
-  EXPECT_TRUE(instance->op("empty"));
+  CHECK_TRUE(instance->op("empty"));
   instance->op("push", 11);
-  EXPECT_FALSE(instance->op("empty"));
+  CHECK_FALSE(instance->op("empty"));
   instance->op("push", 22);
   instance->op("push", 33);
   instance->op("push", 44);
-  EXPECT_FALSE(instance->op("empty"));
+  CHECK_FALSE(instance->op("empty"));
 
   // pop
   uint64_t val = 0;
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 11);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 22);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 33);
-  EXPECT_TRUE(instance->op("pop", &val));
-  EXPECT_EQ(val, 44);
-  EXPECT_FALSE(instance->op("pop", &val));
-  EXPECT_TRUE(instance->op("empty"));
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 11);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 22);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 33);
+  CHECK_TRUE(instance->op("pop", &val));
+  CHECK_EQ(val, 44);
+  CHECK_FALSE(instance->op("pop", &val));
+  CHECK_TRUE(instance->op("empty"));
 
   LOG(INFO) << "FIFO::test() -- end";
 }

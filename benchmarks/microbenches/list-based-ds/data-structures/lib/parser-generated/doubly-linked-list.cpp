@@ -21,15 +21,13 @@
 
 #include "parser-generated/doubly-linked-list.hpp"
 
+#include <absl/log/check.h>
+
 using namespace dcds_generated;
 
-static void EXPECT_TRUE(std::any v) { assert(std::any_cast<bool>(v)); }
-static void EXPECT_FALSE(std::any v) { assert(std::any_cast<bool>(v) == false); }
-template <typename A, typename B>
-void EXPECT_EQ(A a, B b) {
-  LOG(INFO) << "val: " << a << " | expected: " << b;
-  assert(a == b);
-}
+// CHECKs with an any cast wrapper
+static void EXPECT_TRUE(std::any v) { CHECK(std::any_cast<bool>(v)); }
+static void EXPECT_FALSE(std::any v) { CHECK_EQ(std::any_cast<bool>(v), false); }
 
 DoublyLinkedList::DoublyLinkedList() {
   this->builder = std::make_shared<dcds::Builder>(ds_name);
@@ -331,13 +329,13 @@ static void testBackOps(dcds::JitContainer* instance) {
   // pop
   uint64_t val = 0;
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 44);
+  CHECK_EQ(val, 44);
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 33);
+  CHECK_EQ(val, 33);
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 22);
+  CHECK_EQ(val, 22);
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 11);
+  CHECK_EQ(val, 11);
   EXPECT_FALSE(instance->op("pop_back", &val));
   EXPECT_TRUE(instance->op("empty"));
 
@@ -357,13 +355,13 @@ static void testFrontOps(dcds::JitContainer* instance) {
   // pop
   uint64_t val = 0;
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 44);
+  CHECK_EQ(val, 44);
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 33);
+  CHECK_EQ(val, 33);
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 22);
+  CHECK_EQ(val, 22);
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 11);
+  CHECK_EQ(val, 11);
   EXPECT_FALSE(instance->op("pop_front", &val));
   EXPECT_TRUE(instance->op("empty"));
   LOG(INFO) << "DoublyLinkedList::testFrontOps() -- end";
@@ -387,11 +385,11 @@ static void testFrontBackMixedOps(dcds::JitContainer* instance) {
   EXPECT_FALSE(instance->op("empty"));
 
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 44);
+  CHECK_EQ(val, 44);
   LOG(INFO) << "here";
 
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 22);
+  CHECK_EQ(val, 22);
   // 11->33
 
   instance->op("push_front", 66);
@@ -400,14 +398,14 @@ static void testFrontBackMixedOps(dcds::JitContainer* instance) {
   // 66->11->33->55
 
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 66);
+  CHECK_EQ(val, 66);
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 55);
+  CHECK_EQ(val, 55);
 
   EXPECT_TRUE(instance->op("pop_front", &val));
-  EXPECT_EQ(val, 11);
+  CHECK_EQ(val, 11);
   EXPECT_TRUE(instance->op("pop_back", &val));
-  EXPECT_EQ(val, 33);
+  CHECK_EQ(val, 33);
 
   EXPECT_TRUE(instance->op("empty"));
   EXPECT_FALSE(instance->op("pop_front", &val));
