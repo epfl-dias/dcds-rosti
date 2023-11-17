@@ -99,9 +99,6 @@ static size_t test_MT(dcds::JitContainer* instance, size_t n_threads) {
       for (size_t i = 0; i < iterations; i++) {
         doOp(instance);
       }
-      LOG(INFO) << "DoneXX";
-      sync_point.arrive_and_wait();  // not required i guess.
-      LOG(INFO) << "DoneXX2";
     });
   }
 
@@ -134,21 +131,22 @@ int main(int argc, char** argv) {
 
   currVal = test_ST(instance, expected_val);
   expected_val += iterations;
-  LOG(INFO) << "currVal1 = " << currVal << " | expected: " << expected_val;
+  CHECK(currVal == expected_val) << "current_value != expected_value :: " << currVal << " != " << expected_val;
 
   currVal = test_ST(instance, expected_val);
   expected_val += iterations;
-  LOG(INFO) << "currVal2 = " << currVal << " | expected: " << expected_val;
-  //
-  size_t n_threads = 4;
+  CHECK(currVal == expected_val) << "current_value != expected_value :: " << currVal << " != " << expected_val;
+
+  size_t n_threads = 24;
   currVal = test_MT(instance, n_threads);
   expected_val += (iterations * n_threads);
-  LOG(INFO) << "currValMR = " << currVal << " | expected: " << expected_val;
+  CHECK(currVal == expected_val) << "(multi-threaded) current_value != expected_value :: " << currVal
+                                 << " != " << expected_val;
 
   currVal = test_MT2(instance, n_threads);
   expected_val += (iterations * n_threads);
-  LOG(INFO) << "currValMR2 = " << currVal << " | expected: " << expected_val;
+  CHECK(currVal == expected_val) << "(multi-threaded) current_value != expected_value :: " << currVal
+                                 << " != " << expected_val;
 
-  LOG(INFO) << "------- DONE";
   return 0;
 }
