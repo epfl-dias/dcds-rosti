@@ -33,6 +33,8 @@ set(dcds_cxx
 
         # Transaction
         lib/transaction/transaction-manager.cpp
+        lib/transaction/transaction.cpp
+        lib/transaction/txn-log.cpp
 
         # Util
         lib/util/profiling.cpp
@@ -53,10 +55,12 @@ target_include_directories(dcds
 
 target_link_libraries_system(dcds
         absl::log
+        absl::check
         absl::log_initialize
         absl::debugging
         absl::failure_signal_handler
         cuckoo::cuckoo
+        tbb
         LLVM::LLVM)
 
 if (VTUNE AND VTUNE_ENABLE)

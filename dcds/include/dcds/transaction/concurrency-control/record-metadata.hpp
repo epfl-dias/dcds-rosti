@@ -22,6 +22,8 @@
 #ifndef DCDS_RECORD_METADATA_HPP
 #define DCDS_RECORD_METADATA_HPP
 
+#include <oneapi/tbb/rw_mutex.h>
+
 #include "dcds/common/common.hpp"
 // #include "dcds/transaction/transaction.hpp"
 #include "dcds/util/locks/lock.hpp"
@@ -41,22 +43,35 @@ class RecordMetaData {
   // protected:
  private:
   // record_id_t row_id; we do not need record_id for now.
-  utils::locks::SpinLock latch;
-  utils::locks::Lock write_lock;
+  // utils::locks::SpinLock latch;
+  // utils::locks::Lock write_lock;
+
+  oneapi::tbb::rw_mutex _lock{};
 
  public:
-  inline auto lock() { return write_lock.try_lock(); }
-  inline void unlock() {
-    // need some sanity check if unlock is by who locked it.
-    return write_lock.unlock();
-  }
+  inline auto unlock_ex() { return _lock.unlock(); }
 
-  template <class lambda>
-  inline void withLatch(lambda &&func) {
-    this->latch.acquire();
-    func(this);
-    this->latch.release();
-  }
+  inline auto unlock_shared() { return _lock.unlock_shared(); }
+
+  inline auto lock_ex() { return _lock.try_lock(); }
+  inline auto lock_shared() { return _lock.try_lock_shared(); }
+
+  // FIXME: HACKED TO AVOID ABORT AND QUEUE LOCKS!
+  //  inline auto lock_ex(){ _lock.lock(); return true;}
+  //  inline auto lock_shared(){ _lock.lock_shared(); return true;}
+
+  //  inline auto lock() { return write_lock.try_lock(); }
+  //  inline void unlock() {
+  //    // need some sanity check if unlock is by who locked it.
+  //    return write_lock.unlock();
+  //  }
+
+  //  template <class lambda>
+  //  inline void withLatch(lambda &&func) {
+  //    this->latch.acquire();
+  //    func(this);
+  //    this->latch.release();
+  //  }
 };
 
 class RecordMetaData_SingleVersion : public RecordMetaData {

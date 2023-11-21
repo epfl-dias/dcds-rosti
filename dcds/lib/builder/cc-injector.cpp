@@ -60,9 +60,11 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
 
     } else if (st->stType == statementType::UPDATE) {
       auto upd_st = reinterpret_cast<UpdateStatement *>(st);
-      if (!type_traits.is_nascent)
+      if (!type_traits.is_nascent) {
+        // FIXME: if the previous lock was shared, it has to change that to exclusive! or add an upgrade lock statement.
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, upd_st->destination_attr, typeName, typeId,
                           true);
+      }
 
       attribute_info x{typeName, upd_st->destination_attr};
       if (traits_in_scope.contains(x)) {
@@ -76,9 +78,12 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
       // new traits actually here, as we are going deeper?
       // also, pass if reference variable is nascent, then no need to do CC inside.
       if (!type_traits.is_nascent) {
+        // FIXME: check if the function is a read-only function, then it can be just shared-lock.
+        // also for runtime-const, we dont want lock.
+        // FIXME: !!!!
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
                           mc_st->function_instance->builder->getName(), mc_st->function_instance->builder->getTypeID(),
-                          true);
+                          false);
       }
 
       attribute_info x{mc_st->function_instance->builder->getName(), mc_st->referenced_type_variable};

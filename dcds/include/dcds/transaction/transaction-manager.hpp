@@ -45,6 +45,13 @@ class TransactionManager {
   TransactionManager(const TransactionManager &) = delete;
   TransactionManager &operator=(const TransactionManager &) = delete;
 
+ public:
+  ~TransactionManager() {
+    // LOG(INFO) <<"~TransactionManager["<<txn_namespace<<"]";
+    LOG(INFO) << "~TransactionManager[" << txn_namespace << "] commits: " << commit;
+    LOG(INFO) << "~TransactionManager[" << txn_namespace << "] aborts: " << abort;
+  }
+
  private:
   const std::string txn_namespace;
 
@@ -61,6 +68,10 @@ class TransactionManager {
 
  private:
   TxnTsGenerator txnIdGenerator{};
+
+ private:
+  std::atomic<size_t> commit{};
+  std::atomic<size_t> abort{};
 
   // need some concurrent data structure for storing transactions in sorted manner.
 };

@@ -26,6 +26,7 @@
 
 #include "dcds/common/common.hpp"
 #include "dcds/common/types.hpp"
+#include "dcds/transaction/txn-log.hpp"
 #include "dcds/transaction/txn-utils.hpp"
 
 namespace dcds::txn {
@@ -39,18 +40,21 @@ class Txn {
   Txn(const Txn& other) = delete;
   Txn& operator=(const Txn& other) = delete;
 
-  explicit Txn(TxnTs txn_ts, bool is_read_only = false)
-      : txnTs(txn_ts), read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
+  //  explicit Txn(TxnTs txn_ts, bool is_read_only = false)
+  //      : txnTs(txn_ts), read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
+  explicit Txn(bool is_read_only = false) : read_only(is_read_only), status(TXN_STATUS::ACTIVE) {}
 
  public:
-  struct [[maybe_unused]] TxnCmp {
-    bool operator()(const Txn& a, const Txn& b) const { return a.txnTs.start_time < b.txnTs.start_time; }
-  };
+  //  struct [[maybe_unused]] TxnCmp {
+  //    bool operator()(const Txn& a, const Txn& b) const { return a.txnTs.start_time < b.txnTs.start_time; }
+  //  };
 
-  auto getStatus() { return status; }
+  [[nodiscard]] inline auto getStatus() const { return status; }
+
+  auto& getLog() { return log; }
 
  public:
-  const TxnTs txnTs;
+  // const TxnTs txnTs;
   const bool read_only;
 
  public:  // fixme;
@@ -61,6 +65,17 @@ class Txn {
   // during beginTxn, pass information about expected number of locks.
   std::set<uintptr_t> exclusive_locks;
   std::set<uintptr_t> shared_locks;
+
+ public:
+  void rollback();
+
+ private:
+  // log
+  // we need to log update/insertions/removals.
+  // can we delay the removals until the end of txn?
+  // std::vector of some type.
+
+  TransactionLog log;
 
   friend class TransactionManager;
 

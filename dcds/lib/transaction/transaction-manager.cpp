@@ -27,23 +27,18 @@
 namespace dcds::txn {
 
 txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
-  // Create a txn object, add in txn table, and return.
-  // As the purpose of this transaction is to support concurrent data structure, this should be very lean and mean.
-
-  //  LOG(WARNING) << "FIXME: beginTxn does not include in txnTable yet";
-  // do we need txnTable/lock table at the moment?
-
-  //  return std::make_shared<Txn>(txnIdGenerator.getTxnTs(), is_read_only);
-  return new Txn(txnIdGenerator.getTxnTs(), is_read_only);
+  //  return new Txn(txnIdGenerator.getTxnTs(), is_read_only);
+  return new Txn(is_read_only);
 }
 
 void TransactionManager::releaseAllLocks(txn_ptr_t txn) {
   for (auto& rec : txn->exclusive_locks) {
-    dcds::storage::record_reference_t(rec)->unlock();
+    //    dcds::storage::record_reference_t(rec)->unlock();
+    dcds::storage::record_reference_t(rec)->unlock_ex();
   }
 
   for (auto& rec : txn->shared_locks) {
-    dcds::storage::record_reference_t(rec)->unlock();
+    dcds::storage::record_reference_t(rec)->unlock_shared();
   }
 }
 
@@ -52,8 +47,10 @@ bool TransactionManager::endTransaction(txn_ptr_t txn) {
   if (txn->status == TXN_STATUS::ACTIVE) {
     // start commit
     commitTransaction(txn);
+    commit++;
   } else {
     abortTransaction(txn);
+    abort++;
     success = false;
   }
   return success;
@@ -68,7 +65,7 @@ bool TransactionManager::commitTransaction(txn_ptr_t txn) {
 }
 bool TransactionManager::abortTransaction(txn_ptr_t txn) {
   // TODO: undo changes.
-
+  txn->rollback();
   releaseAllLocks(txn);
   txn->status = TXN_STATUS::ABORTED;
   return false;
