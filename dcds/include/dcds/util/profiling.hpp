@@ -31,9 +31,20 @@
 #pragma clang diagnostic ignored "-Wreserved-macro-identifier"
 #define __itt_event void*
 #pragma clang diagnostic pop
+
+#define __itt_resume() ((void)0)
+#define __itt_pause() ((void)0)
 #endif
 
 namespace dcds::profiling {
+
+class Profile {
+ public:
+  static void resume() { __itt_resume(); }
+
+  static void pause() { __itt_pause(); }
+};
+
 class ProfileRegion {
  public:
   explicit ProfileRegion(std::string region_name);
