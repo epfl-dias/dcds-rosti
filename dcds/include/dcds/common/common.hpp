@@ -51,4 +51,10 @@ class jit_function_t {
 
 }  // namespace dcds
 
+constexpr size_t operator""_K(unsigned long long int x) { return x * 1024; }
+
+constexpr size_t operator""_M(unsigned long long int x) { return x * 1024_K; }
+
+constexpr size_t operator""_G(unsigned long long int x) { return x * 1024_M; }
+
 #endif  // DCDS_COMMON_HPP
