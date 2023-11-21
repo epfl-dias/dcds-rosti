@@ -51,7 +51,6 @@ class RecordReference {
   RecordReference() : record_metadata_ptr() {}
   explicit RecordReference(uintptr_t unsafe_raw_address) : record_metadata_ptr(unsafe_raw_address) {}
   //  RecordRefV2(table_id_t tableId) : record_metadata_ptr(0, tableId) {}
-
   //  RecordRefV2 &operator=(RecordRefV2 const &other) = default;
   //  RecordRefV2 &operator=(RecordRefV2 &&other) = default;
 
@@ -103,36 +102,32 @@ class Table {
   // record_reference_t getNullReference() const { return record_reference_t{}; }
 
   virtual record_reference_t insertRecord(txn::Txn *txn, const void *data) = 0;
-  virtual void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value, uint attribute_idx) = 0;
+  virtual record_reference_t insertNRecord(txn::Txn *txn, size_t N, const void *data) = 0;
 
-  // Another possible issue is packing of recordMetaData?
-  //  RecordReference insertRecord(const txn::Txn &txn, const void *data);
+  virtual void updateAttribute(txn::Txn *txn, record_metadata_t *, void *value, uint attribute_idx) = 0;
+  virtual void updateNthRecord(txn::Txn *txn, record_metadata_t *, void *value, uint record_offset,
+                               uint attribute_idx) = 0;
 
-  //  std::vector<record_metadata_t *> insertRecordBatch(const void *data, const txn::Txn &txn, int num_records);
-  //
-  //  void updateRecord(const txn::Txn &txn, record_metadata_t *, void *data, const column_id_t *column_indexes =
-  //  nullptr,
-  //                    const short num_columns = -1);
-  //
-  //  void deleteRecord(const txn::Txn &txn, record_metadata_t *);
-  //
-  //  void getRecord(const txn::Txn &txn, record_metadata_t *, void *destination,
-  //                 const column_id_t *column_indexes = nullptr, const short num_columns = -1);
-  //
-  //  void *getRecordData(const txn::Txn &txn, record_metadata_t *);
-  virtual void *getRecordData(record_metadata_t *rc) = 0;
+  //  virtual record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) = 0;
+  //  virtual void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) =
+  //  0;
 
-  virtual record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) = 0;
-  virtual void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) = 0;
+  //  virtual void *getRecordData(record_metadata_t *rc) = 0;
+  virtual void getData(txn::Txn *txn, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
+  virtual void getAttribute(txn::Txn *txn, record_metadata_t *rc, void *dst, uint attribute_idx) = 0;
 
-  //  virtual void getAttribute(txn::Txn &, record_metadata_t *rc, uint attribute_idx);
-  virtual void getData(txn::Txn &, record_metadata_t *rc, void *dst, size_t offset, size_t len) = 0;
-  virtual void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx) = 0;
+  virtual record_reference_t getNthRecordReference(txn::Txn *txn, record_metadata_t *rc, uint record_offset) = 0;
+
+  virtual void getNthRecord(txn::Txn *txn, record_metadata_t *rc, void *dst, uint record_offset,
+                            uint attribute_idx) = 0;
 
   virtual size_t size() = 0;
   virtual size_t capacity() = 0;
   virtual bool empty() = 0;
   virtual void reserve(size_t) = 0;
+
+  virtual void rollback_update(record_metadata_t *, void *prev_value, uint attribute_idx) = 0;
+  virtual void rollback_create(record_metadata_t *) = 0;
 
  protected:
   std::atomic<size_t> record_id_gen{};
@@ -168,20 +163,28 @@ class SingleVersionRowStore : public Table {
   ~SingleVersionRowStore() override = default;
 
  public:
-  record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
-  // record_reference_t
-  void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) override;
-
-  inline void *getRecordData(record_metadata_t *rc) override {
-    return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t));
-  }
+  //  record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
+  //  void updateRefTypeData(txn::Txn &, record_metadata_t *, record_reference_t &value, uint attribute_idx) override;
 
   record_reference_t insertRecord(txn::Txn *txn, const void *data) override;
+  record_reference_t insertNRecord(txn::Txn *txn, size_t N, const void *data) override;
 
-  void updateAttribute(txn::Txn &, record_metadata_t *, void *value, uint attribute_idx) override;
+  void updateAttribute(txn::Txn *txn, record_metadata_t *, void *value, uint attribute_idx) override;
+  void updateNthRecord(txn::Txn *txn, record_metadata_t *, void *value, uint record_offset,
+                       uint attribute_idx) override;
 
-  void getData(txn::Txn &, record_metadata_t *rc, void *dst, size_t offset, size_t len) override;
-  void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx) override;
+  //  inline void *getRecordData(record_metadata_t *rc) override {
+  //    return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t));
+  //  }
+  void getData(txn::Txn *txn, record_metadata_t *rc, void *dst, size_t offset, size_t len) override;
+  void getAttribute(txn::Txn *txn, record_metadata_t *rc, void *dst, uint attribute_idx) override;
+
+  record_reference_t getNthRecordReference(txn::Txn *txn, record_metadata_t *rc, uint record_offset) override;
+
+  void getNthRecord(txn::Txn *txn, record_metadata_t *rc, void *dst, uint record_offset, uint attribute_idx) override;
+
+  void rollback_update(record_metadata_t *rc, void *prev_value, uint attribute_idx) override;
+  void rollback_create(record_metadata_t *rc) override;
 
  public:
   size_t size() override { return records_data.size(); }
@@ -193,7 +196,7 @@ class SingleVersionRowStore : public Table {
   std::deque<void *> records_data;
 
  private:
-  void *allocateRecordMemory() const;
+  void *allocateRecordMemory(size_t n_records = 1) const;
   void freeRecordMemory(void *);
 };
 

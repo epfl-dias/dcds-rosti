@@ -58,7 +58,6 @@ class JitContainer {
     // NOTE: good background-reading on parameter-packs:
     // https://www.scs.stanford.edu/~dm/blog/param-pack.html#function-parameter-packs
 
-    LOG(INFO) << "OP CALLED: " << op_name;
     assert(codegen_engine->getAvailableFunctions().contains(op_name) && "unknown op called");
 
     auto fn = codegen_engine->getAvailableFunctions()[op_name];
@@ -68,37 +67,31 @@ class JitContainer {
       case dcds::valueType::RECORD_PTR: {
         auto ret = reinterpret_cast<uint64_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET: " << ret;
         return {ret};
       }
       case dcds::valueType::INT32: {
         auto ret = reinterpret_cast<uint32_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET INT32: " << ret;
         return {ret};
       }
       case dcds::valueType::VOID: {
         reinterpret_cast<uint64_t (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET VOID: ";
         return {};
       }
       case dcds::valueType::BOOL: {
         auto ret = reinterpret_cast<bool (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET BOOL: " << ret;
         return {ret};
       }
       case dcds::valueType::DOUBLE: {
         auto ret = reinterpret_cast<double (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET DOUBLE: " << ret;
         return {ret};
       }
       case dcds::valueType::FLOAT: {
         auto ret = reinterpret_cast<float (*)(void *, uintptr_t, ...)>(const_cast<void *>(fn->address))(
             _container->txnManager, _container->mainRecord, std::forward<Args>(args)...);
-        LOG(INFO) << "RET FLOAT: " << ret;
         return {ret};
       }
       default:

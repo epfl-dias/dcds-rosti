@@ -13,6 +13,8 @@ set(dcds_cxx
         # Codegen
         lib/codegen/codegen.cpp
         lib/codegen/llvm-codegen/llvm-codegen.cpp
+        lib/codegen/llvm-codegen/llvm-codegen-statement.cpp
+        lib/codegen/llvm-codegen/llvm-codegen-function.cpp
         lib/codegen/llvm-codegen/llvm-context.cpp
         lib/codegen/llvm-codegen/llvm-jit.cpp
         lib/codegen/llvm-codegen/functions.cpp

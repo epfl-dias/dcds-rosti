@@ -29,16 +29,31 @@
 #include "dcds/codegen/llvm-codegen/llvm-codegen.hpp"
 
 namespace dcds {
-class LLVMCodegen;
-}
+// class LLVMCodegen;
+// class LLVMCodegenFunction;
+class LLVMScopedContext;
+}  // namespace dcds
 
 namespace dcds::expressions {
 
 class LLVMExpressionVisitor : public ExpressionVisitor {
  public:
-  explicit LLVMExpressionVisitor(LLVMCodegen* codegen_engine,
-                                 dcds::LLVMCodegen::function_build_context* function_context)
-      : codegenEngine(codegen_engine), fnCtx(function_context) {}
+  static llvm::Value* gen(LLVMScopedContext* build_ctx, const dcds::expressions::Expression* expr) {
+    dcds::expressions::LLVMExpressionVisitor exprVisitor(build_ctx);
+    auto val = const_cast<dcds::expressions::Expression*>(expr)->accept(&exprVisitor);
+    return static_cast<llvm::Value*>(val);
+  }
+
+  static llvm::Value* gen(LLVMScopedContext* build_ctx, const std::shared_ptr<dcds::expressions::Expression>& expr) {
+    dcds::expressions::LLVMExpressionVisitor exprVisitor(build_ctx);
+    auto val = const_cast<dcds::expressions::Expression*>(expr.get())->accept(&exprVisitor);
+    return static_cast<llvm::Value*>(val);
+  }
+
+  // std::shared_ptr
+
+ private:
+  explicit LLVMExpressionVisitor(LLVMScopedContext* function_context) : build_ctx(function_context) {}
 
   ~LLVMExpressionVisitor() override = default;
 
@@ -70,8 +85,7 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
   llvm::Value* loadValueIfRequired(llvm::Value* in, dcds::valueType dcds_value_type);
 
  private:
-  dcds::LLVMCodegen* codegenEngine;
-  dcds::LLVMCodegen::function_build_context* fnCtx;
+  LLVMScopedContext* build_ctx;
 };
 
 }  // namespace dcds::expressions

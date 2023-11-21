@@ -38,6 +38,7 @@ class StatementBuilder {
   friend class LLVMCodegen;
   friend class BuilderOptPasses;
   friend class CCInjector;
+  friend class LLVMCodegenStatement;
 
  public:
   struct conditional_blocks {
@@ -65,6 +66,11 @@ class StatementBuilder {
   void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                         const std::shared_ptr<expressions::LocalVariableExpression> &destination);
 
+  // For array/list
+  void addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                        const std::shared_ptr<expressions::LocalVariableExpression> &destination,
+                        const std::shared_ptr<dcds::expressions::Expression> &key);
+
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &source);
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                           const std::shared_ptr<expressions::Expression> &source);
@@ -85,10 +91,23 @@ class StatementBuilder {
     return this->addMethodCall(object_type, reference_variable, function_name, "", std::move(args));
   }
 
+  void addMethodCall(const std::shared_ptr<Builder> &object_type,
+                     const std::shared_ptr<dcds::expressions::LocalVariableExpression> &reference_variable,
+                     const std::string &function_name,
+                     const std::vector<std::shared_ptr<dcds::expressions::Expression>> &args = {}) {
+    return this->addMethodCall(object_type, reference_variable, function_name, nullptr, args);
+  }
+
   // with-return + with/without args
   void addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
                      const std::string &function_name, const std::string &return_destination_variable,
                      std::vector<std::string> args = {});
+
+  void addMethodCall(const std::shared_ptr<Builder> &object_type,
+                     const std::shared_ptr<dcds::expressions::LocalVariableExpression> &reference_variable,
+                     const std::string &function_name,
+                     const std::shared_ptr<expressions::LocalVariableExpression> &return_destination,
+                     const std::vector<std::shared_ptr<dcds::expressions::Expression>> &args = {});
 
   conditional_blocks addConditionalBranch(dcds::expressions::Expression *expr);
 
@@ -130,6 +149,10 @@ class StatementBuilder {
   //  }
 
  private:
+  std::shared_ptr<expressions::LocalVariableExpression> MethodCall_getReturnDestination(
+      const std::string &return_destination_variable);
+
+ private:
   std::shared_ptr<StatementBuilder> clone_deep();
 
  private:
@@ -147,8 +170,10 @@ class StatementBuilder {
   FunctionBuilder &parent_function;
   StatementBuilder *parent_block;
 
-  // public:
-  //  friend std::ostream &operator<<(std::ostream &out, const StatementBuilder &sb);
+ private:
+  static std::atomic<size_t> variable_name_index;
+  std::shared_ptr<expressions::TemporaryVariableExpression> add_temp_var(const std::string &name_prefix,
+                                                                         valueType type);
 };
 
 // std::ostream &operator<<(std::ostream &out, const StatementBuilder &sb);

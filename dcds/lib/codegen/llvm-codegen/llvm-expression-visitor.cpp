@@ -25,27 +25,29 @@
 #include <llvm/IR/Value.h>
 
 #include "dcds/builder/function-builder.hpp"
+#include "dcds/codegen/llvm-codegen/llvm-codegen-function.hpp"
 #include "dcds/codegen/llvm-codegen/llvm-context.hpp"
+#include "dcds/codegen/llvm-codegen/llvm-scoped-context.hpp"
 
 using namespace dcds::expressions;
 
 void* LLVMExpressionVisitor::visit(const expressions::IsNullExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::IsNullExpression::visit";
 
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(expr.getExpression()->accept(this));
 
   // NOTE: this is assuming a lot that isNull will be only of type RECORD_PTR?
   // ALSO, test it for functionArg as base, maybe it will be different subtype.
 
   llvm::Value* loadedVal = builder->CreateLoad(llvm::Type::getInt64Ty(builder->getContext()), subExprEval);
-  return builder->CreateICmpEQ(loadedVal, codegenEngine->createInt64(0));
+  return builder->CreateICmpEQ(loadedVal, build_ctx->getCodegen()->createInt64(0));
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::IsNotNullExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::IsNotNullExpression::visit";
 
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(expr.getExpression()->accept(this));
 
   // NOTE: this is assuming a lot that isNotNull will be only of type RECORD_PTR?
@@ -64,7 +66,7 @@ void* LLVMExpressionVisitor::visit(const expressions::IsNotNullExpression& expr)
   //  }
 
   llvm::Value* loadedVal = builder->CreateLoad(llvm::Type::getInt64Ty(builder->getContext()), subExprEval);
-  auto isNotNull = builder->CreateICmpNE(loadedVal, codegenEngine->createInt64(0));
+  auto isNotNull = builder->CreateICmpNE(loadedVal, build_ctx->getCodegen()->createInt64(0));
 
   // Following is not needed i think.
   // Convert the result to a boolean (i1)
@@ -76,14 +78,15 @@ void* LLVMExpressionVisitor::visit(const expressions::IsNotNullExpression& expr)
 llvm::Value* LLVMExpressionVisitor::loadValueIfRequired(llvm::Value* in, dcds::valueType dcds_value_type) {
   auto* ret = in;
   if (ret->getType()->isPointerTy()) {
-    ret = codegenEngine->getBuilder()->CreateLoad(codegenEngine->DcdsToLLVMType(dcds_value_type), in);
+    ret =
+        build_ctx->getCodegen()->getBuilder()->CreateLoad(build_ctx->getCodegen()->DcdsToLLVMType(dcds_value_type), in);
   }
   return ret;
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::AddExpression::visit";
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
@@ -102,7 +105,7 @@ void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
 
 void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::SubtractExpression::visit";
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
@@ -121,7 +124,7 @@ void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) 
 
 void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) {
   LOG(INFO) << "LLVMExpressionVisitor::IsEvenExpression::visit";
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(isEven.getExpression()->accept(this));
 
   if (!(llvm::isa<llvm::IntegerType>(subExprEval->getType()))) {
@@ -157,18 +160,24 @@ void* LLVMExpressionVisitor::visit(const expressions::FunctionArgumentExpression
   LOG(INFO) << "LLVMExpressionVisitor::FunctionArgumentExpression::visit";
   assert(expr.var_src_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
 
-  bool doesReturn = fnCtx->fb->getReturnValueType() != valueType::VOID;
-  size_t fn_arg_idx_st = doesReturn ? 4 : 3;  // if it does return, then 3 is the retVal ptr.
+  //  bool doesReturn = fnCtx->fb->getReturnValueType() != valueType::VOID;
+  //  size_t fn_arg_idx_st = doesReturn ? 4 : 3;  // if it does return, then 3 is the retVal ptr.
+  //
+  //  auto source_arg = fnCtx->fn->getArg(fnCtx->fb->getArgumentIndex(expr.var_name) + fn_arg_idx_st);
+  //  return source_arg;
 
-  auto source_arg = fnCtx->fn->getArg(fnCtx->fb->getArgumentIndex(expr.var_name) + fn_arg_idx_st);
-  return source_arg;
+  return this->build_ctx->getFunctionContext()->getArgumentByName(expr.var_name);
+  // return fnCtx->GetArgumentByName(expr.var_name);
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::TemporaryVariableExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::TemporaryVariableExpression::visit";
   assert(expr.var_src_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE);
-  assert(this->fnCtx->tempVariableMap->contains(expr.var_name));
-  return fnCtx->tempVariableMap->operator[](expr.var_name);
+  //  assert(this->fnCtx->tempVariableMap->contains(expr.var_name));
+  //  return fnCtx->tempVariableMap->operator[](expr.var_name);
+
+  return this->build_ctx->getFunctionContext()->getVariable(expr.var_name);
+  // return fnCtx->GetVariable(expr.var_name);
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::LocalVariableExpression& localVariableExpr) {
@@ -183,34 +192,34 @@ void* LLVMExpressionVisitor::visit(const expressions::LocalVariableExpression& l
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::Int64Constant& expr) {
-  return codegenEngine->createInt64(expr.getValue());
+  return build_ctx->getCodegen()->createInt64(expr.getValue());
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::FloatConstant& expr) {
-  return codegenEngine->createFloat(expr.getValue());
+  return build_ctx->getCodegen()->createFloat(expr.getValue());
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::DoubleConstant& expr) {
-  return codegenEngine->createDouble(expr.getValue());
+  return build_ctx->getCodegen()->createDouble(expr.getValue());
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::BoolConstant& expr) {
   if (expr.getValue()) {
-    return codegenEngine->createTrue();
+    return build_ctx->getCodegen()->createTrue();
   } else {
-    return codegenEngine->createFalse();
+    return build_ctx->getCodegen()->createFalse();
   }
 }
 void* LLVMExpressionVisitor::visit(const expressions::NullPtrConstant& expr) {
   // is this really a nullptr?
   // because we have record_ptr mostly, which are 0, so return 0 i think.
-  //  return llvm::ConstantPointerNull::get(Type::getInt8PtrTy(this->codegenEngine->getLLVMContext()));
-  return codegenEngine->createInt64(0);
+  //  return llvm::ConstantPointerNull::get(Type::getInt8PtrTy(this->build_ctx->getCodegen()->getLLVMContext()));
+  return build_ctx->getCodegen()->createInt64(0);
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::EqualExpression::visit";
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
@@ -220,7 +229,7 @@ void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
 }
 void* LLVMExpressionVisitor::visit(const expressions::NotEqualExpression& expr) {
   LOG(INFO) << "LLVMExpressionVisitor::NotEqualExpression::visit";
-  auto builder = codegenEngine->getBuilder();
+  auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));

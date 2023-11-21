@@ -91,14 +91,30 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
     auto name = actual_attr_names[i];
     LOG(INFO) << "[createTablesInternal] Loading attribute: " << name << " | type: " << type;
 
-    int64_t sizeVar = 0;
-    if (type == dcds::valueType::INT64)
-      sizeVar = sizeof(int64_t);
-    else if (type == dcds::valueType::RECORD_PTR)
-      sizeVar = sizeof(void*);
-    else
-      assert(false && "unknown?");
-    columns.emplace_back(name, type, sizeVar);
+    int64_t attribute_size = 0;
+    switch (type) {
+      case dcds::valueType::INT64:
+        attribute_size = sizeof(int64_t);
+        break;
+      case dcds::valueType::INT32:
+        attribute_size = sizeof(int32_t);
+        break;
+      case dcds::valueType::FLOAT:
+        attribute_size = sizeof(float);
+        break;
+      case dcds::valueType::DOUBLE:
+        attribute_size = sizeof(double);
+        break;
+      case dcds::valueType::RECORD_PTR:
+        attribute_size = sizeof(void*);
+        break;
+      case dcds::valueType::BOOL:
+        attribute_size = sizeof(bool);
+        break;
+      case dcds::valueType::VOID:
+        assert(false && "void type cannot be used as variable type");
+    }
+    columns.emplace_back(name, type, attribute_size);
   }
 
   // CRITICAL SECTION: so that if two DS instances are getting initialized together,
@@ -115,50 +131,33 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
     assert(ret_table_ptr);
   }
 
-  LOG(INFO) << "[createTablesInternal] DONE: " << ret_table_ptr;
   return ret_table_ptr;
 }
 
 void* getTxnManager(const char* txn_namespace) {
   auto x = dcds::txn::NamespaceRegistry::getInstance().getOrCreate(txn_namespace);
-  LOG(INFO) << "[getTxnManager]: txn_namespace: " << txn_namespace;
-  LOG(INFO) << "[getTxnManager]: returning: " << x.get();
   return x.get();
 }
 
 void* getTable(const char* table_name) { return dcds::storage::TableRegistry::getInstance().getTable(table_name); }
 
 void* beginTxn(void* txnManager, bool isReadOnly) {
-  LOG(INFO) << "beginTxn: args: " << txnManager;
   auto txnPtr = static_cast<dcds::txn::TransactionManager*>(txnManager)->beginTransaction(false);
-  LOG(INFO) << "beginTxn ret: " << txnPtr;
   return txnPtr;
 }
 
-// bool commitTxn(void* txnManager, void* txnPtr) {
-//   LOG(INFO) << "commitTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr;
-//   auto x =
-//       static_cast<dcds::txn::TransactionManager*>(txnManager)->commitTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
-//   LOG(INFO) << "commitTxn: ret: " << x;
-//   return x;
-// }
-
 bool endTxn(void* txnManager, void* txnPtr) {
-  LOG(INFO) << "endTxn: args: txnManager: " << txnManager << " | txnPtr: " << txnPtr
-            << " |txnStatus: " << static_cast<dcds::txn::Txn*>(txnPtr)->status;
-  auto x =
-      static_cast<dcds::txn::TransactionManager*>(txnManager)->endTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
-  LOG(INFO) << "endTxn: ret: " << x;
-  return x;
+  return static_cast<dcds::txn::TransactionManager*>(txnManager)->endTransaction(static_cast<dcds::txn::Txn*>(txnPtr));
 }
 
 uintptr_t insertMainRecord(void* table, void* txn, void* data) {
-  LOG(INFO) << "insertMainRecord: args: " << table << " | " << txn << " | " << data;
-
   auto x = static_cast<dcds::storage::Table*>(table)->insertRecord(static_cast<dcds::txn::Txn*>(txn), data);
-  LOG(INFO) << "insertMainRecord[" << static_cast<dcds::storage::Table*>(table)->name() << "] ret: " << x.getBase();
-  // LOG(INFO) << "[insertMainRecord] x.getTable(): " << x.getTable()->name();
+  return x.getBase();
+}
 
+uintptr_t insertNRecords(void* table, void* txn, void* data, size_t N) {
+  // LOG(INFO) << "insertNRecords[" << static_cast<dcds::storage::Table*>(table)->name() << "] : N: " << N;
+  auto x = static_cast<dcds::storage::Table*>(table)->insertNRecord(static_cast<dcds::txn::Txn*>(txn), N, data);
   return x.getBase();
 }
 
@@ -179,65 +178,56 @@ uintptr_t extractRecordFromDsContainer(void* container) {
 }
 
 void table_read_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* dst, size_t attributeIdx) {
-  auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  // auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
   auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
   auto storageTable = mainRecord.getTable();
   auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
-  LOG(INFO) << "[table_read_attribute][" << storageTable->name() << "] mainRecordActual: " << _mainRecord;
+  storageTable->getAttribute(txn, mainRecord.operator->(), dst, attributeIdx);
+}
 
-  // required args:
-  // - mainRecord,
-  // - table,
-  // - txn,
-  // - txnManager also? I don't think so but take it optionally
-  // -dst
-  // -attributeIdx (what about reading it all?)(does our attribute index and ordering in struct matches?)
+void table_read_attribute_offset(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* dst, size_t attributeIdx,
+                                 size_t record_offset) {
+  // auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto storageTable = mainRecord.getTable();
+  auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
-  //  void getAttribute(txn::Txn &, record_metadata_t *rc, void *dst, uint attribute_idx);
-  // LOG(INFO) << "getAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
-  storageTable->getAttribute(*txn, mainRecord.operator->(), dst, attributeIdx);
-  // LOG(INFO) << "getAttribute done";
-
-  // with-latch:
-  //  mainRecord->readWithLatch([&](dcds::storage::record_metadata_t* rc) {
-  //    storageTable->getAttribute(*txn, rc, dst, attributeIdx);
-  //  });
+  storageTable->getNthRecord(txn, mainRecord.operator->(), dst, record_offset, attributeIdx);
 }
 
 void table_write_attribute(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* src, uint attributeIdx) {
-  auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  // auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
   auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
   auto storageTable = mainRecord.getTable();
   auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
-  // required args:
-  // - mainRecord,
-  // - table,
-  // - txn,
-  // - txnManager also? I don't think so but take it optionally
-  // -dst
-  // -attributeIdx (what about reading it all?)(does our attribute index and ordering in struct matches?)
+  storageTable->updateAttribute(txn, mainRecord.operator->(), src, attributeIdx);
+}
 
-  //  void updateAttribute(txn::Txn &txn, record_metadata_t *, void *value, uint attribute_idx);
-  LOG(INFO) << "updateAttribute from: " << storageTable->name() << " | attributeIdx: " << attributeIdx;
-  // LOG(INFO) << "src val: " << *(reinterpret_cast<uint64_t*>(src));
-  storageTable->updateAttribute(*txn, mainRecord.operator->(), src, attributeIdx);
-  //  LOG(INFO) << "updateAttribute done";
+void table_write_attribute_offset(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, void* src, uint attributeIdx,
+                                  size_t record_offset) {
+  // auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto storageTable = mainRecord.getTable();
+  auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
 
-  // with-latch:
-  //  mainRecord->writeWithLatch([&](dcds::storage::record_metadata_t* dsRc) {
-  //    dsTable->updateAttribute(*txn, dsRc, writeVariable, attributeIndex);
-  //  });
+  storageTable->updateNthRecord(txn, mainRecord.operator->(), src, record_offset, attributeIdx);
+}
+
+uintptr_t table_get_nth_record(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, size_t record_offset) {
+  // auto txnManager = reinterpret_cast<dcds::txn::TransactionManager*>(_txnManager);
+  auto mainRecord = dcds::storage::record_reference_t(_mainRecord);
+  auto storageTable = mainRecord.getTable();
+  auto* txn = reinterpret_cast<dcds::txn::Txn*>(txnPtr);
+
+  auto x = storageTable->getNthRecordReference(txn, mainRecord.operator->(), record_offset);
+  return x.getBase();
 }
 
 bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record) {
-  LOG(WARNING) << "lock_shared (hacked to exclusive): " << record;
-  // return true;
-  return lock_exclusive(_txnManager, txnPtr, record);
-}
-bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record) {
-  LOG(INFO) << "lock_exclusive: " << record;
+  // LOG(WARNING) << "lock_shared: " << record;
+  //  return lock_exclusive(_txnManager, txnPtr, record);
 
   auto* txn = static_cast<dcds::txn::Txn*>(txnPtr);
   auto mainRecord = dcds::storage::record_reference_t(record);
@@ -245,13 +235,38 @@ bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record) {
   if (unlikely(txn->exclusive_locks.contains(record))) {
     return true;
   } else {
-    auto acquire_success = mainRecord.operator->()->lock();
+    auto acquire_success = mainRecord.operator->()->lock_shared();
+    if (acquire_success) {
+      txn->shared_locks.insert(record);
+      return true;
+    } else {
+      txn->status = dcds::txn::TXN_STATUS::ABORTED;
+      // LOG(INFO) << "lock-failed";
+      return false;
+    }
+  }
+}
+bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record) {
+  // LOG(INFO) << "lock_exclusive: " << record;
+
+  auto* txn = static_cast<dcds::txn::Txn*>(txnPtr);
+  auto mainRecord = dcds::storage::record_reference_t(record);
+
+  if (unlikely(txn->exclusive_locks.contains(record))) {
+    return true;
+  } else {
+    if (unlikely(txn->shared_locks.contains(record))) {
+      txn->shared_locks.erase(record);
+      mainRecord->unlock_shared();
+    }
+    auto acquire_success = mainRecord.operator->()->lock_ex();
+    //    auto acquire_success = mainRecord.operator->()->lock_exclusive();
     if (acquire_success) {
       txn->exclusive_locks.insert(record);
       return true;
     } else {
       txn->status = dcds::txn::TXN_STATUS::ABORTED;
-      LOG(INFO) << "lock-failed";
+      // LOG(INFO) << "lock-failed";
       return false;
     }
   }

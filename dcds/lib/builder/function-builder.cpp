@@ -93,7 +93,7 @@ void FunctionBuilder::print(std::ostream &out, size_t indent_level) {
   for (auto i = 0; i < this->function_args.size(); i++) {
     out << this->function_args[i]->toString();
     if (i != this->function_args.size() - 1) {
-      out << ",";
+      out << ", ";
     }
   }
 

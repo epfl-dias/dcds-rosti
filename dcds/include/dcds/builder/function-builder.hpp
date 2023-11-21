@@ -51,6 +51,8 @@ class FunctionBuilder : remove_copy {
   friend class StatementBuilder;
   friend class BuilderOptPasses;
   friend class CCInjector;
+  friend class LLVMCodegenStatement;
+  friend class LLVMCodegenFunction;
 
  public:
   explicit FunctionBuilder(dcds::Builder *ds_builder, std::string functionName);

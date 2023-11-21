@@ -36,6 +36,7 @@ class FunctionBuilder;
 
 enum class statementType {
   READ,
+  READ_INDEXED,
   UPDATE,
   CREATE,
   YIELD,
@@ -52,6 +53,9 @@ inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
   switch (ty) {
     case dcds::statementType::READ:
       os << "READ";
+      break;
+    case dcds::statementType::READ_INDEXED:
+      os << "READ_INDEXED";
       break;
     case statementType::UPDATE:
       os << "UPDATE";
@@ -146,6 +150,29 @@ class ReadStatement : public Statement {
   ~ReadStatement() override = default;
 };
 
+class ReadIndexedStatement : public Statement {
+ public:
+  explicit ReadIndexedStatement(std::string source_attribute,
+                                std::shared_ptr<expressions::LocalVariableExpression> destination,
+                                std::shared_ptr<expressions::Expression> index_key, bool fixed_integer_indexed)
+      : Statement(statementType::READ_INDEXED),
+        source_attr(std::move(source_attribute)),
+        dest_expr(std::move(destination)),
+        index_expr(std::move(index_key)),
+        integer_indexed(fixed_integer_indexed) {}
+
+  ReadIndexedStatement(const ReadIndexedStatement&) = default;
+
+  const std::string source_attr;
+  const std::shared_ptr<expressions::LocalVariableExpression> dest_expr;
+  const std::shared_ptr<expressions::Expression> index_expr;
+  const bool integer_indexed;
+
+  [[nodiscard]] Statement* clone() const override { return new ReadIndexedStatement(*this); }
+
+  ~ReadIndexedStatement() override = default;
+};
+
 class UpdateStatement : public Statement {
  public:
   explicit UpdateStatement(std::string destination_attribute, std::shared_ptr<expressions::Expression> source)
@@ -178,10 +205,9 @@ class InsertStatement : public Statement {
 
 class MethodCallStatement : public Statement {
  public:
-  explicit MethodCallStatement(
-      std::shared_ptr<FunctionBuilder> function_call, std::string reference_variable,
-      std::shared_ptr<expressions::LocalVariableExpression> return_destination,
-      std::vector<std::shared_ptr<expressions::LocalVariableExpression>> _function_arguments = {})
+  explicit MethodCallStatement(std::shared_ptr<FunctionBuilder> function_call, std::string reference_variable,
+                               std::shared_ptr<expressions::LocalVariableExpression> return_destination,
+                               std::vector<std::shared_ptr<expressions::Expression>> _function_arguments = {})
       : Statement(statementType::METHOD_CALL),
         function_instance(std::move(function_call)),
         function_arguments(std::move(_function_arguments)),
@@ -192,7 +218,7 @@ class MethodCallStatement : public Statement {
   MethodCallStatement(const MethodCallStatement&) = default;
 
   std::shared_ptr<FunctionBuilder> function_instance;
-  const std::vector<std::shared_ptr<expressions::LocalVariableExpression>> function_arguments;
+  const std::vector<std::shared_ptr<expressions::Expression>> function_arguments;
   const std::string referenced_type_variable;
   const std::shared_ptr<expressions::LocalVariableExpression> return_dest;
   const bool has_return_dest;

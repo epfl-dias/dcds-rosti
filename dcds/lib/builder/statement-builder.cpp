@@ -26,39 +26,111 @@
 
 using namespace dcds;
 
+std::atomic<size_t> StatementBuilder::variable_name_index = 0;
+std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::add_temp_var(const std::string &name_prefix,
+                                                                                         valueType type) {
+  return this->parent_function.addTempVariable(name_prefix + "_" + std::to_string(variable_name_index.fetch_add(1)),
+                                               type);
+}
+
 void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                         const std::string &destination) {
-  // Ideally this should return a valueType or something operate-able so the user knows what is the return type?
-  // NOTE: Source will always be DS-attribute, and destination will be a temporary variable always.
-
-  if (!(this->parent_function.hasAttribute(attribute))) {
-    throw dcds::exceptions::dcds_dynamic_exception("Attribute not registered in the data structure");
+  if (this->parent_function.hasTempVariable(destination)) {
+    return this->addReadStatement(attribute, this->parent_function.getTempVariable(destination));
+  } else if (this->parent_function.hasArgument(destination)) {
+    auto func_arg = this->parent_function.getArgument(destination);
+    // CHECK(func_arg->is_var_writable) << "Function argument is not writeable";
+    return this->addReadStatement(attribute, this->parent_function.getArgument(destination));
+  } else {
+    CHECK(false) << "Function does not have referenced destination variable: " << destination;
   }
-
-  if (!(this->parent_function.hasTempVariable(destination))) {
-    throw dcds::exceptions::dcds_dynamic_exception("Function does not referenced destination variable referenced: " +
-                                                   destination);
-  }
-
-  auto s = new ReadStatement(attribute->name, this->parent_function.getTempVariable(destination));
-  statements.push_back(s);
 }
 
 void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                         const std::shared_ptr<expressions::LocalVariableExpression> &destination) {
-  // How do we know if expr is valid?
-  // checks?
-  if (destination->getResultType() != attribute->type) {
-    throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch between attribute and destination variable");
-  }
+  CHECK(this->parent_function.hasAttribute(attribute)) << "Attribute not registered in the data structure";
+  CHECK(destination->getType() == attribute->type) << "Type mismatch between attribute and destination variable";
 
   auto rs = new ReadStatement(attribute->name, destination);
   statements.push_back(rs);
 }
 
+void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                                        const std::shared_ptr<expressions::LocalVariableExpression> &destination,
+                                        const std::shared_ptr<dcds::expressions::Expression> &key) {
+  CHECK(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST) << "Attribute is not a array/list type";
+
+  auto attributeList = std::static_pointer_cast<AttributeList>(attribute);
+
+  if (attributeList->is_primitive_type) {
+    CHECK(destination->getType() == attributeList->simple_type->type)
+        << "Type mismatch between source and destination: " << attributeList->simple_type->type
+        << " != " << destination->getType();
+  } else {
+    // FIXME: can we check the inner-type of record_ptr
+    CHECK(destination->getType() == dcds::valueType::RECORD_PTR)
+        << "Destination is not of the type RECORD_PTR: " << destination->getType();
+  }
+
+  if (attributeList->is_fixed_size) {
+    // FIXME: create a function for checking integral type.
+    CHECK(key->getResultType() == valueType::INT64) << "Key should be integral type for fixed-sized arrays";
+  } else {
+    auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+
+    CHECK(key->getResultType() != indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type)
+        << "Mismatched key type: "
+        << "Expected: " << key->getResultType()
+        << " vs Input: " << indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type;
+  }
+
+  // what will be the statements then?
+  //  e.g. sb->addReadStatement(rec_attribute, rec, key_arg);
+
+  // we need the value at that index.
+
+  // it will be translated into two statements. first is getting the pointer to actual table?
+
+  if (attributeList->is_fixed_size) {
+    // ARRAY access
+    auto arrayTy = std::static_pointer_cast<AttributeArray>(attributeList);
+
+    // $$ for array
+    // get pointer to starting record, or index of starting record? and then add the index, and then do a read on that
+    // statement.
+    //    this->addReadStatement(attribute, add_temp_var("index_read_tmp_arTy", valueType::RECORD_PTR));
+    //    this->addLogStatement("read the pointer to the actual table record\n");
+
+    // now how to get the value?
+    LOG(INFO) << "AUNNN: " << attribute->name;
+
+    auto rs = new ReadIndexedStatement(attribute->name, destination, key, true);
+    statements.push_back(rs);
+
+  } else {
+    // KV_MAP access
+    auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+
+    // $$ for indexedList
+    // get the pointer to the actual index which is stored there.
+    // then probe the index to get the value of it.
+
+    // we need a name-generator.
+    this->addReadStatement(attribute, add_temp_var("index_read_tmp_idxTy", valueType::RECORD_PTR));
+    // now we have ptr to that index, now probe it for get.
+
+    // how to handle if not found?
+    auto rs = new ReadIndexedStatement(attribute->name, destination, key, false);
+    statements.push_back(rs);
+  }
+}
+
 void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                           const std::string &source) {
   // NOTE: Destination will always be DS-attribute, and source can be either temporary variable or function argument.
+
+  CHECK(!(attribute->is_compile_time_constant)) << "Cannot update a compile-time constant attribute";
+  CHECK(!(attribute->is_runtime_constant)) << "Cannot update a runtime constant attribute";
 
   if (!(this->parent_function.hasAttribute(attribute))) {
     throw dcds::exceptions::dcds_dynamic_exception("Attribute not registered in the data structure");
@@ -85,6 +157,9 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
 
 void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                           const std::shared_ptr<expressions::Expression> &source) {
+  CHECK(!(attribute->is_compile_time_constant)) << "Cannot update a compile-time constant attribute";
+  CHECK(!(attribute->is_runtime_constant)) << "Cannot update a runtime constant attribute";
+
   // How do we know if expr is valid?
   // checks?
   if (source->getResultType() != attribute->type) {
@@ -98,10 +173,9 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
 void StatementBuilder::addReturnStatement(const std::shared_ptr<expressions::Expression> &expr) {
   // How do we know if expr is valid?
   // checks?
-  if (expr->getResultType() != this->parent_function.returnValueType) {
-    throw dcds::exceptions::dcds_invalid_type_exception(
-        "Return type mismatch between return variable and declared return type");
-  }
+  CHECK(expr->getResultType() == this->parent_function.returnValueType)
+      << "Return type mismatch between return variable and declared return type in the function: "
+      << this->parent_function.getName();
 
   auto rs = new ReturnStatement(expr);
   statements.push_back(rs);
@@ -121,10 +195,8 @@ void StatementBuilder::addReturnStatement(const std::string &temporary_var_name)
 }
 
 void StatementBuilder::addReturnVoidStatement() {
-  if (this->parent_function.returnValueType != dcds::valueType::VOID) {
-    throw dcds::exceptions::dcds_invalid_type_exception(
-        "Return type mismatch between return variable and declared return type");
-  }
+  CHECK(this->parent_function.returnValueType == dcds::valueType::VOID)
+      << "Function (" << this->parent_function.getName() << ") expects non-void return";
 
   auto rs = new ReturnStatement(nullptr);
   statements.push_back(rs);
@@ -158,6 +230,28 @@ std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addI
 std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addInsertStatement(
     const std::shared_ptr<Builder> &object_type, const std::string &variable_name) {
   return this->addInsertStatement(object_type->getName(), variable_name);
+}
+
+std::shared_ptr<expressions::LocalVariableExpression> StatementBuilder::MethodCall_getReturnDestination(
+    const std::string &return_destination_variable) {
+  std::shared_ptr<expressions::LocalVariableExpression> return_dest = nullptr;
+  if (!(return_destination_variable.empty())) {
+    if (this->parent_function.hasTempVariable(return_destination_variable)) {
+      return_dest = this->parent_function.getTempVariable(return_destination_variable);
+    } else if (this->parent_function.hasArgument(return_destination_variable)) {
+      return_dest = *(this->parent_function.findArgument(return_destination_variable));
+      if (!(return_dest->is_var_writable)) {
+        throw dcds::exceptions::dcds_invalid_type_exception(
+            "Function argument is not a reference type/ cannot save return value to a function argument passed by "
+            "value.");
+      }
+
+    } else {
+      throw dcds::exceptions::dcds_dynamic_exception(
+          "Argument is neither a temporary variable, nor a function argument: " + return_destination_variable);
+    }
+  }
+  return return_dest;
 }
 
 void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type, const std::string &reference_variable,
@@ -196,7 +290,7 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
         std::to_string(expected_args.size()) + " provided: " + std::to_string(function_args.size()));
   }
 
-  std::vector<std::shared_ptr<expressions::LocalVariableExpression>> arg_vars;
+  std::vector<std::shared_ptr<expressions::Expression>> arg_vars;
   auto i = 0;
   for (const std::string &arg_name : function_args) {
     if (!arg_name.empty()) {
@@ -222,32 +316,56 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
   }
 
   // return destination
-  std::shared_ptr<expressions::LocalVariableExpression> return_dest = nullptr;
+  std::shared_ptr<expressions::LocalVariableExpression> return_dest =
+      MethodCall_getReturnDestination(return_destination_variable);
   if (!(return_destination_variable.empty())) {
-    if (this->parent_function.hasTempVariable(return_destination_variable)) {
-      return_dest = this->parent_function.getTempVariable(return_destination_variable);
-    } else if (this->parent_function.hasArgument(return_destination_variable)) {
-      return_dest = *(this->parent_function.findArgument(return_destination_variable));
-      if (!(return_dest->is_var_writable)) {
-        throw dcds::exceptions::dcds_invalid_type_exception(
-            "Function argument is not a reference type/ cannot save return value to a function argument passed by "
-            "value.");
-      }
-
-    } else {
-      throw dcds::exceptions::dcds_dynamic_exception(
-          "Argument is neither a temporary variable, nor a function argument: " + return_destination_variable);
-    }
-
-    if (return_dest->getType() != method->getReturnValueType()) {
-      LOG(INFO) << return_dest->getType();
-      LOG(INFO) << method->getReturnValueType();
-      throw dcds::exceptions::dcds_invalid_type_exception("Type mismatch for return destination.");
-    }
+    CHECK(return_dest->getType() == method->getReturnValueType()) << "Type mismatch for return destination.";
   }
 
   auto rs = new MethodCallStatement(object_type->getFunction(function_name), reference_variable, return_dest,
                                     std::move(arg_vars));
+  statements.push_back(rs);
+  doesHaveMethodCalls = true;
+}
+
+void StatementBuilder::addMethodCall(
+    const std::shared_ptr<Builder> &object_type,
+    const std::shared_ptr<dcds::expressions::LocalVariableExpression> &reference_variable,
+    const std::string &function_name, const std::shared_ptr<expressions::LocalVariableExpression> &return_destination,
+    const std::vector<std::shared_ptr<dcds::expressions::Expression>> &function_args) {
+  CHECK(reference_variable != nullptr) << "Reference variable cannot be empty";
+  CHECK((this->parent_function.hasTempVariable(reference_variable->getName()) ||
+         this->parent_function.hasArgument(reference_variable->getName())))
+      << "Reference variable does not exists in the scope: " + reference_variable->getName();
+
+  CHECK(reference_variable->getType() == dcds::valueType::RECORD_PTR)
+      << "Reference variable is not a type: " << reference_variable->getName();
+
+  // FIXME: how to check if the record_ptr is of the correct type, that is, object_type!
+  CHECK(object_type->hasFunction(function_name))
+      << "Function (" << function_name << ") does not exists in the type: " + object_type->getName();
+
+  auto method = object_type->getFunction(function_name);
+  const auto &expected_args = method->getArguments();
+
+  CHECK(function_args.size() == expected_args.size())
+      << "number of function arguments does not matched expected number of arguments by the target function. expected: "
+      << std::to_string(expected_args.size()) << " provided: " << std::to_string(function_args.size());
+
+  auto i = 0;
+  for (const auto &arg : function_args) {
+    CHECK(arg->getResultType() == expected_args[i]->getType())
+        << "Type mismatch for argument # " << i << " :" << arg->getResultType()
+        << " != " << expected_args[i]->getType();
+    i++;
+  }
+
+  if (return_destination) {
+    CHECK(return_destination->getType() == method->getReturnValueType()) << "Type mismatch for return destination.";
+  }
+
+  auto rs = new MethodCallStatement(object_type->getFunction(function_name), reference_variable->getName(),
+                                    return_destination, function_args);
   statements.push_back(rs);
   doesHaveMethodCalls = true;
 }
@@ -326,12 +444,12 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
 
     } else if (s->stType == dcds::statementType::READ) {
       auto st = reinterpret_cast<const ReadStatement *>(s);
-      // auto st = std::static_pointer_cast<ReadStatement>(s);
-      //      LOG(INFO) << "HERE";
-      //      LOG(INFO) << st;
-      //      LOG(INFO) << st->dest_expr.operator bool();
-      //      LOG(INFO) << st->dest_expr->getName();
       out << "src: " << st->source_attr << ", dst: " << st->dest_expr->toString();
+
+    } else if (s->stType == dcds::statementType::READ_INDEXED) {
+      auto st = reinterpret_cast<const ReadIndexedStatement *>(s);
+      out << "src: " << st->source_attr << "[" << st->index_expr->toString() << "]"
+          << ", dst: " << st->dest_expr->toString();
 
     } else if (s->stType == statementType::UPDATE) {
       auto st = reinterpret_cast<const UpdateStatement *>(s);

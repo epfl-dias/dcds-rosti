@@ -73,7 +73,9 @@ void LLVMCodegenContext::registerAllFunctions() {
   // void printUInt64(uint64_t* X);
   registerFunction("printUInt64", void_type, {int64_type});
 
-  registerFunction("endTxn", int1_bool_type, {void_ptr_type, void_ptr_type});
+  registerFunction("beginTxn", void_ptr_type, {void_ptr_type, int1_bool_type}, true);
+  registerFunction("endTxn", int1_bool_type, {void_ptr_type, void_ptr_type}, true);
+  registerFunction("extractRecordFromDsContainer", uintptr_type, {void_ptr_type}, true);
 
   //  void* createTablesInternal(char* table_name, const dcds::valueType attributeTypes[], char* attributeNames[],
   //                             int num_attributes)
@@ -85,14 +87,20 @@ void LLVMCodegenContext::registerAllFunctions() {
   //  registerFunction("c4", void_ptr_type, {char_ptr_type});
 
   //  uintptr_t insertMainRecord(void* table, void* txn, void* data)
-  registerFunction("insertMainRecord", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type});
+  registerFunction("insertMainRecord", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type}, true);
+  // extern "C" uintptr_t insertNRecords(void* table, void* txn, void* data, size_t N);
+  registerFunction("insertNRecords", uintptr_type, {void_ptr_type, void_ptr_type, void_ptr_type, createSizeType()},
+                   true);
+  // uintptr_t table_get_nth_record(void* _txnManager, uintptr_t _mainRecord, void* txnPtr, size_t record_offset){
+  registerFunction("table_get_nth_record", uintptr_type, {void_ptr_type, uintptr_type, void_ptr_type, int64_type},
+                   true);
 
   //  bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record)
   //  bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record)
   //  bool unlock_all(void* _txnManager, void* txnPtr)
-  registerFunction("lock_shared", int1_bool_type, {void_ptr_type, void_ptr_type, uintptr_type});
-  registerFunction("lock_exclusive", int1_bool_type, {void_ptr_type, void_ptr_type, uintptr_type});
-  registerFunction("unlock_all", int1_bool_type, {void_ptr_type, void_ptr_type});
+  registerFunction("lock_shared", int1_bool_type, {void_ptr_type, void_ptr_type, uintptr_type}, true);
+  registerFunction("lock_exclusive", int1_bool_type, {void_ptr_type, void_ptr_type, uintptr_type}, true);
+  registerFunction("unlock_all", int1_bool_type, {void_ptr_type, void_ptr_type}, true);
 }
 
 FunctionCallee LLVMCodegenContext::getFunction_printf() const {

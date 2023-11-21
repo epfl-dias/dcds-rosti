@@ -24,11 +24,14 @@
 #include <utility>
 
 #include "dcds/storage/table-registry.hpp"
+#include "dcds/util/logging.hpp"
 
 using namespace dcds::storage;
 
 Table* RecordReference::getTable() {
-  return TableRegistry::getInstance().getTable(static_cast<table_id_t>(record_metadata_ptr.getData()));
+  // issue here?
+  static thread_local auto* registry = &TableRegistry::getInstance();
+  return registry->getTable(static_cast<table_id_t>(record_metadata_ptr.getData()));
 }
 
 Table::Table(table_id_t tableId, std::string tableName, size_t recordSize, std::vector<AttributeDef> attributes,
@@ -59,59 +62,123 @@ Table::Table(table_id_t tableId, std::string tableName, size_t recordSize, std::
   assert(recordSize == rec_size);
 }
 
-void* SingleVersionRowStore::allocateRecordMemory() const {
+SingleVersionRowStore::SingleVersionRowStore(table_id_t tableId, const std::string& table_name, size_t recordSize,
+                                             std::vector<AttributeDef> attributes)
+    : Table(tableId, table_name, recordSize, std::move(attributes), false) {}
+
+void* SingleVersionRowStore::allocateRecordMemory(size_t n_records) const {
   // TODO: use some sort of caching or allocate more and then return from the allocations.
   // LOG(INFO) << "allocateRecordMemory(): " << record_size << " | actualSize: " << record_size_data_only;
-  return malloc(record_size);
+
+  // WHAT ABOUT ALIGNMENTS?
+  return malloc(record_size * n_records);
 }
 void SingleVersionRowStore::freeRecordMemory(void* mem) { free(mem); }
 
 record_reference_t SingleVersionRowStore::insertRecord(dcds::txn::Txn* txn, const void* data) {
   // txn can be null as we generate single-threaded DS also.
-  assert(!txn || (txn && txn->read_only == false && "RO txn inserting ???"));
+  CHECK(!txn || (txn && !txn->read_only)) << "RO txn inserting ???";
+
   void* mem = allocateRecordMemory();
-  auto* meta = new (mem) record_metadata_t(txn ? txn->txnTs.start_time : 0);
+  //  auto* meta = new (mem) record_metadata_t(txn ? txn->txnTs.start_time : 0);
+  auto* meta = new (mem) record_metadata_t(0);
   void* dataMemory = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mem) + sizeof(record_metadata_t));
 
   memcpy(dataMemory, data, record_size_data_only);
 
-  return record_reference_t{this->table_id, meta};
+  auto rec = record_reference_t{this->table_id, meta};
+  if (likely(txn != nullptr)) {
+    txn->getLog().addInsertLog(rec.getBase());
+  }
+  return rec;
 }
 
-SingleVersionRowStore::SingleVersionRowStore(table_id_t tableId, const std::string& table_name, size_t recordSize,
-                                             std::vector<AttributeDef> attributes)
-    : Table(tableId, table_name, recordSize, std::move(attributes), false) {}
+record_reference_t SingleVersionRowStore::insertNRecord(txn::Txn* txn, size_t N, const void* data) {
+  CHECK(!txn || (txn && !txn->read_only)) << "RO txn inserting ???";
 
-void SingleVersionRowStore::updateAttribute(txn::Txn& txn, record_metadata_t* rc, void* value, uint attribute_idx) {
+  void* mem = allocateRecordMemory(N);
+  auto mem_p = reinterpret_cast<uintptr_t>(mem);
+  record_reference_t ret;
+
+  for (size_t i = 0; i < N; i++) {
+    void* base = reinterpret_cast<void*>(mem_p + (record_size * i));
+
+    auto* meta = new (base) record_metadata_t(0);
+    if (likely(data != nullptr)) {
+      void* dataMemory = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base) + sizeof(record_metadata_t));
+      memcpy(dataMemory, data, record_size_data_only);
+    }
+
+    if (i == 0) ret = record_reference_t{this->table_id, meta};
+  }
+  return ret;
+}
+
+void SingleVersionRowStore::updateAttribute(txn::Txn* txn, record_metadata_t* rc, void* value, uint attribute_idx) {
   auto colWidthOffset = column_size_offset_pairs.at(attribute_idx);
   auto data_ptr =
       reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) + colWidthOffset.second);
+  if (likely(txn != nullptr)) {
+    txn->getLog().addUpdateLog(record_reference_t{this->table_id, rc}.getBase(), attribute_idx, data_ptr,
+                               colWidthOffset.first);
+  }
   memcpy(data_ptr, value, colWidthOffset.first);
 }
 
-record_reference_t SingleVersionRowStore::getRefTypeData(record_metadata_t* rc, uint attribute_idx) {
-  auto data_ptr = reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t);
-  data_ptr = data_ptr + column_size_offsets[attribute_idx];  // actual data_ptr
-
-  return record_reference_t{*(reinterpret_cast<record_reference_t*>(data_ptr))};
+void SingleVersionRowStore::updateNthRecord(txn::Txn* txn, record_metadata_t* rc, void* value, uint record_offset,
+                                            uint attribute_idx) {
+  auto rd_rc = reinterpret_cast<uintptr_t>(rc) + (record_size * record_offset);
+  return this->updateAttribute(txn, reinterpret_cast<record_metadata_t*>(rd_rc), value, attribute_idx);
 }
 
-void SingleVersionRowStore::updateRefTypeData(txn::Txn&, record_metadata_t* rc, record_reference_t& value,
-                                              uint attribute_idx) {
-  auto data_ptr = reinterpret_cast<record_reference_t*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) +
-                                                        column_size_offsets[attribute_idx]);
-  *data_ptr = value;
-}
+// record_reference_t SingleVersionRowStore::getRefTypeData(record_metadata_t* rc, uint attribute_idx) {
+//   auto data_ptr = reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t);
+//   data_ptr = data_ptr + column_size_offsets[attribute_idx];  // actual data_ptr
+//
+//   return record_reference_t{*(reinterpret_cast<record_reference_t*>(data_ptr))};
+// }
+//
+// void SingleVersionRowStore::updateRefTypeData(txn::Txn&, record_metadata_t* rc, record_reference_t& value,
+//                                               uint attribute_idx) {
+//   auto data_ptr = reinterpret_cast<record_reference_t*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) +
+//                                                         column_size_offsets[attribute_idx]);
+//   *data_ptr = value;
+// }
 
-void SingleVersionRowStore::getData(txn::Txn&, record_metadata_t* rc, void* dst, size_t offset, size_t len) {
+void SingleVersionRowStore::getData(txn::Txn* txn, record_metadata_t* rc, void* dst, size_t offset, size_t len) {
   assert(offset + len < record_size);
   auto data_ptr =
       reinterpret_cast<record_reference_t*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) + offset);
   memcpy(dst, data_ptr, len);
 }
-void SingleVersionRowStore::getAttribute(txn::Txn&, record_metadata_t* rc, void* dst, uint attribute_idx) {
+void SingleVersionRowStore::getAttribute(txn::Txn* txn, record_metadata_t* rc, void* dst, uint attribute_idx) {
+  assert(rc != nullptr);
+  //  LOG(INFO) << rc << " | " << this->name();
   auto colWidthOffset = column_size_offset_pairs.at(attribute_idx);
   auto data_ptr = reinterpret_cast<record_reference_t*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) +
                                                         colWidthOffset.second);
   memcpy(dst, data_ptr, colWidthOffset.first);
 }
+
+void SingleVersionRowStore::getNthRecord(txn::Txn* txn, record_metadata_t* rc, void* dst, uint record_offset,
+                                         uint attribute_idx) {
+  // rc -- starting record
+  auto rd_rc = reinterpret_cast<uintptr_t>(rc) + (record_size * record_offset);
+  return this->getAttribute(txn, reinterpret_cast<record_metadata_t*>(rd_rc), dst, attribute_idx);
+}
+
+record_reference_t SingleVersionRowStore::getNthRecordReference(txn::Txn* txn, record_metadata_t* rc,
+                                                                uint record_offset) {
+  auto rd_rc = reinterpret_cast<uintptr_t>(rc) + (record_size * record_offset);
+
+  return record_reference_t{this->table_id, reinterpret_cast<record_metadata_t*>(rd_rc)};
+}
+
+void SingleVersionRowStore::rollback_update(record_metadata_t* rc, void* prev_value, uint attribute_idx) {
+  auto colWidthOffset = column_size_offset_pairs.at(attribute_idx);
+  auto data_ptr =
+      reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(rc) + sizeof(record_metadata_t) + colWidthOffset.second);
+
+  memcpy(data_ptr, prev_value, colWidthOffset.first);
+}
+void SingleVersionRowStore::rollback_create(record_metadata_t* rc) { freeRecordMemory(rc); }

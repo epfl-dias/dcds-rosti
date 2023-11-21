@@ -58,6 +58,11 @@ class CCInjector {
                                 attribute_traits &traits_in_scope, Iterator &pos, std::deque<Statement *> &statements,
                                 const std::string &attribute_name, const std::string &type_name, size_t typeID,
                                 bool lock_exclusive = true) {
+    // FIXME: if the previous lock was shared, it has to change that to exclusive! or add an upgrade lock statement.
+    // Hacked for now, making all locks exclusive.
+
+    // lock_exclusive = true;
+
     attribute_info attrInfo{type_name, attribute_name};
     if (!(lock_placed.contains(attrInfo))) {
       if (traits_in_scope.contains(attrInfo)) {

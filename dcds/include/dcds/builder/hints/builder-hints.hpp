@@ -24,7 +24,13 @@
 
 namespace dcds::hints {
 
-enum class BuilderHints { SINGLE_THREADED, MULTI_THREADED };
+enum class BuilderHints {
+  // Concurrency Hints
+  SINGLE_THREADED,
+  MULTI_THREADED,
+  // Composability Hints
+  ALWAYS_COMPOSE_INTERNAL
+};
 
 }
 

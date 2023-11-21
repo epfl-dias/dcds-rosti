@@ -195,4 +195,11 @@ void Builder::injectCC() {
   this->cc_injector->inject();
 }
 
+void Builder::dump() {
+  for (auto& f : functions) {
+    f.second->print(std::cout, 0);
+    std::cout << "\n\n";
+  }
+}
+
 }  // namespace dcds

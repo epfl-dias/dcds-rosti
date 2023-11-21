@@ -129,36 +129,62 @@ class Builder : remove_copy {
  public:
   auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
   auto getAttributeIndex(const std::string& attribute_name) {
-    assert(attributes.contains(attribute_name) && "how come index for un-registered attribute");
+    CHECK(attributes.contains(attribute_name)) << "Unknown attribute requested";
     return std::distance(std::begin(attributes), attributes.find(attribute_name));
   }
 
+  bool hasAttribute(const std::string& name) { return attributes.contains(name); }
+  bool hasAttribute(const std::shared_ptr<dcds::Attribute>& attribute) { return this->hasAttribute(attribute->name); }
+
   auto addAttributePtr(const std::string& name, const std::shared_ptr<Builder>& type) {
-    if (hasAttribute(name)) {
-      throw dcds::exceptions::dcds_dynamic_exception("Duplicate attribute name: " + name);
-    }
+    CHECK(!hasAttribute(name)) << "Duplicate attribute name: " << name;
     auto pt = std::make_shared<dcds::CompositeAttributePointer>(name, type->getName());
     attributes.emplace(name, pt);
     return pt;
   }
 
   auto addAttributePtr(const std::string& name, const std::string& type) {
-    if (!(registered_subtypes.contains(name))) {
-      throw dcds::exceptions::dcds_dynamic_exception("Unknown/Unregistered type: " + type);
-    }
+    CHECK(registered_subtypes.contains(name)) << "Unknown/Unregistered type: " << type;
     return addAttributePtr(name, registered_subtypes[type]);
   }
 
   auto addAttribute(const std::string& name, dcds::valueType attrType, const std::any& default_value) {
-    if (hasAttribute(name)) {
-      throw dcds::exceptions::dcds_dynamic_exception("Duplicate attribute name: " + name);
-    }
+    CHECK(!hasAttribute(name)) << "Duplicate attribute name: " << name;
     auto pt = std::make_shared<dcds::SimpleAttribute>(name, attrType, default_value);
     attributes.emplace(name, pt);
     return pt;
   }
-  bool hasAttribute(const std::string& name) { return attributes.contains(name); }
-  bool hasAttribute(const std::shared_ptr<dcds::Attribute>& attribute) { return this->hasAttribute(attribute->name); }
+  auto addAttributeArray(const std::string& name, const std::shared_ptr<Builder>& type, size_t len) {
+    CHECK(!hasAttribute(name)) << "Duplicate attribute name: " << name;
+    CHECK(len > 0) << "Cannot create an array with zero length";
+    CHECK(registered_subtypes.contains(type->getName())) << "Unknown/Unregistered type: " << type;
+
+    auto pt = std::make_shared<dcds::AttributeArray>(name, type, len);
+    attributes.emplace(name, pt);
+    return pt;
+  }
+
+  auto addAttributeArray(const std::string& name, dcds::valueType type, size_t len,
+                         const std::any& default_value = {}) {
+    CHECK(hasAttribute(name)) << "Duplicate attribute name: " << name;
+    CHECK(len > 0) << "Cannot create an array with zero length";
+
+    auto pt = std::make_shared<dcds::AttributeArray>(name, type, len, default_value);
+    attributes.emplace(name, pt);
+    return pt;
+  }
+
+  auto addAttributeIndexedList(const std::string& name, const std::shared_ptr<Builder>& type,
+                               const std::string& key_attribute) {
+    CHECK(!hasAttribute(name)) << "Duplicate attribute name: " << name;
+    CHECK(type->hasAttribute(key_attribute))
+        << "Indexed list type does not contain the key-attribute: " << key_attribute;
+    CHECK(registered_subtypes.contains(type->getName())) << "Unknown/Unregistered type: " << type;
+
+    auto pt = std::make_shared<dcds::AttributeIndexedList>(name, type, key_attribute);
+    attributes.emplace(name, pt);
+    return pt;
+  }
 
  private:
   // should be called from optPasses only, otherwise user may declare, use and then delete it causing dangling issues.
@@ -170,10 +196,6 @@ class Builder : remove_copy {
   }
 
  public:
-  // --- MAP ATTRIBUTE FOR KEY-VALUE
-  auto addKeyValueMap(const std::string& name, dcds::valueType keyType, dcds::valueType valueType);
-  // ---
-
   void generateGetter(const std::string& attribute_name);
   void generateSetter(const std::string& attribute_name);
 
@@ -222,10 +244,15 @@ class Builder : remove_copy {
       case hints::BuilderHints::MULTI_THREADED:
         is_multi_threaded = true;
         break;
+      case hints::BuilderHints::ALWAYS_COMPOSE_INTERNAL:
+        LOG(WARNING) << "TODO ALWAYS_COMPOSE_INTERNAL";
+        break;
     }
   }
 
   std::shared_ptr<Builder> clone(std::string name);
+
+  void dump();
 
  private:
   template <class lambda>
@@ -261,7 +288,7 @@ class Builder : remove_copy {
   const size_t type_id;
 
  public:
-  auto getTypeID() const { return type_id; }
+  [[nodiscard]] auto getTypeID() const { return type_id; }
 
  private:
   static std::atomic<size_t> type_id_src;

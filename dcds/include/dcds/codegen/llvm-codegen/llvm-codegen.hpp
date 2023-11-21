@@ -70,28 +70,30 @@ namespace expressions {
 class LLVMExpressionVisitor;
 }
 
+class LLVMCodegen;
+
+class FunctionBuildContext {
+  friend class LLVMCodegen;
+
+ public:
+  std::shared_ptr<FunctionBuilder> fb;
+  std::shared_ptr<StatementBuilder> sb;
+  llvm::Function *fn;
+  BasicBlock *returnBlock;
+  std::map<std::string, llvm::Value *> *tempVariableMap;
+
+  std::string retval_variable_name;
+
+  explicit FunctionBuildContext(std::shared_ptr<FunctionBuilder> _fb, std::shared_ptr<StatementBuilder> _sb,
+                                llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap,
+                                BasicBlock *_returnBlock)
+      : fb(std::move(_fb)), sb(std::move(_sb)), fn(_fn), tempVariableMap(_tempVariableMap), returnBlock(_returnBlock) {}
+};
+
 class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   friend class expressions::LLVMExpressionVisitor;
-
- private:
-  struct function_build_context {
-    std::shared_ptr<FunctionBuilder> fb;
-    std::shared_ptr<StatementBuilder> sb;
-    llvm::Function *fn;
-    BasicBlock *returnBlock;
-    std::map<std::string, llvm::Value *> *tempVariableMap;
-
-    std::string retval_variable_name;
-
-    explicit function_build_context(std::shared_ptr<FunctionBuilder> _fb, std::shared_ptr<StatementBuilder> _sb,
-                                    llvm::Function *_fn, std::map<std::string, llvm::Value *> *_tempVariableMap,
-                                    BasicBlock *_returnBlock)
-        : fb(std::move(_fb)),
-          sb(std::move(_sb)),
-          fn(_fn),
-          tempVariableMap(_tempVariableMap),
-          returnBlock(_returnBlock) {}
-  };
+  friend class LLVMCodegenStatement;
+  friend class LLVMCodegenFunction;
 
  public:
   explicit LLVMCodegen(dcds::Builder *builder);
@@ -136,18 +138,23 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
 
   void createDsStructType(dcds::Builder *builder);
   Value *initializeDsValueStructDefault(dcds::Builder &builder);
+  llvm::Value *createDefaultValue(const std::shared_ptr<Attribute> &attribute);
 
   void buildConstructor(dcds::Builder &builder, bool is_nested_type);
   llvm::Function *buildConstructorInner(dcds::Builder &builder);
+  void initializeArrayAttributes(dcds::Builder &builder, std::map<std::string, llvm::Function *> &fn_init_sub_tables,
+                                 llvm::Value *txn_manager, llvm::Value *main_record, llvm::Value *txn);
   void buildDestructor();
   void buildFunctions(dcds::Builder *builder, bool is_nested_type);
   void buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb, bool is_nested_type);
-  llvm::Function *buildOneFunction_inner(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb);
   llvm::Function *buildOneFunction_outer(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
                                          llvm::Function *fn_inner);
   void buildFunctionDictionary(dcds::Builder &builder);
 
   llvm::Function *buildInitTablesFn(dcds::Builder &builder, llvm::Value *table_name);
+  llvm::Function *genInitStorageFn(const std::string &function_name_prefix, llvm::Value *table_name,
+                                   const std::map<std::string, std::shared_ptr<Attribute>> &attributes);
+
   llvm::Function *genFunctionSignature(
       std::shared_ptr<FunctionBuilder> &fb, const std::vector<llvm::Type *> &pre_args = {},
       const std::string &name_prefix = "", const std::string &name_suffix = "",
@@ -157,15 +164,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   std::map<std::string, llvm::Value *> allocateTemporaryVariables(std::shared_ptr<FunctionBuilder> &fb,
                                                                   llvm::BasicBlock *basicBlock);
   llvm::Value *allocateOneVar(const std::string &var_name, dcds::valueType var_type, std::any init_value = {});
-
-  void buildFunctionBody(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb,
-                         std::shared_ptr<StatementBuilder> &sb, llvm::Function *fn, llvm::BasicBlock *basicBlock,
-                         std::map<std::string, llvm::Value *> &tempVariableMap);
-
-  void buildStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
-  void buildStatement_ConditionalStatement(dcds::Builder *builder, function_build_context &fnCtx, Statement *stmt);
-
-  llvm::Value *codegenExpression(function_build_context &fnCtx, const dcds::expressions::Expression *expr);
 
   llvm::Type *DcdsToLLVMType(dcds::valueType dcds_type, bool is_reference = false);
 
@@ -181,7 +179,8 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
 
  private:
   // StructType *dsContainerStructType{};
-  StructType *dsRecordValueStructType{};
+  //  StructType *dsRecordValueStructType{};
+  std::map<std::string, StructType *> record_value_struct_types;
 
  private:
   std::unique_ptr<LLVMJIT> jitter;
