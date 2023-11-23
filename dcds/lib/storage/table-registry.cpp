@@ -24,55 +24,67 @@
 namespace dcds::storage {
 
 bool TableRegistry::exists(table_id_t tableId) {
-  std::shared_lock<std::shared_mutex> lk(this->registry_lk);
-  return tables.contains(tableId);
+  std::shared_lock lk(this->registry_lk);
+
+  return (tables.lookup(tableId) != nullptr);  // llvm::DenseMap
+  // return tables.contains(tableId);          // std::map
 }
 bool TableRegistry::exists(const std::string &name) {
-  std::shared_lock<std::shared_mutex> lk(this->registry_lk);
-  return table_name_map.contains(name);
+  std::shared_lock lk(this->registry_lk);
+  return (table_name_map.find(name) != table_name_map.end());
 }
 
 Table *TableRegistry::createTable(const std::string &name, const std::vector<AttributeDef> &columns,
                                   bool multi_version) {
   size_t record_size = 0;
   for (const auto &c : columns) {
-    // LOG(INFO) << "size: " << c.getName() << " - " << c.getSize();
     record_size += c.getSize();
   }
-  std::unique_lock<std::shared_mutex> lk(this->registry_lk);
-  assert(!table_name_map.contains(name) && "table already exists");
+
+  std::unique_lock lk(this->registry_lk);
+  assert((table_name_map.find(name) == table_name_map.end()) && "table already exists");
 
   auto tableId = table_id_generator.fetch_add(1);
-  table_name_map.emplace(name, tableId);
-
-  // LOG(INFO) << "record size: " << record_size;
+  table_name_map.try_emplace(name, tableId);
 
   if (multi_version) {
     throw std::runtime_error("unimplemented MV");
   } else {
     auto tablePtr = new SingleVersionRowStore(tableId, name, record_size, columns);
-    tables.emplace(tableId, tablePtr);
+    // assert(tables.insert(tableId, tablePtr)); // cuckoo::map
+    // tables.emplace(tableId, tablePtr); // std::map
+    tables.try_emplace(tableId, tablePtr);  // llvm::DenseMap
     return tablePtr;
   }
 }
 
 Table *TableRegistry::getTable(table_id_t tableId) {
-  std::shared_lock<std::shared_mutex> lk(this->registry_lk);
-  if (tables.contains(tableId)) {
-    return tables.at(tableId);
-  } else {
-    return {};
-  }
+  //  return tables.find(tableId); // cuckoo::map
+
+  std::shared_lock lk(this->registry_lk);
+
+  // std::map
+  //    if (tables.contains(tableId)) {
+  //      return tables.at(tableId);
+  //    } else {
+  //      return {};
+  //    }
+
+  // llvm::DenseMap
+  return tables.lookup(tableId);
 }
 Table *TableRegistry::getTable(const std::string &name) {
-  std::shared_lock<std::shared_mutex> lk(this->registry_lk);
-  if (table_name_map.contains(name)) {
-    // LOG(INFO) << "Table does exists " << name << " || " << tables.at(table_name_map.at(name))->name();
-    return tables.at(table_name_map.at(name));
-  } else {
-    // LOG(INFO) << "Table does not exists!: " << name;
-    return {};
+  //  if (table_name_map.contains(name)) {
+  //    return tables.find(table_name_map.find(name));
+  //  }
+  //  return {};
+
+  std::shared_lock lk(this->registry_lk);
+
+  if (auto iter = table_name_map.find(name); likely(iter != table_name_map.end())) {
+    return tables.lookup(iter->second);
   }
+  return {};
 }
 
 }  // namespace dcds::storage

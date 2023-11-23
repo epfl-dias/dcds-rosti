@@ -25,23 +25,36 @@
 
 #include "dcds/storage/table-registry.hpp"
 #include "dcds/util/logging.hpp"
+#include "llvm/ADT/DenseMap.h"
 
 using namespace dcds::storage;
 
 Table* RecordReference::getTable() {
-  // issue here?
   static thread_local auto* registry = &TableRegistry::getInstance();
   auto tableId = record_metadata_ptr.getData();
 
-  //  return registry->getTable(static_cast<table_id_t>(tableId));
+  // No-cache
+  //    return registry->getTable(static_cast<table_id_t>(tableId));
 
-  static thread_local std::unordered_map<table_id_t, Table*> cache_map;
-  if ((cache_map.contains(tableId))) {
-    return cache_map.at(tableId);
-  } else {
+  // std::unordered_map cache
+  //  static thread_local std::unordered_map<table_id_t, Table*> cache_map;
+  //  if ((cache_map.contains(tableId))) {
+  //    return cache_map.at(tableId);
+  //  } else {
+  //    auto tablePtr = registry->getTable(static_cast<table_id_t>(tableId));
+  //    cache_map.emplace(tableId, tablePtr);
+  //    return tablePtr;
+  //  }
+
+  // llvm::SmallDenseMap cache --> Best-so-far
+  static thread_local llvm::SmallDenseMap<table_id_t, Table*> cache_map;
+  auto ret = cache_map.lookup(tableId);
+  if (unlikely(ret == nullptr)) {
     auto tablePtr = registry->getTable(static_cast<table_id_t>(tableId));
-    cache_map.emplace(tableId, tablePtr);
+    cache_map.try_emplace(tableId, tablePtr);
     return tablePtr;
+  } else {
+    return ret;
   }
 }
 

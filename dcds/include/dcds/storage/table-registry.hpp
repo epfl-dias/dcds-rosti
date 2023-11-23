@@ -22,15 +22,15 @@
 #ifndef DCDS_TABLE_REGISTRY_HPP
 #define DCDS_TABLE_REGISTRY_HPP
 
-#include <map>
+#include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/StringMap.h>
+
 #include <mutex>
 #include <shared_mutex>
 
 #include "dcds/common/common.hpp"
 #include "dcds/storage/table.hpp"
 #include "dcds/util/singleton.hpp"
-
-// do we need schema if the reference would be returned back?
 
 namespace dcds::storage {
 
@@ -40,16 +40,6 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
  public:
   bool exists(table_id_t tableId);
   bool exists(const std::string& name);
-
-  //  std::shared_ptr<Table> create_table(
-  //      const std::string &name, layout_type layout, const TableDef &columns,
-  //      uint64_t initial_num_records = 10000000, bool indexed = true,
-  //      bool partitioned = true, int numa_idx = -1,
-  //      size_t max_partition_size = 0);
-
-  // Do we need create table or register table?
-  // or what about having single vs multiple txnManager? we store it in schema or table class a reference to what txnMgr
-  // to use.
 
   Table* getTable(table_id_t tableId);
   Table* getTable(const std::string& name);
@@ -61,11 +51,11 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
   void dropTable();  // how to drop if it is a sharedPtr, someone might be holding reference to it?
 
  private:
-  std::shared_mutex registry_lk;
-  std::map<table_id_t, Table*> tables{};
-  std::map<std::string, table_id_t> table_name_map{};
+  oneapi::tbb::rw_mutex registry_lk{};
+  llvm::DenseMap<table_id_t, Table*> tables;
 
-  std::atomic<table_id_t> table_id_generator;
+  llvm::StringMap<table_id_t> table_name_map;
+  alignas(64) std::atomic<table_id_t> table_id_generator;
 
  private:
   ~TableRegistry() {
