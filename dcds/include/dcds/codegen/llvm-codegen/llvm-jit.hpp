@@ -22,49 +22,88 @@
 #ifndef DCDS_LLVM_JIT_HPP
 #define DCDS_LLVM_JIT_HPP
 
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/iterator_range.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/CodeGen/TargetPassConfig.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JITSymbol.h>
+#include <llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h>
 #include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/ExecutorProcessControl.h>
+#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/IRTransformLayer.h>
+#include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Mangler.h>
+#include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 #include "dcds/util/logging.hpp"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/GVN.h"
+#include "dcds/util/timing.hpp"
 
 namespace dcds {
 
-// This is giving error for some reason, fix it later.
-static bool print_generated_code = false;
+static bool print_generated_code = true;
+
+class PassConfiguration {
+ public:
+  std::unique_ptr<llvm::TargetMachine> JTM;
+  llvm::Triple ModuleTriple;
+  llvm::TargetLibraryInfoImpl TLII;
+  llvm::legacy::PassManager Passes;
+  llvm::PassManagerBuilder Builder;
+  llvm::ImmutablePass *TTIPass;
+  llvm::FunctionPass *PrefetchPass;
+
+ public:
+  explicit PassConfiguration(std::unique_ptr<llvm::TargetMachine> TM)
+      : JTM(std::move(TM)),
+        ModuleTriple(JTM->getTargetTriple()),
+        TLII(ModuleTriple),
+        TTIPass(createTargetTransformInfoWrapperPass(JTM->getTargetIRAnalysis())),
+        PrefetchPass(llvm::createLoopDataPrefetchPass()) {
+    llvm::Pass *TPC = dynamic_cast<llvm::LLVMTargetMachine *>(JTM.get())->createPassConfig(Passes);
+    Passes.add(TPC);
+
+    Passes.add(new llvm::TargetLibraryInfoWrapperPass(TLII));
+
+    // Add internal analysis passes from the target machine.
+    Passes.add(createTargetTransformInfoWrapperPass(JTM->getTargetIRAnalysis()));
+
+    Builder.OptLevel = 3;
+    Builder.SizeLevel = 0;
+
+    Builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
+
+    Builder.DisableUnrollLoops = false;
+    Builder.LoopVectorize = true;
+
+    Builder.SLPVectorize = true;
+
+    JTM->adjustPassManager(Builder);
+
+    Builder.populateModulePassManager(Passes);
+  }
+};
 
 class LLVMJIT {
  public:
@@ -74,16 +113,11 @@ class LLVMJIT {
   }
 
   explicit LLVMJIT(
-      // std::unique_ptr<llvm::LLVMContext> &llvmContext,
       llvm::orc::JITTargetMachineBuilder JTMB = llvm::cantFail(llvm::orc::JITTargetMachineBuilder::detectHost())
                                                     .setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive)
                                                     .setCodeModel(llvm::CodeModel::Model::Large))
       : DL(llvm::cantFail(JTMB.getDefaultDataLayoutForTarget())),
-        targetMachine(llvm::cantFail(JTMB.createTargetMachine())),
         Mangle(ES, this->DL),
-        //        Ctx(llvmContext),
-        //        PassConf(llvm::cantFail(JTMB.createTargetMachine())),
-        //        objectLayer(*this->theES, [] { return std::make_unique<llvm::SectionMemoryManager>(); }),
         ObjectLayer(ES, []() { return std::make_unique<llvm::SectionMemoryManager>(); }),
         CompileLayer(ES, ObjectLayer, std::make_unique<llvm::orc::ConcurrentIRCompiler>(JTMB)),
         PrintOptimizedIRLayer(
@@ -94,13 +128,13 @@ class LLVMJIT {
               return std::move(TSM);
             }),
         TransformLayer(ES, PrintOptimizedIRLayer,
-                       [/*JTMB = std::move(JTMB)*/](llvm::orc::ThreadSafeModule TSM,
-                                                    const llvm::orc::MaterializationResponsibility &R) mutable
+                       [_JTMB = std::move(JTMB)](llvm::orc::ThreadSafeModule TSM,
+                                                 const llvm::orc::MaterializationResponsibility &R) mutable
                        -> llvm::Expected<llvm::orc::ThreadSafeModule> {
-                         // auto TM = JTMB.createTargetMachine();
-                         // if (!TM) return TM.takeError();
-                         // return optimizeModule(std::move(TSM), std::move(TM.get()));
-                         return optimizeModule(std::move(TSM), R);
+                         auto TM = _JTMB.createTargetMachine();
+                         if (!TM) return TM.takeError();
+                         return optimizeModule2(std::move(TSM), std::move(TM.get()));
+                         // return optimizeModule(std::move(TSM), R);
                        }),
         PrintGeneratedIRLayer(
             ES, TransformLayer,
@@ -146,22 +180,13 @@ class LLVMJIT {
   const llvm::DataLayout &getDataLayout() const { return DL; }
   llvm::orc::JITDylib &getMainJITDylib() { return MainJD; }
 
-  auto getTargetTriple() { return targetMachine->getTargetTriple(); }
-
   void addModule(llvm::orc::ThreadSafeModule M) { llvm::cantFail(PrintGeneratedIRLayer.add(MainJD, std::move(M))); }
-
-  //  Error addModule(ThreadSafeModule TSM, ResourceTrackerSP RT = nullptr) {
-  //    if (!RT) RT = mainJD.getDefaultResourceTracker();
-  //    return optimizeLayer.add(RT, std::move(TSM));
-  //  }
 
   void dump() { ES.dump(llvm::outs()); }
 
   llvm::JITEvaluatedSymbol lookup(llvm::StringRef Name) {
     return llvm::cantFail(ES.lookup({&MainJD}, Mangle(Name.str())));
   }
-
-  //  auto lookup(StringRef Name) { return dcds::llvmutil::unwrap(theES->lookup({&mainJD}, mangle(Name.str()))); }
 
   void *getRawAddress(std::string const &name) {
     return reinterpret_cast<void *>(llvm::cantFail(ES.lookup({&MainJD}, Mangle(name))).getAddress());
@@ -171,14 +196,16 @@ class LLVMJIT {
   static llvm::Expected<llvm::orc::ThreadSafeModule> printIR(llvm::orc::ThreadSafeModule module,
                                                              const std::string &suffix = "");
 
-  static llvm::Expected<llvm::orc::ThreadSafeModule> optimizeModule(llvm::orc::ThreadSafeModule TSM,
-                                                                    const llvm::orc::MaterializationResponsibility &R);
+  //  static llvm::Expected<llvm::orc::ThreadSafeModule> optimizeModule(llvm::orc::ThreadSafeModule TSM,
+  //                                                                    const llvm::orc::MaterializationResponsibility
+  //                                                                    &R);
+  static llvm::orc::ThreadSafeModule optimizeModule2(llvm::orc::ThreadSafeModule TSM,
+                                                     std::unique_ptr<llvm::TargetMachine> TM);
 
  private:
   llvm::orc::ExecutionSession ES{llvm::cantFail(llvm::orc::SelfExecutorProcessControl::Create())};
   llvm::DataLayout DL;
   llvm::orc::MangleAndInterner Mangle;
-  //  llvm::orc::ThreadSafeContext Ctx;
 
   llvm::orc::RTDyldObjectLinkingLayer ObjectLayer;
   llvm::orc::IRCompileLayer CompileLayer;
@@ -190,8 +217,6 @@ class LLVMJIT {
 
   std::mutex vtuneLock;
   llvm::JITEventListener *vtuneProfiler;
-
-  std::unique_ptr<llvm::TargetMachine> targetMachine;
 };
 
 }  // namespace dcds

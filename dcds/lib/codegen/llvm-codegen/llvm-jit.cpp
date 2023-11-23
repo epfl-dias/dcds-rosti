@@ -24,40 +24,70 @@
 using namespace llvm;
 using namespace dcds;
 
-// bool print_generated_code = true;
-
 llvm::Expected<llvm::orc::ThreadSafeModule> LLVMJIT::printIR(llvm::orc::ThreadSafeModule module,
                                                              const std::string &suffix) {
   module.withModuleDo([&suffix](llvm::Module &m) {
-    std::error_code EC;
-    llvm::raw_fd_ostream out("generated_code/" + m.getName().str() + suffix + ".ll", EC,
-                             llvm::sys::fs::OpenFlags::OF_None);
-    m.print(out, nullptr, false, true);
+    m.print(llvm::outs(), nullptr);
+    //    std::error_code EC;
+    //    llvm::raw_fd_ostream out("generated_code/" + m.getName().str() + suffix + ".ll", EC,
+    //                             llvm::sys::fs::OpenFlags::OF_None);
+    //    m.print(out, nullptr, false, true);
   });
   return std::move(module);
 }
 
-llvm::Expected<llvm::orc::ThreadSafeModule> LLVMJIT::optimizeModule(llvm::orc::ThreadSafeModule TSM,
-                                                                    const llvm::orc::MaterializationResponsibility &R) {
-  TSM.withModuleDo([](Module &M) {
-    // Create a function pass manager.
-    auto FPM = std::make_unique<legacy::FunctionPassManager>(&M);
+llvm::orc::ThreadSafeModule LLVMJIT::optimizeModule2(llvm::orc::ThreadSafeModule TSM,
+                                                     std::unique_ptr<llvm::TargetMachine> TM) {
+  TSM.withModuleDo([&TM](llvm::Module &M) {
+    time_block t("Optimization phase ");
 
-    // Add some optimizations.
-    FPM->add(createInstructionCombiningPass());
-    FPM->add(createReassociatePass());
-    FPM->add(createGVNPass());
-    FPM->add(createCFGSimplificationPass());
-    FPM->add(createDeadCodeEliminationPass());
-    FPM->doInitialization();
+    M.setTargetTriple(TM->getTargetTriple().str());
 
-    // Run the optimizations over all functions in the module being added to
-    // the JIT.
-    for (auto &F : M) FPM->run(F);
+    PassConfiguration pc{std::move(TM)};
+
+    llvm::legacy::FunctionPassManager FPasses{&M};
+
+    pc.Builder.populateFunctionPassManager(FPasses);
+
+    FPasses.add(pc.TTIPass);
+    FPasses.add(pc.PrefetchPass);
+
+    {
+      time_block t_run("Optimization run phase ");
+
+      FPasses.doInitialization();
+      for (llvm::Function &F : M) FPasses.run(F);
+      FPasses.doFinalization();
+
+      // Now that we have all the passes ready, run them.
+      pc.Passes.run(M);
+    }
   });
-
-  return std::move(TSM);
+  return TSM;
 }
+
+// llvm::Expected<llvm::orc::ThreadSafeModule> LLVMJIT::optimizeModule(llvm::orc::ThreadSafeModule TSM,
+//                                                                     const llvm::orc::MaterializationResponsibility
+//                                                                     &R) {
+//   TSM.withModuleDo([](Module &M) {
+//     // Create a function pass manager.
+//     auto FPM = std::make_unique<legacy::FunctionPassManager>(&M);
+//
+//     // Add some optimizations.
+//     FPM->add(createInstructionCombiningPass());
+//     FPM->add(createReassociatePass());
+//     FPM->add(createGVNPass());
+//     FPM->add(createCFGSimplificationPass());
+//     FPM->add(createDeadCodeEliminationPass());
+//     FPM->doInitialization();
+//
+//     // Run the optimizations over all functions in the module being added to
+//     // the JIT.
+//     for (auto &F : M) FPM->run(F);
+//   });
+//
+//   return std::move(TSM);
+// }
 
 void *LLVMJIT::getCompiledFunction(llvm::Function *function_ptr) {
   assert(function_ptr);

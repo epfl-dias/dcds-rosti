@@ -942,16 +942,8 @@ void LLVMCodegen::buildFunctionDictionary(dcds::Builder &builder) {
 }
 
 void LLVMCodegen::jitCompileAndLoad() {
-  LOG(INFO) << "[LLVMCodegen::jit()] IR- before passes: ";
-  this->printIR();
-  //    LOG(INFO) << "[LLVMCodegen::jit()] IR- after passes: ";
-  //    runOptimizationPasses();
-  //    this->printIR();
-  //  LOG(INFO) << "[LLVMCodegen::jit()] Passes done";
-
   this->jitter = std::make_unique<LLVMJIT>();
   this->theLLVMModule->setDataLayout(jitter->getDataLayout());
-  this->theLLVMModule->setTargetTriple(jitter->getTargetTriple().str());
 
   auto modName = getModule()->getName();
   LOG(INFO) << "Module name: " << modName.str();
