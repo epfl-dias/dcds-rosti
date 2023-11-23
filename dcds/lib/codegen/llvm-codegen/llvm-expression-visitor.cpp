@@ -31,8 +31,10 @@
 
 using namespace dcds::expressions;
 
+static constexpr bool print_debug_log = false;
+
 void* LLVMExpressionVisitor::visit(const expressions::IsNullExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::IsNullExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::IsNullExpression::visit";
 
   auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(expr.getExpression()->accept(this));
@@ -45,7 +47,7 @@ void* LLVMExpressionVisitor::visit(const expressions::IsNullExpression& expr) {
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::IsNotNullExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::IsNotNullExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::IsNotNullExpression::visit";
 
   auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(expr.getExpression()->accept(this));
@@ -85,7 +87,7 @@ llvm::Value* LLVMExpressionVisitor::loadValueIfRequired(llvm::Value* in, dcds::v
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::AddExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::AddExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
@@ -104,7 +106,7 @@ void* LLVMExpressionVisitor::visit(const expressions::AddExpression& expr) {
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::SubtractExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::SubtractExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
@@ -123,7 +125,7 @@ void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) 
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) {
-  LOG(INFO) << "LLVMExpressionVisitor::IsEvenExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::IsEvenExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
   auto subExprEval = static_cast<llvm::Value*>(isEven.getExpression()->accept(this));
 
@@ -157,7 +159,7 @@ void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) 
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::FunctionArgumentExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::FunctionArgumentExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::FunctionArgumentExpression::visit";
   assert(expr.var_src_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT);
 
   //  bool doesReturn = fnCtx->fb->getReturnValueType() != valueType::VOID;
@@ -171,7 +173,7 @@ void* LLVMExpressionVisitor::visit(const expressions::FunctionArgumentExpression
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::TemporaryVariableExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::TemporaryVariableExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::TemporaryVariableExpression::visit";
   assert(expr.var_src_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE);
   //  assert(this->fnCtx->tempVariableMap->contains(expr.var_name));
   //  return fnCtx->tempVariableMap->operator[](expr.var_name);
@@ -181,7 +183,7 @@ void* LLVMExpressionVisitor::visit(const expressions::TemporaryVariableExpressio
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::LocalVariableExpression& localVariableExpr) {
-  LOG(INFO) << "LLVMExpressionVisitor::LocalVariableExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::LocalVariableExpression::visit";
   if (localVariableExpr.var_src_type == VAR_SOURCE_TYPE::TEMPORARY_VARIABLE) {
     return visit(dynamic_cast<const TemporaryVariableExpression&>(localVariableExpr));
   } else if (localVariableExpr.var_src_type == VAR_SOURCE_TYPE::FUNCTION_ARGUMENT) {
@@ -218,7 +220,7 @@ void* LLVMExpressionVisitor::visit(const expressions::NullPtrConstant& expr) {
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::EqualExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::EqualExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
@@ -228,7 +230,7 @@ void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
   return builder->CreateICmpEQ(leftValue, rightValue);
 }
 void* LLVMExpressionVisitor::visit(const expressions::NotEqualExpression& expr) {
-  LOG(INFO) << "LLVMExpressionVisitor::NotEqualExpression::visit";
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::NotEqualExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));

@@ -28,12 +28,14 @@
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 
+static constexpr bool print_debug_log = false;
+
 namespace dcds {
 using namespace dcds::expressions;
 
 void LLVMCodegenStatement::buildStatement(Statement *stmt) {
   // FIXME: what about scoping of temporary variables??
-  LOG(INFO) << "[LLVMCodegen] buildStatement: " << stmt->stType;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] buildStatement: " << stmt->stType;
 
   // READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, CALL
   if (stmt->stType == dcds::statementType::READ) {

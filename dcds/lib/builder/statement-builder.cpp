@@ -102,7 +102,6 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
     //    this->addLogStatement("read the pointer to the actual table record\n");
 
     // now how to get the value?
-    LOG(INFO) << "AUNNN: " << attribute->name;
 
     auto rs = new ReadIndexedStatement(attribute->name, destination, key, true);
     statements.push_back(rs);
@@ -388,8 +387,8 @@ StatementBuilder::conditional_blocks StatementBuilder::addConditionalBranch(dcds
 void StatementBuilder::extractReadWriteSet_recursive(rw_set_t &read_set, rw_set_t &write_set) {
   this->for_each_statement([&](const Statement *stmt) {
     auto typeName = this->parent_function.builder->getName();
-    LOG(INFO) << "extractReadWriteSet_recursive: " << typeName << "::" << this->parent_function.getName() << ": "
-              << stmt->stType;
+    //    LOG(INFO) << "extractReadWriteSet_recursive: " << typeName << "::" << this->parent_function.getName() << ": "
+    //              << stmt->stType;
 
     // What about dependent read-write?
 
@@ -502,9 +501,8 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
 }
 
 std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
-  // NOTE: this is not a clean way, if we can avoid this, that would be the best option! didn't go through copy
-  // constructor route as quite doubtful on it for now.
-  LOG(INFO) << "here";
+  // FIXME: this is not a clean way, if we can avoid this, that would be the best option! didn't go through copy
+  // constructor route as quite doubtful on it for now given the shared_pointers.
 
   // do we need new name for it?
   auto ret = std::make_shared<StatementBuilder>(this->parent_function, this->parent_block, this->name);
@@ -514,9 +512,8 @@ std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
   ret->doesHaveMethodCalls = this->doesHaveMethodCalls;
 
   // copy statements
-  // what if statements within are keeping something important or shared ptr? shouldnt it call clone method of
+  // what if statements within are keeping something important or shared ptr? shouldn't it call clone method of
   // statement?
-  LOG(INFO) << "sz: " << this->statements.size();
 
   for (auto st : this->statements) {
     LOG(INFO) << "Cloning : " << st->stType;
@@ -531,7 +528,6 @@ std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
       ret->statements.emplace_back(st->clone());
     }
   }
-  LOG(INFO) << "here-done";
 
   return ret;
 }

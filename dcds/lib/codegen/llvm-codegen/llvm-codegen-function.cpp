@@ -30,6 +30,8 @@
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 #include "dcds/util/logging.hpp"
 
+static constexpr bool print_debug_log = false;
+
 namespace dcds {
 
 LLVMCodegenFunction::LLVMCodegenFunction(LLVMCodegen *_codegen, dcds::Builder *builder,
@@ -63,7 +65,7 @@ LLVMCodegenFunction::LLVMCodegenFunction(LLVMCodegen *_codegen, dcds::Builder *b
   IRBuilder()->SetInsertPoint(entryBB);
 
   // 3- allocate temporary variables.
-  LOG(INFO) << "codegen-temporary variables";
+  LOG_IF(INFO, print_debug_log) << "codegen-temporary variables";
   allocateFunctionVariables();
 
   // Allocate the return variable: success-state: not_abort
@@ -75,7 +77,7 @@ LLVMCodegenFunction::LLVMCodegenFunction(LLVMCodegen *_codegen, dcds::Builder *b
   LLVMScopedContext build_ctx(this->codegen, builder, this->fb, this->fb->entryPoint, this);
 
   // 4- codegen all statements
-  LOG(INFO) << "codegen-statements";
+  LOG_IF(INFO, print_debug_log) << "codegen-statements";
   LLVMCodegenStatement::gen(&build_ctx);
 
   // ----- GEN RETURN BLOCK
@@ -89,7 +91,7 @@ LLVMCodegenFunction::LLVMCodegenFunction(LLVMCodegen *_codegen, dcds::Builder *b
   returnBB->moveAfter(&(fn->back()));
   // ----- GEN RETURN BLOCK END
 
-  LOG(INFO) << "verifying function";
+  LOG_IF(INFO, print_debug_log) << "verifying function";
   dcds::LLVMCodegenFunction::LLVM_verifyFunction(fn);
 }
 
@@ -168,7 +170,7 @@ llvm::Function *LLVMCodegenFunction::wrapFunctionVariadicArgs(llvm::Function *in
 void LLVMCodegenFunction::allocateFunctionVariables() {
   // auto allocaBuilder = llvm::IRBuilder<>(basicBlock, basicBlock->end());
 
-  LOG(INFO) << "Allocating function's temp vars: " << fb->temp_variables.size();
+  LOG_IF(INFO, print_debug_log) << "Allocating function's temp vars: " << fb->temp_variables.size();
 
   for (auto &v : fb->temp_variables) {
     auto var_name = v.first;
@@ -222,9 +224,9 @@ void LLVMCodegenFunction::genFunctionSignature(const std::vector<std::pair<std::
 }
 
 llvm::Value *LLVMCodegenFunction::getArgumentByName(const std::string &name) {
-  // LOG(INFO) << "getArgumentByName: " << name;
+  // LOG_IF(INFO, print_debug_log) << "getArgumentByName: " << name;
   for (auto &arg : fn->args()) {
-    // LOG(INFO) << "\targ.getName(): " << arg.getName().str();
+    // LOG_IF(INFO, print_debug_log) << "\targ.getName(): " << arg.getName().str();
     if (arg.getName().equals(name)) {
       return &arg;
     }

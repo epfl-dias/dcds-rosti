@@ -62,7 +62,7 @@ std::shared_ptr<FunctionBuilder> FunctionBuilder::cloneShared(dcds::Builder *ds_
 }
 
 std::pair<rw_set_t, rw_set_t> FunctionBuilder::extractReadWriteSet() {
-  LOG(INFO) << "extractReadSet for " << this->getName();
+  // LOG(INFO) << "extractReadSet for " << this->getName();
   rw_set_t read_set;   // <typeName, std:set<attributeName>>
   rw_set_t write_set;  // <typeName, std::set<attributeName>>
 
@@ -72,6 +72,7 @@ std::pair<rw_set_t, rw_set_t> FunctionBuilder::extractReadWriteSet() {
 }
 
 bool FunctionBuilder::isReadOnly() {
+  // This might be problematic, as if the function performs a method call, then it is not a read-only anymore.
   auto [readSet, writeSet] = this->extractReadWriteSet();
   return writeSet.empty();
 }
