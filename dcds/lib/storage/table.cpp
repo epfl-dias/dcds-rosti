@@ -31,7 +31,18 @@ using namespace dcds::storage;
 Table* RecordReference::getTable() {
   // issue here?
   static thread_local auto* registry = &TableRegistry::getInstance();
-  return registry->getTable(static_cast<table_id_t>(record_metadata_ptr.getData()));
+  auto tableId = record_metadata_ptr.getData();
+
+  //  return registry->getTable(static_cast<table_id_t>(tableId));
+
+  static thread_local std::unordered_map<table_id_t, Table*> cache_map;
+  if ((cache_map.contains(tableId))) {
+    return cache_map.at(tableId);
+  } else {
+    auto tablePtr = registry->getTable(static_cast<table_id_t>(tableId));
+    cache_map.emplace(tableId, tablePtr);
+    return tablePtr;
+  }
 }
 
 Table::Table(table_id_t tableId, std::string tableName, size_t recordSize, std::vector<AttributeDef> attributes,
