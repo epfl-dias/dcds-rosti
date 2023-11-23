@@ -54,7 +54,7 @@ class RecordReference {
   //  RecordRefV2 &operator=(RecordRefV2 const &other) = default;
   //  RecordRefV2 &operator=(RecordRefV2 &&other) = default;
 
-  auto operator->() { return reinterpret_cast<record_metadata_t *>(record_metadata_ptr.operator->()); }
+  inline auto operator->() { return reinterpret_cast<record_metadata_t *>(record_metadata_ptr.operator->()); }
   auto operator()() { return record_metadata_ptr; }
 
   bool valid() { return (record_metadata_ptr.operator->() != nullptr); }

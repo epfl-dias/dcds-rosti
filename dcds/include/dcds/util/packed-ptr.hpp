@@ -54,7 +54,7 @@ class PackerPtr {
     pt |= (ptr & PTR_MASK);
   }
 
-  auto operator->() const { return reinterpret_cast<void*>(pt & PTR_MASK); }
+  inline auto operator->() const { return reinterpret_cast<void*>(pt & PTR_MASK); }
 
   void dump() const {
     LOG(INFO) << "[PackerPtr] data: " << static_cast<size_t>(getData())
