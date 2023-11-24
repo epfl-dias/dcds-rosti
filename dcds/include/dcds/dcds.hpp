@@ -33,6 +33,10 @@
 #include "dcds/common/common.hpp"
 #include "dcds/exporter/jit-container.hpp"
 #include "dcds/util/logging.hpp"
+#include "dcds/util/affinity-manager.hpp"
+#include "dcds/util/profiling.hpp"
+#include "dcds/util/timing.hpp"
+#include "dcds/util/thread-runner.hpp"
 
 namespace dcds {
 
