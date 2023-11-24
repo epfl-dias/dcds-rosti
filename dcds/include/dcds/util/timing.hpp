@@ -119,14 +119,13 @@ class [[nodiscard]] time_blockT {
                               decltype(__builtin_LINE()) line = __builtin_LINE())
       : time_blockT([_text{std::move(text)}, file, line, logSeverity](const auto &t) {
           auto s = --nested_time_block::getNestLevel();
-          absl::log_internal::LogMessage(file, line, logSeverity.severity)
+          absl::log_internal::LogMessage(file, static_cast<int>(line), logSeverity.severity)
               << '\t' << std::string(s, '|') << _text << toString(t);
-          // LOG(INFO).AtLocation(file, line) << '\t' << std::string(s, '|') << _text << toString(t);
         }) {
     ++nested_time_block::getNestLevel();
   }
 
-  inline explicit time_blockT() : reg([](const auto &t) {}), start(clock::now()) {}
+  inline explicit time_blockT() : reg([]([[maybe_unused]] const auto &t) {}), start(clock::now()) {}
 
   inline ~time_blockT() {
     auto end = clock::now();

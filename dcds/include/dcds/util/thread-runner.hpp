@@ -28,32 +28,74 @@
 #include <thread>
 #include <vector>
 
+#include "dcds/util/affinity-manager.hpp"
+#include "dcds/util/timing.hpp"
+
+namespace dcds {
+
+const auto processor_count = std::thread::hardware_concurrency();
+
+// template <typename TDuration = std::chrono::milliseconds, typename TClock = std::chrono::system_clock>
 class ThreadRunner {
  public:
-  ThreadRunner(size_t _n_threads = 1) : n_threads(_n_threads), sync_point(_n_threads, []() {}) {}
+  using TDuration = std::chrono::milliseconds;
+  using TClock = std::chrono::system_clock;
+  using clock = TClock;
+  using dur = typename TClock::duration;
+  static_assert(dur{1} <= TDuration{1}, "clock not precise enough");
 
-  // TODO: Add timing utilities
-  // TODO: Add pre- / post-run also.
+ public:
+  explicit ThreadRunner(std::ptrdiff_t _n_threads = 1) : n_threads(_n_threads), sync_point(_n_threads, []() {}) {}
 
-  template <class Function, class... Args>
-  void operator()(Function&& f, Args&&... args) {
+  template <class pre_runner, class post_runner, class Function, class... Args>
+  size_t operator()(pre_runner&& pre_run, post_runner&& post_run, Function&& f, Args&&... args) {
+    std::barrier<void (*)()> sync_point_pre(n_threads, []() {});
     std::vector<std::thread> runners;
 
     for (uint64_t _ti = 0; _ti < n_threads; _ti++) {
-      runners.emplace_back([&]() {
-        sync_point.arrive_and_wait();
-        f(args...);
-      });
+      runners.emplace_back(
+          [&](uint64_t _tid) {
+            dcds::ScopedAffinityManager scopedAffinity(dcds::Core(_tid % processor_count));
+
+            // PRE-RUN
+            pre_run(_tid);
+            sync_point_pre.arrive_and_wait();
+
+            // Main-function
+            sync_point.arrive_and_wait();  // mark the start
+            if (_tid == 0) start = clock ::now();
+            f(args...);
+            sync_point.arrive_and_wait();  // mark the end
+            if (_tid == 0) end = clock ::now();
+
+            // POST-RUN
+            post_run(_tid);
+          },
+          _ti);
     }
 
     for (auto& th : runners) {
       th.join();
     }
+
+    auto d = std::chrono::duration_cast<TDuration>(end - start);
+    return d.count();
   }
 
- private:
+  template <class Function, class... Args>
+  size_t operator()(Function&& f, Args&&... args) {
+    return this->operator()([](uint64_t) {}, [](uint64_t) {}, f, args...);
+  }
+
+ public:
   const size_t n_threads{};
+
+ private:
   std::barrier<void (*)()> sync_point;
+  std::chrono::time_point<clock> start;
+  std::chrono::time_point<clock> end;
 };
+
+}  // namespace dcds
 
 #endif  // DCDS_THREAD_RUNNER_HPP
