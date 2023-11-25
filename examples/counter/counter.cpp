@@ -19,21 +19,14 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <benchmark/benchmark.h>
-
-#include <barrier>
 #include <dcds/dcds.hpp>
-#include <dcds/util/thread-runner.hpp>
-#include <string>
-#include <thread>
-#include <vector>
-
 constexpr size_t initial_value = 100;
 static std::string name = "Counter";
 static auto op_name = name + "_fetch_add";
 static auto op_get = name + "_get";
 
 constexpr size_t iterations = 5;
+const size_t num_threads = std::thread::hardware_concurrency();
 
 static std::shared_ptr<dcds::Builder> generateCounter() {
   auto builder = std::make_shared<dcds::Builder>(name);
@@ -75,7 +68,7 @@ static std::shared_ptr<dcds::Builder> generateCounter() {
 static size_t doOp(dcds::JitContainer* instance) { return std::any_cast<uint64_t>(instance->op(op_name)); }
 
 static size_t test_ST(dcds::JitContainer* instance, size_t init_value) {
-  size_t val = 0;
+  size_t val;
   size_t verifier = init_value;
 
   for (size_t i = 0; i < iterations; i++) {
@@ -88,28 +81,7 @@ static size_t test_ST(dcds::JitContainer* instance, size_t init_value) {
 }
 
 static size_t test_MT(dcds::JitContainer* instance, size_t n_threads) {
-  std::vector<std::thread> runners;
-
-  std::barrier<void (*)()> sync_point(n_threads, []() {});
-
-  for (size_t x = 0; x < n_threads; x++) {
-    runners.emplace_back([&]() {
-      LOG(INFO) << "tid: " << std::this_thread::get_id();
-      sync_point.arrive_and_wait();  // not required i guess.
-      for (size_t i = 0; i < iterations; i++) {
-        doOp(instance);
-      }
-    });
-  }
-
-  for (auto& th : runners) {
-    th.join();
-  }
-  return std::any_cast<uint64_t>(instance->op(op_get));
-}
-
-static size_t test_MT2(dcds::JitContainer* instance, size_t n_threads) {
-  auto thr = ThreadRunner(n_threads);
+  auto thr = dcds::ThreadRunner(n_threads);
 
   thr([&]() {
     for (size_t i = 0; i < iterations; i++) {
@@ -125,28 +97,26 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Counter";
 
   auto ctr = generateCounter();
+  ctr->dump();
   auto instance = ctr->createInstance();
-  size_t currVal = 0;
-  size_t expected_val = initial_value;
+  size_t current_value;
+  size_t expected_value = initial_value;
 
-  currVal = test_ST(instance, expected_val);
-  expected_val += iterations;
-  CHECK(currVal == expected_val) << "current_value != expected_value :: " << currVal << " != " << expected_val;
+  current_value = test_ST(instance, expected_value);
+  expected_value += iterations;
+  CHECK(current_value == expected_value) << "current_value != expected_value :: " << current_value
+                                       << " != " << expected_value;
 
-  currVal = test_ST(instance, expected_val);
-  expected_val += iterations;
-  CHECK(currVal == expected_val) << "current_value != expected_value :: " << currVal << " != " << expected_val;
+  current_value = test_ST(instance, expected_value);
+  expected_value += iterations;
+  CHECK(current_value == expected_value) << "current_value != expected_value :: " << current_value
+                                       << " != " << expected_value;
 
-  size_t n_threads = 24;
-  currVal = test_MT(instance, n_threads);
-  expected_val += (iterations * n_threads);
-  CHECK(currVal == expected_val) << "(multi-threaded) current_value != expected_value :: " << currVal
-                                 << " != " << expected_val;
 
-  currVal = test_MT2(instance, n_threads);
-  expected_val += (iterations * n_threads);
-  CHECK(currVal == expected_val) << "(multi-threaded) current_value != expected_value :: " << currVal
-                                 << " != " << expected_val;
+  current_value = test_MT(instance, num_threads);
+  expected_value += (iterations * num_threads);
+  CHECK(current_value == expected_value) << "(multi-threaded) current_value != expected_value :: " << current_value
+                                       << " != " << expected_value;
 
   return 0;
 }
