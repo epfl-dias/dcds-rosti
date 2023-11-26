@@ -63,6 +63,7 @@
 namespace dcds {
 
 static bool print_generated_code = true;
+static bool print_optimized_code = false;
 
 class PassConfiguration {
  public:
@@ -124,7 +125,7 @@ class LLVMJIT {
             ES, CompileLayer,
             [](llvm::orc::ThreadSafeModule TSM,
                const llvm::orc::MaterializationResponsibility &R) -> llvm::Expected<llvm::orc::ThreadSafeModule> {
-              if (print_generated_code) return printIR(std::move(TSM), "_opt");
+              if (print_optimized_code) return printIR(std::move(TSM), "_opt");
               return std::move(TSM);
             }),
         TransformLayer(ES, PrintOptimizedIRLayer,

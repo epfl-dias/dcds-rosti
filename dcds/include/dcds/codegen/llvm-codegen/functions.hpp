@@ -75,6 +75,4 @@ extern "C" bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record);
 extern "C" bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record);
 // extern "C" bool unlock_all(void* _txnManager, void* txnPtr);
 
-extern "C" void* getCuckooMap(dcds::valueType value_type);
-
 #endif  // DCDS_FUNCTIONS_HPP

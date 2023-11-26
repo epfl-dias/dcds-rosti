@@ -34,6 +34,7 @@
 #include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
+#include "dcds/indexes/index-functions.hpp"
 
 namespace dcds {
 
@@ -679,9 +680,9 @@ void LLVMCodegen::initializeArrayAttributes(dcds::Builder &builder,
     if (at->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST) {
       auto attributeList = std::static_pointer_cast<AttributeList>(at);
       llvm::Value *index_ptr;
-      if (attributeList->is_fixed_size) {
-        // fixed-size array
-        auto attributeArray = std::static_pointer_cast<AttributeArray>(attributeList);
+      llvm::Value *array_table;
+      {
+        // create-mapped-value-table
 
         std::string sub_table_name;
         llvm::Value *sub_table_name_llvm_const;
@@ -700,12 +701,12 @@ void LLVMCodegen::initializeArrayAttributes(dcds::Builder &builder,
               this->genInitStorageFn(sub_table_name_prefix, sub_table_name_llvm_const, builder.attributes);
 
         } else {
-          sub_table_name = attributeArray->composite_type->getName() + "_tbl";
+          sub_table_name = attributeList->composite_type->getName() + "_tbl";
           sub_table_name_llvm_const =
-              this->createStringConstant(sub_table_name, attributeArray->composite_type->getName());
-          CHECK(fn_init_sub_tables.contains(attributeArray->name))
+              this->createStringConstant(sub_table_name, attributeList->composite_type->getName());
+          CHECK(fn_init_sub_tables.contains(attributeList->name))
               << "Storage init does not exists for child type: " << attributeList->composite_type->getName();
-          init_sub_table_fn = fn_init_sub_tables[attributeArray->name];
+          init_sub_table_fn = fn_init_sub_tables[attributeList->name];
         }
 
         Value *fn_res_doesTableExists_sub =
@@ -716,9 +717,12 @@ void LLVMCodegen::initializeArrayAttributes(dcds::Builder &builder,
                 [&]() { phi_subTable.emplace(this->gen_call(getTable, {sub_table_name_llvm_const})); })
             .gen_else([&]() { phi_subTable.emplace(this->gen_call(init_sub_table_fn, {})); });
 
-        // it should be a single-table.
-        // the pointer should point to base-record.
-        llvm::Value *array_table = phi_subTable.get();
+        array_table = phi_subTable.get();
+      }
+
+      if (attributeList->is_fixed_size) {
+        // fixed-size array
+        auto attributeArray = std::static_pointer_cast<AttributeArray>(attributeList);
 
         // Until here, if the table was not created, we created the table for the array-attribute.
         // now we want to insert N records in the table, get the ptr to the base.
@@ -736,7 +740,21 @@ void LLVMCodegen::initializeArrayAttributes(dcds::Builder &builder,
 
       } else {
         // indexed-map : cuckoo, or whatever.
-        assert(false);
+
+        // we have the table to mapped type. but we don't need to insert anything there.
+        // but somehow, either have a name generator function or save the table name back in the attribute?
+
+        auto indexedList = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+        CHECK(indexedList->is_primitive_type == false) << "IndexedList can only be of complex type";
+
+        // create a cuckoo-map, or index_t with type<key_t, record_ptr>
+        auto key_attribute = indexedList->composite_type->getAttribute(indexedList->key_attribute);
+
+        // FIXME: createIndexMap is a fixed function which creates cuckooMap. we need it to be switch-able to
+        //  cuckoo (hash), or some other range, or specific types.
+        // ----> also add it to destructor.
+        auto key_type = ConstantInt::get(Type::getInt32Ty(getLLVMContext()), std::to_underlying(key_attribute->type));
+        index_ptr = this->gen_call(createIndexMap, {key_type}, Type::getInt64Ty(getLLVMContext()));
       }
 
       llvm::AllocaInst *allocaInst = getBuilder()->CreateAlloca(index_ptr->getType());

@@ -78,7 +78,7 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
   } else {
     auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
 
-    CHECK(key->getResultType() != indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type)
+    CHECK(key->getResultType() == indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type)
         << "Mismatched key type: "
         << "Expected: " << key->getResultType()
         << " vs Input: " << indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type;
@@ -400,6 +400,9 @@ void StatementBuilder::extractReadWriteSet_recursive(rw_set_t &read_set, rw_set_
     } else if (stmt->stType == statementType::READ) {
       auto readStmt = reinterpret_cast<const ReadStatement *>(stmt);
       read_set[typeName].insert(readStmt->source_attr);
+    } else if (stmt->stType == statementType::READ_INDEXED) {
+      auto readStmt = reinterpret_cast<const ReadIndexedStatement *>(stmt);
+      read_set[typeName].insert(readStmt->source_attr + "[" + readStmt->index_expr->toString() + "]");
     } else if (stmt->stType == statementType::UPDATE) {
       auto updStmt = reinterpret_cast<const UpdateStatement *>(stmt);
       write_set[typeName].insert(updStmt->destination_attr);

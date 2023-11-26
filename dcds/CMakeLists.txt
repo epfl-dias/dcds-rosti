@@ -27,6 +27,7 @@ set(dcds_cxx
         lib/common/types.cpp
 
         # Indexes
+        lib/indexes/index-functions.cpp
         # lib/indexes/art-node.cpp
 
         # Storage

@@ -185,6 +185,10 @@ class Builder : remove_copy {
     attributes.emplace(name, pt);
     return pt;
   }
+  auto addAttributeIndexedList(const std::string& name, const std::shared_ptr<Builder>& type,
+                               std::shared_ptr<dcds::Attribute>& key_attribute) {
+    return addAttributeIndexedList(name, type, key_attribute->name);
+  }
 
  private:
   // should be called from optPasses only, otherwise user may declare, use and then delete it causing dangling issues.

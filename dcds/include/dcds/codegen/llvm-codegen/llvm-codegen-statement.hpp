@@ -81,6 +81,9 @@ class LLVMCodegenStatement {
 
  private:
   LLVMScopedContext *build_ctx;
+
+ private:
+  llvm::Value *call_index_find(valueType key_type, llvm::Value *base_record_ptr, llvm::Value *index_key);
 };
 
 }  // namespace dcds

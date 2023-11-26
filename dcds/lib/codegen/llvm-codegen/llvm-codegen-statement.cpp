@@ -27,6 +27,7 @@
 #include "dcds/codegen/llvm-codegen/utils/conditionals.hpp"
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
+#include "dcds/indexes/index-functions.hpp"
 
 static constexpr bool print_debug_log = false;
 
@@ -145,6 +146,26 @@ void LLVMCodegenStatement::buildStatement_Read(Statement *stmt) {
       Type::getVoidTy(ctx()));
 }
 
+llvm::Value *LLVMCodegenStatement::call_index_find(valueType key_type, llvm::Value *base_record_ptr,
+                                                   llvm::Value *index_key) {
+  switch (key_type) {
+    case valueType::INT64:
+      return build_ctx->codegen->gen_call(index_find<int64_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+    case valueType::INT32:
+      return build_ctx->codegen->gen_call(index_find<int32_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+    case valueType::FLOAT:
+      return build_ctx->codegen->gen_call(index_find<float>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+    case valueType::DOUBLE:
+      return build_ctx->codegen->gen_call(index_find<double>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+    case valueType::RECORD_PTR:
+      return build_ctx->codegen->gen_call(index_find<uintptr_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+    case valueType::VOID:
+    case valueType::BOOL:
+      assert(false);
+      break;
+  }
+}
+
 void LLVMCodegenStatement::buildStatement_ReadIndexed(Statement *stmt) {
   auto readStmt = reinterpret_cast<ReadIndexedStatement *>(stmt);
   CHECK(build_ctx->current_builder->hasAttribute(readStmt->source_attr)) << "read attribute does not exists";
@@ -165,10 +186,11 @@ void LLVMCodegenStatement::buildStatement_ReadIndexed(Statement *stmt) {
        build_ctx->codegen->createSizeT(build_ctx->current_builder->getAttributeIndex(readStmt->source_attr))},
       Type::getVoidTy(ctx()));
 
+  llvm::Value *index_key = LLVMExpressionVisitor::gen(build_ctx, readStmt->index_expr);
+
   // now we have the pointer to actual table in record_ptr
   if (readStmt->integer_indexed) {
     auto attributeArray = std::static_pointer_cast<AttributeArray>(attributeList);
-    llvm::Value *array_offset = LLVMExpressionVisitor::gen(build_ctx, readStmt->index_expr);
 
     if (attributeArray->is_primitive_type) {
       assert(false);  // directly read the thing in the nth index.
@@ -176,24 +198,21 @@ void LLVMCodegenStatement::buildStatement_ReadIndexed(Statement *stmt) {
       auto *base_record_ptr =
           IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(valueType::RECORD_PTR), base_record);
       auto *record_ptr = build_ctx->codegen->gen_call(
-          table_get_nth_record, {txnManager, base_record_ptr, txn, array_offset}, Type::getInt64Ty(ctx()));
+          table_get_nth_record, {txnManager, base_record_ptr, txn, index_key}, Type::getInt64Ty(ctx()));
       IRBuilder()->CreateStore(record_ptr, destination);
     }
 
-    // extern "C" void table_read_attribute_offset(
-    //    void* _txnManager,
-    //    uintptr_t _mainRecord,
-    //    void* txnPtr, void* dst,
-    //    size_t attributeIdx,
-    //    size_t record_offset)
-
-    // Wrong mainRecord here.
-    //    build_ctx->codegen->gen_call(table_read_attribute_offset,
-    //                      {txnManager, mainRecord, txn, destination, attribute_idx, array_offset},
-    //                      Type::getVoidTy(ctx()));
   } else {
     // TODO: for indexed-types.
-    assert(false);
+    auto indexedList = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+    assert(!indexedList->is_primitive_type);
+
+    auto *base_record_ptr =
+        IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(valueType::RECORD_PTR), base_record);
+
+    auto *record_ptr = call_index_find(indexedList->type, base_record_ptr, index_key);
+
+    IRBuilder()->CreateStore(record_ptr, destination);
   }
 }
 
