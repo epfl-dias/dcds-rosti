@@ -24,7 +24,6 @@
 #include <dcds/dcds.hpp>
 #include <memory>
 
-
 constexpr size_t initial_value = 100;
 static std::string name = "Counter";
 static auto op_name = name + "_fetch_add";
@@ -69,7 +68,6 @@ static std::shared_ptr<dcds::Builder> generateCounter() {
   return builder;
 }
 
-
 static size_t doOp(dcds::JitContainer* instance) { return std::any_cast<uint64_t>(instance->op(op_name)); }
 
 static size_t test_ST(dcds::JitContainer* instance, size_t init_value) {
@@ -97,7 +95,6 @@ static size_t test_MT(dcds::JitContainer* instance, size_t n_threads) {
   return std::any_cast<uint64_t>(instance->op(op_get));
 }
 
-
 TEST(DS_Counter, FetchAdd_ST) {
   auto ctr = generateCounter();
   auto instance = ctr->createInstance();
@@ -110,7 +107,6 @@ TEST(DS_Counter, FetchAdd_ST) {
 }
 
 TEST(DS_Counter, FetchAdd_MT) {
-
   auto ctr = generateCounter();
   auto instance = ctr->createInstance();
   size_t current_value;

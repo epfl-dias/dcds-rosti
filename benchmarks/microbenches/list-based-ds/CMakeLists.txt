@@ -6,10 +6,8 @@ add_executable(list-based-ds
         list-based-ds.cpp
         )
 
-target_link_libraries_system(list-based-ds
-        benchmark::benchmark
-        absl::log
-        )
+target_link_libraries_system(play benchmark::benchmark)
+
 target_link_libraries(list-based-ds
         PUBLIC
         dcds

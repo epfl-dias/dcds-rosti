@@ -5,17 +5,10 @@ add_executable(YCSB
         YCSB-main.cpp
         )
 
-target_link_libraries_system(YCSB
-        benchmark::benchmark
-        absl::log
-        cuckoo::cuckoo
-        tbbmalloc
-        tbbmalloc_proxy
-        )
+target_link_libraries_system(play benchmark::benchmark)
 
 target_link_libraries(YCSB
         PUBLIC
-        LLVM::LLVM
         dcds)
 
 target_compile_features(YCSB PUBLIC cxx_std_23)

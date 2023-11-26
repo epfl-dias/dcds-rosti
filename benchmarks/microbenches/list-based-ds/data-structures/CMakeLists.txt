@@ -2,6 +2,7 @@
 set(list-based-datastructures_cxx
         lib/parser-generated/doubly-linked-list.cpp
         lib/parser-generated/linked-list.cpp
+        lib/un-generated/linked-list.cpp
         )
 
 add_library(list-based-datastructures SHARED
@@ -18,11 +19,6 @@ target_include_directories(list-based-datastructures
 
 target_link_libraries_system(list-based-datastructures
         benchmark::benchmark
-        absl::log
-        absl::check
-        cuckoo::cuckoo
-        tbbmalloc
-        tbbmalloc_proxy
         )
 
 target_link_libraries(list-based-datastructures

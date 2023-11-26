@@ -63,6 +63,8 @@ target_link_libraries_system(dcds
         absl::failure_signal_handler
         cuckoo::cuckoo
         tbb
+        tbbmalloc
+        tbbmalloc_proxy
         LLVM::LLVM)
 
 if (VTUNE AND VTUNE_ENABLE)

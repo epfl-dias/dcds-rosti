@@ -5,11 +5,6 @@ add_executable(lru-list-benchmark
 target_link_libraries_system(lru-list-benchmark
         benchmark::benchmark
         benchmark::benchmark_main
-        tbb
-        tbbmalloc
-        tbbmalloc_proxy
-        absl::check
-        absl::log
         absl::random_random)
 
 target_link_libraries(lru-list-benchmark PUBLIC dcds)
