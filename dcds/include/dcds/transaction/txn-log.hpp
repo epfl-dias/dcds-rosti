@@ -22,6 +22,9 @@
 #ifndef DCDS_TXN_LOG_HPP
 #define DCDS_TXN_LOG_HPP
 
+#include <deque>
+#include <forward_list>
+
 #include "dcds/common/common.hpp"
 
 namespace dcds::txn {
@@ -92,8 +95,15 @@ class TransactionLog {
 
   void rollback();
 
+  ~TransactionLog() {
+    for (auto& l : log) {
+      delete l;
+    }
+  }
+
  private:
-  std::vector<TransactionLogItem*> log;
+  //  std::deque<TransactionLogItem*> log;
+  std::forward_list<TransactionLogItem*> log;
 };
 
 }  // namespace dcds::txn

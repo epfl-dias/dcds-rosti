@@ -66,6 +66,8 @@ class FunctionBuilder : remove_copy {
   [[nodiscard]] auto isAlwaysInline() const { return _is_always_inline; }
   void setAlwaysInline(bool val) { _is_always_inline = val; }
 
+  [[nodiscard]] bool isConst() { return _is_const; }
+
   // --------------------------------------
   // Function Arguments
   // --------------------------------------
@@ -189,9 +191,12 @@ class FunctionBuilder : remove_copy {
   std::map<std::string, std::shared_ptr<expressions::TemporaryVariableExpression>> temp_variables;
   std::shared_ptr<StatementBuilder> entryPoint;
 
-  bool _is_always_inline = false;
-
   size_t cloned_src_id{};
+
+ private:
+  // Function attributes
+  bool _is_always_inline = false;
+  bool _is_const = true;
 
  public:
   void print(std::ostream &out, size_t indent_level = 0);

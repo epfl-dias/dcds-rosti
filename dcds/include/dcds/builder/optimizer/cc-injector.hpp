@@ -38,6 +38,7 @@ class CCInjector {
  private:
   struct attribute_trait_t {
     bool is_nascent;
+    bool is_const;
   };
 
   using attribute_info = std::pair<std::string, std::string>;  // typeName, attributeName
@@ -58,17 +59,16 @@ class CCInjector {
                                 attribute_traits &traits_in_scope, Iterator &pos, std::deque<Statement *> &statements,
                                 const std::string &attribute_name, const std::string &type_name, size_t typeID,
                                 bool lock_exclusive = true) {
-    // FIXME: if the previous lock was shared, it has to change that to exclusive! or add an upgrade lock statement.
-    // Hacked for now, making all locks exclusive.
-
-    // lock_exclusive = true;
-
     attribute_info attrInfo{type_name, attribute_name};
     if (!(lock_placed.contains(attrInfo))) {
       if (traits_in_scope.contains(attrInfo)) {
-        LOG(INFO) << "trait-in-scope: " << attrInfo.second;
-        LOG(INFO) << "\tis_nascent: " << traits_in_scope[attrInfo].is_nascent;
-        return;
+        //        LOG(INFO) << "trait-in-scope: " << attrInfo.second;
+        //        LOG(INFO) << "\tis_nascent: " << traits_in_scope[attrInfo].is_nascent;
+        //        LOG(INFO) << "\tis_const: " << traits_in_scope[attrInfo].is_const;
+        if (traits_in_scope[attrInfo].is_const) {
+          // LOG(INFO) << "No-need of lock as variable is a const";
+          return;
+        }
       }
 
       auto lkSt = new LockStatement(attrInfo.first, attrInfo.second, typeID, lock_exclusive);
@@ -76,9 +76,49 @@ class CCInjector {
 
       lock_placed.emplace(attrInfo, lkSt);
       pos++;
+    } else {
+      // there is a lock already. verify the lock-compatibility.
+      auto prev_lock_st = lock_placed[attrInfo];
+      bool is_shared = (lock_placed[attrInfo]->stType == statementType::CC_LOCK_SHARED);
+
+      if (lock_exclusive && is_shared) {
+        // asked for ex but existing is shared
+        //  convert to exclusive
+        auto lkSt = new LockStatement(attrInfo.first, attrInfo.second, typeID, lock_exclusive);
+        lock_placed[attrInfo] = lkSt;
+
+        for (auto &element : statements) {
+          if (element == prev_lock_st) {
+            element = lkSt;
+            break;  // Stop searching after the replacement
+          }
+        }
+
+        delete prev_lock_st;
+      }
     }
   }
+
+  friend std::ostream &operator<<(std::ostream &os, const CCInjector::attribute_trait_t &ty);
+  friend std::ostream &operator<<(std::ostream &os, const CCInjector::attribute_traits &traits_in_scope);
 };
+
+inline std::ostream &operator<<(std::ostream &os, const CCInjector::attribute_trait_t &ty) {
+  os << "\tis_nascent: " << ty.is_nascent << std::endl;
+  os << "\tis_const: " << ty.is_const << std::endl;
+  ;
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const CCInjector::attribute_traits &traits_in_scope) {
+  for (auto &[k, v] : traits_in_scope) {
+    os << "\t" << k.first << "::" << k.second << std::endl;
+    ;
+    os << v << std::endl;
+    ;
+  }
+  return os;
+}
 
 }  // namespace dcds
 

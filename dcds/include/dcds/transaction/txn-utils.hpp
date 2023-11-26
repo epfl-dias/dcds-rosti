@@ -29,7 +29,8 @@ namespace dcds::txn {
 
 // ACTIVE, IDLE, FINISHED
 // ACTIVE, COMMITTED, ABORTED
-enum class TXN_STATUS { ACTIVE, COMMITTED, ABORTED };
+
+enum class TXN_STATUS : ushort { ACTIVE, COMMITTED, ABORTED };
 inline std::ostream& operator<<(std::ostream& os, dcds::txn::TXN_STATUS ty) {
   os << "TXN_STATUS::";
   switch (ty) {

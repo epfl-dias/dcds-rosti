@@ -58,7 +58,7 @@ class Txn {
   const bool read_only;
 
  public:  // fixme;
-  [[maybe_unused]] xid_t commit_ts{};
+  //[[maybe_unused]] xid_t commit_ts{};
   TXN_STATUS status;
 
  public:

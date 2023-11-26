@@ -30,9 +30,13 @@ void TransactionLog::addUpdateLog(uintptr_t record, column_id_t attribute_idx, v
   // FIXME: potentially do a one big malloc, so that the actual updateLog and data can be in the same allocation.
   void* data_location = malloc(len);
   memcpy(data_location, prev_value, len);
-  this->log.push_back(new UpdateLog(record, attribute_idx, data_location, len));
+  //  this->log.push_back(new UpdateLog(record, attribute_idx, data_location, len));
+  this->log.push_front(new UpdateLog(record, attribute_idx, data_location, len));
 }
-void TransactionLog::addInsertLog(uintptr_t record) { this->log.push_back(new InsertLog(record)); }
+void TransactionLog::addInsertLog(uintptr_t record) {
+  //  this->log.push_back(new InsertLog(record));
+  this->log.push_front(new InsertLog(record));
+}
 
 void TransactionLog::rollback() {
   for (auto& action : this->log) {

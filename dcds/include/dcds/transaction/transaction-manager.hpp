@@ -30,6 +30,7 @@
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/transaction.hpp"
 #include "dcds/transaction/txn-utils.hpp"
+#include "oneapi/tbb/tbb_allocator.h"
 
 // TransactionTable
 namespace dcds::txn {

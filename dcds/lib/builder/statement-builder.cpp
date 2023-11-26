@@ -152,6 +152,7 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
 
   auto s = new UpdateStatement(attribute->name, source_expr);
   statements.push_back(s);
+  this->parent_function._is_const = false;
 }
 
 void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
@@ -167,6 +168,7 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
 
   auto s = new UpdateStatement(attribute->name, source);
   statements.push_back(s);
+  this->parent_function._is_const = false;
 }
 
 void StatementBuilder::addReturnStatement(const std::shared_ptr<expressions::Expression> &expr) {
@@ -223,6 +225,7 @@ std::shared_ptr<expressions::TemporaryVariableExpression> StatementBuilder::addI
 
   auto rs = new InsertStatement(registered_type_name, variable_name);
   statements.push_back(rs);
+  this->parent_function._is_const = false;
   return resultVar;
 }
 
@@ -325,6 +328,9 @@ void StatementBuilder::addMethodCall(const std::shared_ptr<Builder> &object_type
                                     std::move(arg_vars));
   statements.push_back(rs);
   doesHaveMethodCalls = true;
+  if (object_type->getFunction(function_name)->_is_const == false) {
+    this->parent_function._is_const = false;
+  }
 }
 
 void StatementBuilder::addMethodCall(
@@ -367,6 +373,9 @@ void StatementBuilder::addMethodCall(
                                     return_destination, function_args);
   statements.push_back(rs);
   doesHaveMethodCalls = true;
+  if (object_type->getFunction(function_name)->_is_const == false) {
+    this->parent_function._is_const = false;
+  }
 }
 
 StatementBuilder::conditional_blocks StatementBuilder::addConditionalBranch(dcds::expressions::Expression *expr) {

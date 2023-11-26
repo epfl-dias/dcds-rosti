@@ -55,13 +55,24 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
 
     if (st->stType == statementType::READ) {
       auto rd_st = reinterpret_cast<ReadStatement *>(st);
+
+      auto readAttr = s->getFunction()->builder->getAttribute(rd_st->source_attr);
+      attribute_info x{typeName, rd_st->source_attr};
+      traits_in_scope[x].is_const = readAttr->is_runtime_constant || readAttr->is_compile_time_constant;
+
       if (!type_traits.is_nascent)
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, rd_st->source_attr, typeName, typeId, false);
+
+    } else if (st->stType == statementType::READ_INDEXED) {
+      auto rd_st = reinterpret_cast<ReadIndexedStatement *>(st);
+
+      attribute_info x{typeName, rd_st->dest_expr->var_name};
+      traits_in_scope[x].is_const = true;
 
     } else if (st->stType == statementType::UPDATE) {
       auto upd_st = reinterpret_cast<UpdateStatement *>(st);
       if (!type_traits.is_nascent) {
-        // FIXME: if the previous lock was shared, it has to change that to exclusive! or add an upgrade lock statement.
+        // FIXME: if the previous lock was shared, it changes to exclusive! or future: add an upgrade lock statement.
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, upd_st->destination_attr, typeName, typeId,
                           true);
       }
@@ -75,15 +86,16 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
     } else if (st->stType == statementType::METHOD_CALL) {
       auto mc_st = reinterpret_cast<MethodCallStatement *>(st);
       mc_st->function_instance = mc_st->function_instance->cloneShared();
-      // new traits actually here, as we are going deeper?
-      // also, pass if reference variable is nascent, then no need to do CC inside.
-      if (!type_traits.is_nascent) {
-        // FIXME: check if the function is a read-only function, then it can be just shared-lock.
-        // also for runtime-const, we dont want lock.
-        // FIXME: !!!!
-        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
-                          mc_st->function_instance->builder->getName(), mc_st->function_instance->builder->getTypeID(),
-                          false);
+
+      if (!(type_traits.is_nascent)) {
+        LOG(INFO) << "placing lock for method-call variable";
+        //        LOG(INFO) << mc_st->function_instance->getName()
+        //                  << " -- IsFunctionConst: " << mc_st->function_instance->isConst();
+        //        LOG(INFO) << mc_st->function_instance->getName()
+        //                  << " -- IsFunctionReadOnly: " << mc_st->function_instance->isReadOnly();
+
+        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable, typeName,
+                          typeId, false);
       }
 
       attribute_info x{mc_st->function_instance->builder->getName(), mc_st->referenced_type_variable};

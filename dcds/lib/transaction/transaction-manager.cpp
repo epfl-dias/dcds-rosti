@@ -23,12 +23,15 @@
 
 #include "dcds/storage/table.hpp"
 #include "dcds/util/logging.hpp"
+#include "oneapi/tbb/scalable_allocator.h"
 
 namespace dcds::txn {
 
 txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
   //  return new Txn(txnIdGenerator.getTxnTs(), is_read_only);
-  return new Txn(is_read_only);
+  //  return new Txn(is_read_only);
+
+  return new (scalable_malloc(sizeof(Txn))) Txn(is_read_only);
 }
 
 void TransactionManager::releaseAllLocks(txn_ptr_t txn) {
@@ -47,18 +50,22 @@ bool TransactionManager::endTransaction(txn_ptr_t txn) {
   if (txn->status == TXN_STATUS::ACTIVE) {
     // start commit
     commitTransaction(txn);
-    commit++;
+    // commit++;
   } else {
     abortTransaction(txn);
-    abort++;
+    // abort++;
     success = false;
   }
+  assert(txn);
+  //  delete txn;
+  scalable_free(txn);
+
   return success;
 }
 
 bool TransactionManager::commitTransaction(txn_ptr_t txn) {
-  txn->commit_ts = txnIdGenerator.getCommitTs();
-  txn->status = TXN_STATUS::COMMITTED;
+  // txn->commit_ts = txnIdGenerator.getCommitTs();
+  // txn->status = TXN_STATUS::COMMITTED;
   releaseAllLocks(txn);
 
   return true;
@@ -67,7 +74,7 @@ bool TransactionManager::abortTransaction(txn_ptr_t txn) {
   // TODO: undo changes.
   txn->rollback();
   releaseAllLocks(txn);
-  txn->status = TXN_STATUS::ABORTED;
+  // txn->status = TXN_STATUS::ABORTED;
   return false;
 }
 
