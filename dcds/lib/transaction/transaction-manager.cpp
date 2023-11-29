@@ -35,12 +35,11 @@ txn_ptr_t TransactionManager::beginTransaction(bool is_read_only) {
 }
 
 void TransactionManager::releaseAllLocks(txn_ptr_t txn) {
-  for (auto& rec : txn->exclusive_locks) {
-    //    dcds::storage::record_reference_t(rec)->unlock();
+  for (auto rec : txn->exclusive_locks) {
     dcds::storage::record_reference_t(rec)->unlock_ex();
   }
 
-  for (auto& rec : txn->shared_locks) {
+  for (auto rec : txn->shared_locks) {
     dcds::storage::record_reference_t(rec)->unlock_shared();
   }
 }

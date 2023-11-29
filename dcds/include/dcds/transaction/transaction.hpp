@@ -28,6 +28,7 @@
 #include "dcds/common/types.hpp"
 #include "dcds/transaction/txn-log.hpp"
 #include "dcds/transaction/txn-utils.hpp"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace dcds::txn {
 
@@ -62,9 +63,8 @@ class Txn {
   TXN_STATUS status;
 
  public:
-  // during beginTxn, pass information about expected number of locks.
-  std::set<uintptr_t> exclusive_locks;
-  std::set<uintptr_t> shared_locks;
+  llvm::SmallPtrSet<uintptr_t, 10> exclusive_locks;
+  llvm::SmallPtrSet<uintptr_t, 10> shared_locks;
 
  public:
   void rollback();
