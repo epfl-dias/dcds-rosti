@@ -21,6 +21,7 @@
 
 #include <dcds/dcds.hpp>
 #include <random>
+
 #include "tpcc/tpcc_64.hpp"
 
 int main(int argc, char** argv) {

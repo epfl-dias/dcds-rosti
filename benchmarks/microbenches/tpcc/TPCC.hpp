@@ -25,7 +25,6 @@
 #include <dcds/dcds.hpp>
 #include <memory>
 
-
 using date_t = uint64_t;
 
 // From TPCC-SPEC
@@ -34,12 +33,10 @@ constexpr size_t TPCC_NCUST_PER_DIST = 3000;
 constexpr size_t TPCC_NDIST_PER_WH = 10;
 constexpr size_t TPCC_ORD_PER_DIST = 3000;
 
-
 constexpr size_t TPCC_MAX_OL_PER_ORDER = 15;
 constexpr size_t FIRST_NAME_MIN_LEN = 8;
 constexpr size_t FIRST_NAME_LEN = 16;
 constexpr size_t LAST_NAME_LEN = 16;
-
 
 // Standard TPC-C Mix
 /*
@@ -51,16 +48,14 @@ constexpr size_t LAST_NAME_LEN = 16;
 #define MIX_COUNT 100
 */
 
-
 // number_of_warehouse as runtime-parameter or build-time?
 
-class TPCC{
+class TPCC {
  public:
   TPCC();
 
   void test_st();
   void test_mt();
-
 
  private:
   void gen_init_fn();
@@ -85,11 +80,8 @@ class TPCC{
   void gen_order_line_tbl();
   void gen_new_order_tbl();
 
-
  private:
   std::shared_ptr<dcds::Builder> ds_builder;
-
-
 };
 
 #endif  // DCDS_TPCC_HPP

@@ -102,7 +102,6 @@ void TPCC::gen_history_tbl() {
 void TPCC::gen_customer_tbl() {
   auto builder = this->ds_builder->createType("tpcc_customer");
 
-
   builder->addAttribute("c_id", dcds::valueType::INT32, UINT32_C(0));
   builder->addAttribute("c_w_id", dcds::valueType::INT32, UINT32_C(0));
   builder->addAttribute("c_d_id", dcds::valueType::INT32, UINT32_C(0));
@@ -137,11 +136,9 @@ void TPCC::gen_order_tbl() {
   builder->addAttribute("o_carrier_id", dcds::valueType::INT32, UINT32_C(0));
   builder->addAttribute("o_ol_cnt", dcds::valueType::INT32, UINT32_C(0));
   builder->addAttribute("o_all_local", dcds::valueType::INT32, UINT32_C(0));
-
 }
 
 void TPCC::gen_order_line_tbl() {
-
   auto builder = this->ds_builder->createType("tpcc_order_line");
 
   builder->addAttribute("ol_o_id", dcds::valueType::INT32, UINT32_C(0));
@@ -155,7 +152,6 @@ void TPCC::gen_order_line_tbl() {
   builder->addAttribute("ol_amount", dcds::valueType::DOUBLE, double_t(0));
 
   // TODO: char ol_dist_info[24];
-
 }
 
 void TPCC::gen_new_order_tbl() {
