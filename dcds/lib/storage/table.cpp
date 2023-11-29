@@ -90,14 +90,17 @@ SingleVersionRowStore::SingleVersionRowStore(table_id_t tableId, const std::stri
                                              std::vector<AttributeDef> attributes)
     : Table(tableId, table_name, recordSize, std::move(attributes), false) {}
 
-void* SingleVersionRowStore::allocateRecordMemory(size_t n_records) const {
+void* SingleVersionRowStore::allocateRecordMemory(size_t n_records) {
   // TODO: use some sort of caching or allocate more and then return from the allocations.
   // LOG(INFO) << "allocateRecordMemory(): " << record_size << " | actualSize: " << record_size_data_only;
 
   // WHAT ABOUT ALIGNMENTS?
-  return malloc(record_size * n_records);
+  return memory_allocations.emplace_back(malloc(record_size * n_records));
 }
-void SingleVersionRowStore::freeRecordMemory(void* mem) { free(mem); }
+void SingleVersionRowStore::freeRecordMemory(void* mem) {
+  std::erase_if(memory_allocations, [&](const auto& m) { return m == mem; });
+  free(mem);
+}
 
 record_reference_t SingleVersionRowStore::insertRecord(dcds::txn::Txn* txn, const void* data) {
   // txn can be null as we generate single-threaded DS also.

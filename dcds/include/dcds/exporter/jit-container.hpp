@@ -41,6 +41,8 @@ class JitContainer {
     uintptr_t mainRecord;  // can it be directly record_reference_t?
   };
 
+  ~JitContainer() { delete _container; }
+
  private:
   explicit JitContainer(dcds_jit_container_t *container) : _container(container) {}
 

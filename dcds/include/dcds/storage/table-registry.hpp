@@ -50,6 +50,8 @@ class TableRegistry : public dcds::Singleton<TableRegistry> {
   Table* createTable(const std::string& name, const std::vector<AttributeDef>& columns, bool multi_version = false);
   void dropTable();  // how to drop if it is a sharedPtr, someone might be holding reference to it?
 
+  void clear();
+
  private:
   oneapi::tbb::rw_mutex registry_lk{};
   llvm::DenseMap<table_id_t, Table*> tables;

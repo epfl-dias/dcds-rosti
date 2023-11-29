@@ -160,7 +160,11 @@ class SingleVersionRowStore : public Table {
  public:
   SingleVersionRowStore(table_id_t tableId, const std::string &table_name, size_t recordSize,
                         std::vector<AttributeDef> attributes);
-  ~SingleVersionRowStore() override = default;
+  ~SingleVersionRowStore() override {
+    for (auto &m : memory_allocations) {
+      free(m);
+    }
+  }
 
  public:
   //  record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
@@ -194,9 +198,10 @@ class SingleVersionRowStore : public Table {
 
  private:
   std::deque<void *> records_data;
+  std::deque<void *> memory_allocations;
 
  private:
-  void *allocateRecordMemory(size_t n_records = 1) const;
+  void *allocateRecordMemory(size_t n_records = 1);
   void freeRecordMemory(void *);
 };
 

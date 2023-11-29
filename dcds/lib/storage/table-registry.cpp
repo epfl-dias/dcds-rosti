@@ -58,6 +58,16 @@ Table *TableRegistry::createTable(const std::string &name, const std::vector<Att
   }
 }
 
+void TableRegistry::clear() {
+  std::unique_lock lk(this->registry_lk);
+  for (auto &t : this->tables) {
+    // t.second->~Table();
+    delete t.second;
+  }
+  this->tables.clear();
+  this->table_name_map.clear();
+}
+
 Table *TableRegistry::getTable(table_id_t tableId) {
   //  return tables.find(tableId); // cuckoo::map
 
