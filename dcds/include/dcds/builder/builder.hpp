@@ -127,7 +127,11 @@ class Builder : remove_copy {
   //  std::deque<std::vector<std::string>> constructors;
 
  public:
-  auto getAttribute(const std::string& attribute_name) { return attributes[attribute_name]; }
+  auto getAttribute(const std::string& attribute_name) {
+    CHECK(attributes.contains(attribute_name))
+        << "Data structure does not have the named attribute: " << attribute_name;
+    return attributes[attribute_name];
+  }
   auto getAttributeIndex(const std::string& attribute_name) {
     CHECK(attributes.contains(attribute_name)) << "Unknown attribute requested";
     return std::distance(std::begin(attributes), attributes.find(attribute_name));
@@ -189,6 +193,8 @@ class Builder : remove_copy {
                                std::shared_ptr<dcds::Attribute>& key_attribute) {
     return addAttributeIndexedList(name, type, key_attribute->name);
   }
+
+  auto operator[](const std::string& name) { return attributes[name]; }
 
  private:
   // should be called from optPasses only, otherwise user may declare, use and then delete it causing dangling issues.
