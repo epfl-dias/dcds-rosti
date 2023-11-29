@@ -121,7 +121,7 @@ void Builder::build_no_jit(std::shared_ptr<Codegen>& engine, bool is_nested_type
 
   if (!registered_subtypes.empty()) {
     for (auto& rt : registered_subtypes) {
-      LOG(INFO) << "Building sub-type: " << rt.first;
+      // LOG(INFO) << "Building sub-type: " << rt.first;
       rt.second->context = context;
       assert(rt.second);
       rt.second->build_no_jit(engine, true);
@@ -133,8 +133,8 @@ void Builder::build_no_jit(std::shared_ptr<Codegen>& engine, bool is_nested_type
 }
 
 void Builder::build() {
-  LOG(INFO) << "Generating \"" << this->getName() << "\" data structure";
-  LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
+  //  LOG(INFO) << "Generating \"" << this->getName() << "\" data structure";
+  //  LOG(INFO) << "\tMulti-threaded: " << (is_multi_threaded ? "YES" : "NO");
 
   if (is_jit_generated) {
     throw dcds::exceptions::dcds_dynamic_exception("Data structure is already built");
@@ -146,9 +146,9 @@ void Builder::build() {
 
   this->build_no_jit(codegen_engine, false);
 
-  LOG(INFO) << "[Builder::build()] -- jit-before";
+  // LOG(INFO) << "[Builder::build()] -- jit-before";
   codegen_engine->jitCompileAndLoad();
-  LOG(INFO) << "[Builder::build()] -- jit-after";
+  // LOG(INFO) << "[Builder::build()] -- jit-after";
 
   this->is_jit_generated = true;
 }
@@ -158,7 +158,7 @@ JitContainer* Builder::createInstance() {
     throw dcds::exceptions::dcds_dynamic_exception("Data structure is not built yet");
   }
 
-  LOG(INFO) << "[Builder::createInstance] creating instance: " << this->getName();
+  // LOG(INFO) << "[Builder::createInstance] creating instance: " << this->getName();
   auto* ds_constructor = codegen_engine->getFunction(this->getName() + "_constructor");
 
   auto* ds_instance = reinterpret_cast<void* (*)()>(ds_constructor)();

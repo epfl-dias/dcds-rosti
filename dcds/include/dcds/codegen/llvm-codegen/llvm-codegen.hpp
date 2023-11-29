@@ -98,7 +98,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
  public:
   explicit LLVMCodegen(dcds::Builder *builder);
   ~LLVMCodegen() override {
-    LOG(WARNING) << "[LLVMCodegen] Destructor";
     theLLVMFPM->doFinalization();
     theLLVMFPM.reset();
 
@@ -178,8 +177,6 @@ class LLVMCodegen : public Codegen, public LLVMCodegenContext {
   std::unique_ptr<Module> theLLVMModule;
 
  private:
-  // StructType *dsContainerStructType{};
-  //  StructType *dsRecordValueStructType{};
   std::map<std::string, StructType *> record_value_struct_types;
 
  private:

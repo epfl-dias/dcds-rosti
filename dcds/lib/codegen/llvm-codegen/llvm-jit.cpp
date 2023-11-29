@@ -39,7 +39,7 @@ llvm::Expected<llvm::orc::ThreadSafeModule> LLVMJIT::printIR(llvm::orc::ThreadSa
 llvm::orc::ThreadSafeModule LLVMJIT::optimizeModule2(llvm::orc::ThreadSafeModule TSM,
                                                      std::unique_ptr<llvm::TargetMachine> TM) {
   TSM.withModuleDo([&TM](llvm::Module &M) {
-    time_block t("Optimization phase ");
+    // time_block t("Optimization phase ");
 
     M.setTargetTriple(TM->getTargetTriple().str());
 
@@ -53,7 +53,7 @@ llvm::orc::ThreadSafeModule LLVMJIT::optimizeModule2(llvm::orc::ThreadSafeModule
     FPasses.add(pc.PrefetchPass);
 
     {
-      time_block t_run("Optimization run phase ");
+      // time_block t_run("Optimization run phase ");
 
       FPasses.doInitialization();
       for (llvm::Function &F : M) FPasses.run(F);

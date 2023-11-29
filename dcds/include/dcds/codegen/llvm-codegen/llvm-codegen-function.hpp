@@ -52,7 +52,6 @@ class LLVMCodegenFunction {
   // LLVMCodegenFunction(LLVMCodegen *_codegen, std::string function_name);
 
   ~LLVMCodegenFunction() {
-    LOG(INFO) << "Destructing ~LLVMCodegenFunction";
     dcds::LLVMCodegenFunction::LLVM_verifyFunction(fn);
   }
 

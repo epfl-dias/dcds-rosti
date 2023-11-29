@@ -80,16 +80,7 @@ class LLVMCodegenContext {
   void registerAllFunctions();
 
  public:
-  virtual ~LLVMCodegenContext() {
-    LOG(WARNING) << "[LLVMCodegenContext: ] Destructor";
-    // XXX Has to be done in an appropriate sequence - segfaults otherwise
-    //        delete Builder;
-    //            delete TheFPM;
-    //            delete TheExecutionEngine;
-    //            delete TheFunction;
-    //            delete llvmContext;
-    //            delete TheFunction;
-  }
+  virtual ~LLVMCodegenContext() = default;
 
   [[nodiscard]] std::string getModuleName() const { return moduleName; }
   [[nodiscard]] const char *getName() const;

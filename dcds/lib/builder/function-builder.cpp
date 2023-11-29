@@ -43,7 +43,7 @@ FunctionBuilder::FunctionBuilder(dcds::Builder *ds_builder, std::string function
 std::shared_ptr<FunctionBuilder> FunctionBuilder::cloneShared(dcds::Builder *ds_builder) {
   // whats the case for other builder?
   // we need to append the id to name, and add it to function list so it also gets built!
-  LOG(INFO) << "Cloning function: " << this->_name;
+  // LOG(INFO) << "Cloning function: " << this->_name;
   auto f =
       std::make_shared<FunctionBuilder>(ds_builder ? ds_builder : this->builder, this->_name, this->returnValueType);
   f->cloned_src_id = this->function_id;

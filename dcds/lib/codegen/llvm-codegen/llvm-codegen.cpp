@@ -36,6 +36,8 @@
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 #include "dcds/indexes/index-functions.hpp"
 
+static constexpr bool print_debug_log = false;
+
 namespace dcds {
 
 void LLVMCodegen::saveToFile(const std::string &filename) {
@@ -78,7 +80,7 @@ llvm::Type *LLVMCodegen::DcdsToLLVMType(dcds::valueType dcds_type, bool is_refer
 }
 
 void LLVMCodegen::initializeLLVMModule(const std::string &name) {
-  LOG(INFO) << "[LLVMCodegen] Initializing LLVM module: " << name;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] Initializing LLVM module: " << name;
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
@@ -91,7 +93,7 @@ void LLVMCodegen::initializeLLVMModule(const std::string &name) {
 }
 
 LLVMCodegen::LLVMCodegen(Builder *builder) : Codegen(builder), LLVMCodegenContext(builder->getName()) {
-  // LOG(INFO) << "[LLVMCodegen] constructor: " << this->moduleName;
+  // LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] constructor: " << this->moduleName;
   initializeLLVMModule(builder->getName());
   initializePassManager();
   this->registerAllFunctions();
@@ -101,7 +103,7 @@ llvm::Module *LLVMCodegen::getModule() const { return theLLVMModule.get(); }
 llvm::IRBuilder<> *LLVMCodegen::getBuilder() const { return llvmBuilder.get(); }
 
 void LLVMCodegen::initializePassManager() {
-  LOG(INFO) << "[LLVMCodegen] Initializing LLVM pass manager";
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] Initializing LLVM pass manager";
   assert(theLLVMModule.get());
   /// Create a new pass manager.
   theLLVMFPM = std::make_unique<legacy::FunctionPassManager>(theLLVMModule.get());
@@ -126,23 +128,23 @@ void LLVMCodegen::build(dcds::Builder *builder, bool is_nested_type) {
   if (!builder) {
     builder = this->top_level_builder;
   }
-  LOG(INFO) << "[LLVMCodegen] Building: " << builder->getName();
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] Building: " << builder->getName();
 
   // codegenHelloWorld();
 
-  LOG(INFO) << "[LLVMCodegen::build()] createDsStructType";
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen::build()] createDsStructType";
   this->createDsStructType(builder);
 
-  LOG(INFO) << "[LLVMCodegen::build()] buildConstructor";
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen::build()] buildConstructor";
   this->buildConstructor(*builder, is_nested_type);
 
-  LOG(INFO) << "[LLVMCodegen::build()] BuildFunctions";
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen::build()] BuildFunctions";
   this->buildFunctions(builder, is_nested_type);
-  LOG(INFO) << "[LLVMCodegen::build()] DONE";
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen::build()] DONE";
 }
 
 void LLVMCodegen::buildFunctions(dcds::Builder *builder, bool is_nested_type) {
-  LOG(INFO) << "[LLVMCodegen] buildFunctions: # of functions: " << builder->functions.size();
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] buildFunctions: # of functions: " << builder->functions.size();
 
   // later: parallelize this loop, but do take care of the context insertion points in parallel function build.
   for (auto &fb : builder->functions) {
@@ -216,11 +218,11 @@ llvm::Function *LLVMCodegen::wrapFunctionVariadicArgs(llvm::Function *inner_func
 //   getBuilder()->SetInsertPoint(fn_inner_BB);
 //
 //   // 3- allocate temporary variables.
-//   LOG(INFO) << "codegen-temporary variables";
+//   LOG_IF(INFO, print_debug_log) << "codegen-temporary variables";
 //   auto variableCodeMap = this->allocateTemporaryVariables(fb, fn_inner_BB);
 //
 //   // 4- codegen all statements
-//   LOG(INFO) << "codegen-statements";
+//   LOG_IF(INFO, print_debug_log) << "codegen-statements";
 //
 //   this->buildFunctionBody(builder, fb, fb->entryPoint, fn_inner, fn_inner_BB, variableCodeMap);
 //
@@ -307,7 +309,7 @@ llvm::Function *LLVMCodegen::buildOneFunction_outer(dcds::Builder *builder, std:
 }
 
 void LLVMCodegen::buildOneFunction(dcds::Builder *builder, std::shared_ptr<FunctionBuilder> &fb, bool is_nested_type) {
-  LOG(INFO) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] buildOneFunction: " << fb->_name;
 
   // FIXME: scoping of temporary variables??
 
@@ -416,8 +418,8 @@ llvm::Function *LLVMCodegen::genFunctionSignature(std::shared_ptr<FunctionBuilde
 
 llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valueType var_type, std::any init_value) {
   bool has_value = init_value.has_value();
-  LOG(INFO) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << "::" << var_type
-            << " | has_value: " << has_value;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] allocateOneVar temp-var: " << var_name << "::" << var_type
+                                << " | has_value: " << has_value;
 
   switch (var_type) {
     case dcds::valueType::INT64: {
@@ -476,7 +478,7 @@ std::map<std::string, llvm::Value *> LLVMCodegen::allocateTemporaryVariables(std
   std::map<std::string, llvm::Value *> variableCodeMap;
   auto allocaBuilder = llvm::IRBuilder<>(basicBlock, basicBlock->end());
 
-  LOG(INFO) << "Allocating function's temp vars: " << fb->temp_variables.size();
+  LOG_IF(INFO, print_debug_log) << "Allocating function's temp vars: " << fb->temp_variables.size();
 
   for (auto &v : fb->temp_variables) {
     auto var_name = v.first;
@@ -494,11 +496,11 @@ void LLVMCodegen::createDsStructType(dcds::Builder *builder) {
 
   // for each attribute, add it to struct.
   // Later, also add this struct to the output .hpp file.
-  LOG(INFO) << "createDsStructType : " << builder->getName();
+  LOG_IF(INFO, print_debug_log) << "createDsStructType : " << builder->getName();
   std::vector<llvm::Type *> struct_vars;
   for (const auto &a : builder->attributes) {
     // simpleType to type, else have a ptr to it.
-    LOG(INFO) << "attr: " << a.first << "::" << a.second->type;
+    LOG_IF(INFO, print_debug_log) << "attr: " << a.first << "::" << a.second->type;
     struct_vars.push_back(DcdsToLLVMType(a.second->type));
   }
 
@@ -770,7 +772,7 @@ void LLVMCodegen::initializeArrayAttributes(dcds::Builder &builder,
 
 llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
   std::string table_name = builder.getName() + "_tbl";
-  LOG(INFO) << "[LLVMCodegen][buildConstructorInner] table_name: " << table_name;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen][buildConstructorInner] table_name: " << table_name;
 
   auto tableNameLlvmConstant = this->createStringConstant(table_name, "ds_table_name");
 
@@ -785,7 +787,7 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
   std::map<std::string, llvm::Function *> fn_init_sub_tables;
   for (auto &[name, at] : builder.attributes) {
     if (at->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST) {
-      LOG(INFO) << "ARRAY_LIST: " << name;
+      LOG_IF(INFO, print_debug_log) << "ARRAY_LIST: " << name;
       auto attributeList = std::static_pointer_cast<AttributeList>(at);
       // gen tables or whatever to get them started
       if (attributeList->is_primitive_type) {
@@ -794,7 +796,8 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
         auto initSubTableFnName = attributeList->composite_type->getName() + "_init_storage";
 
         CHECK(userFunctions.contains(initSubTableFnName)) << "Sub-type has no _init_storage?? :" << initSubTableFnName;
-        LOG(INFO) << "initSubTableFnName: " << initSubTableFnName << " | " << userFunctions.at(initSubTableFnName);
+        LOG_IF(INFO, print_debug_log) << "initSubTableFnName: " << initSubTableFnName << " | "
+                                      << userFunctions.at(initSubTableFnName);
         fn_init_sub_tables.insert_or_assign(attributeList->name, userFunctions.at(initSubTableFnName));
       }
     }
@@ -858,7 +861,7 @@ llvm::Function *LLVMCodegen::buildConstructorInner(dcds::Builder &builder) {
   getBuilder()->CreateRet(returnDs);
 
   llvmVerifyFunction(fn);
-  LOG(INFO) << "buildConstructorInner DONE";
+  LOG_IF(INFO, print_debug_log) << "buildConstructorInner DONE";
   return fn;
 }
 
@@ -901,7 +904,7 @@ void LLVMCodegen::buildConstructor(dcds::Builder &builder, bool is_nested_type) 
     llvmVerifyFunction(fn);
   }
 
-  LOG(INFO) << "buildConstructor DONE";
+  LOG_IF(INFO, print_debug_log) << "buildConstructor DONE";
 }
 
 void LLVMCodegen::codegenHelloWorld() {
@@ -927,9 +930,10 @@ void LLVMCodegen::codegenHelloWorld() {
 
 void LLVMCodegen::testHelloWorld() {
   assert(this->jitter);
-  LOG(INFO) << "[testHelloWorld] GetRawAddress(\"helloworld\")" << this->jitter->getRawAddress("helloworld");
+  LOG_IF(INFO, print_debug_log) << "[testHelloWorld] GetRawAddress(\"helloworld\")"
+                                << this->jitter->getRawAddress("helloworld");
 
-  LOG(INFO) << "[testHelloWorld] Test helloWorld: ";
+  LOG_IF(INFO, print_debug_log) << "[testHelloWorld] Test helloWorld: ";
   reinterpret_cast<void (*)()>(this->jitter->getRawAddress("helloworld"))();
 }
 
@@ -945,7 +949,7 @@ void *LLVMCodegen::getFunctionPrefixed(const std::string &name) {
 void LLVMCodegen::buildFunctionDictionary(dcds::Builder &builder) {
   assert(this->is_jit_done);
   for (auto &fb : builder.functions) {
-    // LOG(INFO) << "Resolving address: " << fb.first;
+    // LOG_IF(INFO, print_debug_log) << "Resolving address: " << fb.first;
     auto *address = getFunctionPrefixed(fb.first);
     auto name = fb.first;
     auto return_type = fb.second->returnValueType;
@@ -954,7 +958,7 @@ void LLVMCodegen::buildFunctionDictionary(dcds::Builder &builder) {
     for (auto &fa : args_expr) {
       args.emplace_back(fa->getName(), fa->getType());
     }
-    LOG(INFO) << "Resolving address: " << fb.first << " | " << address;
+    LOG_IF(INFO, print_debug_log) << "Resolving address: " << fb.first << " | " << address;
     available_jit_functions.emplace(name, new jit_function_t{name, address, return_type, args});
   }
 }
@@ -963,8 +967,7 @@ void LLVMCodegen::jitCompileAndLoad() {
   this->jitter = std::make_unique<LLVMJIT>();
   this->theLLVMModule->setDataLayout(jitter->getDataLayout());
 
-  auto modName = getModule()->getName();
-  LOG(INFO) << "Module name: " << modName.str();
+  LOG_IF(INFO, print_debug_log) << "Module name: " << getModule()->getName().str();
 
   // llvm::orc::ThreadSafeContext NewTSCtx(std::make_unique<LLVMContext>());
   // auto TSM = llvm::orc::ThreadSafeModule(std::move(theLLVMModule), std::move(NewTSCtx));
@@ -972,9 +975,7 @@ void LLVMCodegen::jitCompileAndLoad() {
   auto TSM = llvm::orc::ThreadSafeModule(std::move(theLLVMModule), std::move(theLLVMContext));
 
   this->jitter->addModule(std::move(TSM));
-  this->jitter->dump();
-  //  this->testHelloWorld();
-  //  this->jitter->dump();
+  // this->jitter->dump();
 
   this->is_jit_done = true;
   this->buildFunctionDictionary(*top_level_builder);

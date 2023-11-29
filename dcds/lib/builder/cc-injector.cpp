@@ -21,13 +21,15 @@
 
 #include "dcds/builder/optimizer/cc-injector.hpp"
 
+static constexpr bool print_debug_log = false;
+
 using namespace dcds;
 
 // TODO: can also inject early release of locks if we certainly know that the DS
 //  attribute is not gonna be needed and there is no side-effect.
 
 void CCInjector::inject() {
-  LOG(INFO) << "[CCInjector::inject] begin";
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::inject] begin";
   // assuming builder-opt has run already, and remove unused variables, etc. etc.
 
   // 1) first create a list of attributes which actually requires CC, that is, used across different DS. but this can
@@ -35,11 +37,11 @@ void CCInjector::inject() {
   // idea?
 
   for (auto &[f_name, fptr] : builder->functions) {
-    LOG(INFO) << "Injecting CC in function: " << f_name;
+    LOG_IF(INFO, print_debug_log) << "Injecting CC in function: " << f_name;
     this->injectCC_function(fptr);
   }
 
-  LOG(INFO) << "[CCInjector::inject] end";
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::inject] end";
 }
 
 void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, const attribute_locks &locks_in_scope,
@@ -88,10 +90,10 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
       mc_st->function_instance = mc_st->function_instance->cloneShared();
 
       if (!(type_traits.is_nascent)) {
-        LOG(INFO) << "placing lock for method-call variable";
-        //        LOG(INFO) << mc_st->function_instance->getName()
+        LOG_IF(INFO, print_debug_log) << "placing lock for method-call variable";
+        //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
         //                  << " -- IsFunctionConst: " << mc_st->function_instance->isConst();
-        //        LOG(INFO) << mc_st->function_instance->getName()
+        //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
         //                  << " -- IsFunctionReadOnly: " << mc_st->function_instance->isReadOnly();
 
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable, typeName,
@@ -125,17 +127,18 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
 }
 
 void CCInjector::injectCC_function(std::shared_ptr<FunctionBuilder> &fb, attribute_trait_t type_trait) {
-  LOG(INFO) << "[CCInjector::injectCC_function] begin: " << fb->getName() << " id: " << fb->function_id;
-  fb->print(std::cout, 0);
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] begin: " << fb->getName()
+                                << " id: " << fb->function_id;
+  if constexpr (print_debug_log) fb->print(std::cout, 0);
 
   //  auto [readSet, writeSet] = fb->extractReadWriteSet();
-  //  LOG(INFO) << "ReadSet:";
+  //  LOG_IF(INFO, print_debug_log) << "ReadSet:";
   //  for (auto &[k, v] : readSet) {
-  //    LOG(INFO) << "\t\tType: " << k << " | attributes: " << joinString(v);
+  //    LOG_IF(INFO, print_debug_log) << "\t\tType: " << k << " | attributes: " << joinString(v);
   //  }
-  //  LOG(INFO) << "WriteSet:";
+  //  LOG_IF(INFO, print_debug_log) << "WriteSet:";
   //  for (auto &[k, v] : writeSet) {
-  //    LOG(INFO) << "\t\tType: " << k << " | attributes: " << joinString(v);
+  //    LOG_IF(INFO, print_debug_log) << "\t\tType: " << k << " | attributes: " << joinString(v);
   //  }
 
   attribute_locks lock_placed;
@@ -143,11 +146,11 @@ void CCInjector::injectCC_function(std::shared_ptr<FunctionBuilder> &fb, attribu
 
   injectCC_statementBlock(fb->entryPoint, lock_placed, type_trait, traits);
 
-  LOG(INFO) << "[CCInjector::injectCC_function] ##################: " << fb->getName();
-  LOG(INFO) << "[CCInjector::injectCC_function] ##################";
-  LOG(INFO) << "[CCInjector::injectCC_function] ##################";
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] ##################: " << fb->getName();
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] ##################";
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] ##################";
 
-  fb->print(std::cout, 0);
+  if constexpr (print_debug_log) fb->print(std::cout, 0);
 
-  LOG(INFO) << "[CCInjector::injectCC_function]: " << fb->getName();
+  LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function]: " << fb->getName();
 }

@@ -62,7 +62,7 @@
 
 namespace dcds {
 
-static bool print_generated_code = true;
+static bool print_generated_code = false;
 static bool print_optimized_code = false;
 
 class PassConfiguration {
@@ -109,7 +109,6 @@ class PassConfiguration {
 class LLVMJIT {
  public:
   ~LLVMJIT() {
-    LOG(INFO) << "[LLVMJIT] Destructor";
     if (auto Err = ES.endSession()) ES.reportError(std::move(Err));
   }
 
@@ -146,8 +145,6 @@ class LLVMJIT {
             }),
         MainJD(llvm::cantFail(ES.createJITDylib("main"))),
         vtuneProfiler(llvm::JITEventListener::createIntelJITEventListener()) {
-    LOG(INFO) << "[LLVMJIT] Constructing JITTER";
-
     if (vtuneProfiler == nullptr) {
       LOG(WARNING) << "Could not create VTune listener";
     } else {

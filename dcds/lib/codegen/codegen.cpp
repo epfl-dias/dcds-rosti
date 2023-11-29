@@ -23,4 +23,4 @@
 
 using namespace dcds;
 
-Codegen::~Codegen() { LOG(INFO) << "Destructing ~CodegenV2"; }
+Codegen::~Codegen() = default;

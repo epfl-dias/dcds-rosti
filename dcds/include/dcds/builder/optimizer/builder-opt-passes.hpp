@@ -59,12 +59,12 @@ class BuilderOptPasses {
   };
 
  public:
-//  enum class BUILDER_OPT_PASS {
-//    REMOVE_UNUSED_FUNCTIONS_FROM_COMPOSITE_TYPES,
-//    REMOVE_UNUSED_ATTRIBUTES,
-//    REMOVE_WRITE_ONLY_ATTRIBUTES,
-//    FIND_DANGLING_RECORD_CREATIONS,
-//  };
+  //  enum class BUILDER_OPT_PASS {
+  //    REMOVE_UNUSED_FUNCTIONS_FROM_COMPOSITE_TYPES,
+  //    REMOVE_UNUSED_ATTRIBUTES,
+  //    REMOVE_WRITE_ONLY_ATTRIBUTES,
+  //    FIND_DANGLING_RECORD_CREATIONS,
+  //  };
 
   explicit BuilderOptPasses(std::shared_ptr<Builder> _builder) : builder(std::move(_builder)) {}
 

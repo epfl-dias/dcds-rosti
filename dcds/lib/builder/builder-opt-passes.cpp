@@ -55,6 +55,8 @@ void BuilderOptPasses::opt_pass_remove_unused_functions_from_composite_types(boo
         case statementType::UPDATE:
         case statementType::YIELD:
         case statementType::LOG_STRING:
+        case statementType::TEMP_VAR_ASSIGN:
+        case statementType::READ_INDEXED:
           break;
 
         case statementType::CC_LOCK_SHARED:
@@ -122,8 +124,9 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
         case statementType::CONDITIONAL_STATEMENT:
         case statementType::YIELD:
         case statementType::LOG_STRING:
+        case statementType::TEMP_VAR_ASSIGN:
+        case statementType::READ_INDEXED:
           break;
-
         case statementType::CC_LOCK_SHARED:
         case statementType::CC_LOCK_EXCLUSIVE:
           break;
@@ -210,50 +213,52 @@ void BuilderOptPasses::setParent(const std::shared_ptr<Builder>& currentBuilder)
 
 bool BuilderOptPasses::removeAttributeStatements(const std::shared_ptr<StatementBuilder>& sb,
                                                  const std::string& attribute_name) {
+  return false;
   // Scratchpad, TODO: implement & fix.
-//
-//  // returns if the block is empty now.
-//
-//  // Caveat: if the update is actually linked to previous insert, then insert is a dangling one now.
-//
-//  std::deque<std::shared_ptr<Statement>> removedStatements;
-//
-//  std::erase_if(sb->statements, [&](const std::shared_ptr<Statement>& s) {
-//    if (s->stType == statementType::UPDATE &&
-//        std::static_pointer_cast<UpdateStatement>(s)->destination_attr == attribute_name) {
-//      // blindly remove it? or save it like pos, or
-//
-//      removedStatements.emplace_back(s);
-//      return true;
-//    } else {
-//      return false;
-//    }
-//  });
-//
-//  for (const auto& s : sb->statements) {
-//    if (s->stType == statementType::CONDITIONAL_STATEMENT) {
-//      auto conditional = std::static_pointer_cast<ConditionalStatement>(s);
-//      // now there are two returns here!
-//      auto toRemoveIfBlock = removeAttributeStatements(conditional->ifBlock, attribute_name);
-//      auto toRemoveElseBlock = removeAttributeStatements(conditional->elseBLock, attribute_name);
-//      LOG(INFO) << "toRemoveIfBlock: " << toRemoveIfBlock;
-//      LOG(INFO) << "toRemoveElseBlock: " << toRemoveElseBlock;
-//
-//      // removing else block does not matter, as it will not create the else branch essentially.
-//      // or for that matter, empty if would be optimized away, no?
-//
-//      // what about leading to an empty funtion?
-//    }
-//  }
-//
-//  LOG(INFO) << "SB SIZE: " << sb->statements.size();
-//
-//  // e.g.: for set_next, there is only one statement remaining, that is, returnVoid. so this function can be removed.
-//  // but do we want to? clang would do it for us or no?
-//
-//  // what about finding dangling records?
-//
-//  return sb->statements.empty();  // return true if block is empty now.
+  //
+  //  // returns if the block is empty now.
+  //
+  //  // Caveat: if the update is actually linked to previous insert, then insert is a dangling one now.
+  //
+  //  std::deque<std::shared_ptr<Statement>> removedStatements;
+  //
+  //  std::erase_if(sb->statements, [&](const std::shared_ptr<Statement>& s) {
+  //    if (s->stType == statementType::UPDATE &&
+  //        std::static_pointer_cast<UpdateStatement>(s)->destination_attr == attribute_name) {
+  //      // blindly remove it? or save it like pos, or
+  //
+  //      removedStatements.emplace_back(s);
+  //      return true;
+  //    } else {
+  //      return false;
+  //    }
+  //  });
+  //
+  //  for (const auto& s : sb->statements) {
+  //    if (s->stType == statementType::CONDITIONAL_STATEMENT) {
+  //      auto conditional = std::static_pointer_cast<ConditionalStatement>(s);
+  //      // now there are two returns here!
+  //      auto toRemoveIfBlock = removeAttributeStatements(conditional->ifBlock, attribute_name);
+  //      auto toRemoveElseBlock = removeAttributeStatements(conditional->elseBLock, attribute_name);
+  //      LOG(INFO) << "toRemoveIfBlock: " << toRemoveIfBlock;
+  //      LOG(INFO) << "toRemoveElseBlock: " << toRemoveElseBlock;
+  //
+  //      // removing else block does not matter, as it will not create the else branch essentially.
+  //      // or for that matter, empty if would be optimized away, no?
+  //
+  //      // what about leading to an empty funtion?
+  //    }
+  //  }
+  //
+  //  LOG(INFO) << "SB SIZE: " << sb->statements.size();
+  //
+  //  // e.g.: for set_next, there is only one statement remaining, that is, returnVoid. so this function can be
+  //  removed.
+  //  // but do we want to? clang would do it for us or no?
+  //
+  //  // what about finding dangling records?
+  //
+  //  return sb->statements.empty();  // return true if block is empty now.
 }
 
 void BuilderOptPasses::removeWriteOnlyAttribute(std::shared_ptr<Builder>& currentBuilder,

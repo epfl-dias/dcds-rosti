@@ -31,12 +31,14 @@
 #include "dcds/codegen/llvm-codegen/utils/loops.hpp"
 #include "dcds/codegen/llvm-codegen/utils/phi-node.hpp"
 
+static constexpr bool print_debug_log = false;
+
 using namespace llvm;
 
 const char *LLVMCodegenContext::getName() const { return (new std::string{getModule()->getName().str()})->c_str(); }
 
 LLVMCodegenContext::LLVMCodegenContext(std::string moduleName) : moduleName(std::move(moduleName)) {
-  LOG(INFO) << "[LLVMCodegenContext] constructor: " << this->moduleName;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegenContext] constructor: " << this->moduleName;
 }
 
 void LLVMCodegenContext::registerAllFunctions() {
@@ -349,7 +351,7 @@ void LLVMCodegenContext::registerFunction(const char *funcName, Function *func) 
 void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm::Type *returnType,
                                           const std::vector<llvm::Type *> &args, bool always_inline,
                                           llvm::GlobalValue::LinkageTypes linkageType) {
-  LOG(INFO) << "[LLVMCodegenContext] registerFunction: ver2: " << function_name;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegenContext] registerFunction: ver2: " << function_name;
 
   assert(returnType);
 
@@ -368,7 +370,7 @@ void LLVMCodegenContext::registerFunction(const std::string &function_name, llvm
 
 void LLVMCodegenContext::registerFunction(const std::string &func, std::initializer_list<llvm::Value *> args,
                                           llvm::Type *ret) {
-  LOG(INFO) << "[LLVMCodegenContext] registerFunction: ver1: " << func;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegenContext] registerFunction: ver1: " << func;
 
   std::vector<llvm::Type *> v;
   v.reserve(args.size());
@@ -406,21 +408,21 @@ llvm::Value *LLVMCodegenContext::gen_call(const std::string &func, std::initiali
   try {
     f = getFunction(func);
     assert(f);
-    //    LOG(INFO) << "Found function: " << func;
+    //    LOG_IF(INFO, print_debug_log) << "Found function: " << func;
     //    for (const auto &arg : args) {
-    //      LOG(INFO) << "argDump[1]";
+    //      LOG_IF(INFO, print_debug_log) << "argDump[1]";
     //      arg->getType()->dump();
     //    }
     assert(!ret || ret == f->getReturnType());
   } catch (std::runtime_error &) {
-    LOG(INFO) << "[LLVMCodegenContext][gen_call] "
-              << "registering a new function: " << func;
+    LOG_IF(INFO, print_debug_log) << "[LLVMCodegenContext][gen_call] "
+                                  << "registering a new function: " << func;
     assert(ret);
     std::vector<llvm::Type *> v;
     v.reserve(args.size());
     for (const auto &arg : args) {
       v.emplace_back(arg->getType());
-      //      LOG(INFO) << "argDump[2]";
+      //      LOG_IF(INFO, print_debug_log) << "argDump[2]";
       //      arg->getType()->dump();
     }
     auto FT = llvm::FunctionType::get(ret, v, false);

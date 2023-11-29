@@ -72,8 +72,8 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
 
   std::vector<dcds::storage::AttributeDef> columns;
 
-  LOG(INFO) << "[createTablesInternal] table_name: " << table_name;
-  LOG(INFO) << "[createTablesInternal] num_attributes: " << num_attributes;
+  //  LOG(INFO) << "[createTablesInternal] table_name: " << table_name;
+  //  LOG(INFO) << "[createTablesInternal] num_attributes: " << num_attributes;
 
   // HACK: as we are getting pointer to first character of first attribute instead of ptr.
   auto* startPtr = reinterpret_cast<char*>(attributeNames);
@@ -89,7 +89,7 @@ void* createTablesInternal(char* table_name, dcds::valueType attributeTypes[], c
   for (auto i = 0; i < num_attributes; i++) {
     auto type = attributeTypes[i];
     auto name = actual_attr_names[i];
-    LOG(INFO) << "[createTablesInternal] Loading attribute: " << name << " | type: " << type;
+    //    LOG(INFO) << "[createTablesInternal] Loading attribute: " << name << " | type: " << type;
 
     int64_t attribute_size = 0;
     switch (type) {

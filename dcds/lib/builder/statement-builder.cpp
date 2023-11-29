@@ -528,7 +528,7 @@ std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
   // statement?
 
   for (auto st : this->statements) {
-    LOG(INFO) << "Cloning : " << st->stType;
+    //    LOG(INFO) << "Cloning : " << st->stType;
     if (st->stType == statementType::CONDITIONAL_STATEMENT) {
       auto cd = reinterpret_cast<ConditionalStatement *>(st);
 
