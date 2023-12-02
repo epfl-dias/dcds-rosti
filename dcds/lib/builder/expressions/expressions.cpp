@@ -79,3 +79,7 @@ std::string IsNullExpression::toString() const { return std::string{"IS_NULL( " 
 std::string IsNotNullExpression::toString() const {
   return std::string{"IS_NOT_NULL( " + this->expr->toString() + " )"};
 }
+
+std::string EqualExpression::toString() const {
+  return std::string{" (" + this->getLeft()->toString() + " == " + this->getRight()->toString() + " )"};
+}

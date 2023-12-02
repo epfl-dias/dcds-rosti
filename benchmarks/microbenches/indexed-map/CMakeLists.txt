@@ -9,7 +9,9 @@ target_link_libraries_system(play benchmark::benchmark)
 
 target_link_libraries(indexed-map
         PUBLIC
-        dcds)
+        dcds
+        bench-data-structures
+)
 
 target_compile_features(indexed-map PUBLIC cxx_std_23)
 

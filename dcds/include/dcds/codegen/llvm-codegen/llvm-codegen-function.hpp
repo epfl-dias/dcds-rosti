@@ -51,9 +51,7 @@ class LLVMCodegenFunction {
   // TODO: for non-builder functions, mainly meant for automatic restore-points in the BB.
   // LLVMCodegenFunction(LLVMCodegen *_codegen, std::string function_name);
 
-  ~LLVMCodegenFunction() {
-    dcds::LLVMCodegenFunction::LLVM_verifyFunction(fn);
-  }
+  ~LLVMCodegenFunction() { dcds::LLVMCodegenFunction::LLVM_verifyFunction(fn); }
 
  public:
   // Utilities

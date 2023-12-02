@@ -248,7 +248,9 @@ llvm::Value *LLVMCodegenFunction::getArgumentByPosition(uint32_t index) {
 llvm::Value *LLVMCodegenFunction::getVariable(const std::string &name) {
   if (allocated_vars.contains(name))
     return allocated_vars[name];
-  else
+  else if (getArgumentByName(name) != nullptr) {
+    return getArgumentByName(name);
+  } else
     return nullptr;
 }
 

@@ -225,6 +225,9 @@ void* LLVMExpressionVisitor::visit(const expressions::EqualExpression& expr) {
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
   CHECK(leftValue->getType()->getTypeID() == rightValue->getType()->getTypeID()) << "Type mismatch";
 
   return builder->CreateICmpEQ(leftValue, rightValue);
@@ -235,6 +238,10 @@ void* LLVMExpressionVisitor::visit(const expressions::NotEqualExpression& expr) 
 
   auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
   auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
   CHECK(leftValue->getType()->getTypeID() == rightValue->getType()->getTypeID()) << "Type mismatch";
 
   return builder->CreateICmpNE(leftValue, rightValue);

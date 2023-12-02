@@ -335,12 +335,13 @@ void LLVMCodegenStatement::buildStatement_MethodCall(Statement *stmt) {
 
   assert(build_ctx->getFunctionContext()->getVariable(methodStmt->referenced_type_variable));
 
-  // assert(build_ctx->getFunctionContext()->getArgumentByName(methodStmt->referenced_type_variable));
+  auto ref_var = build_ctx->getFunctionContext()->getVariable(methodStmt->referenced_type_variable);
+  if (ref_var->getType()->isPointerTy()) {
+    callArgs.push_back(IRBuilder()->CreateLoad(llvm::Type::getInt64Ty(ctx()), ref_var));
+  } else {
+    callArgs.push_back(ref_var);
+  }
 
-  llvm::Value *referencedRecord =
-      IRBuilder()->CreateLoad(llvm::Type::getInt64Ty(ctx()),
-                              build_ctx->getFunctionContext()->getVariable(methodStmt->referenced_type_variable));
-  callArgs.push_back(referencedRecord);
   callArgs.push_back(txn);
 
   // --- call statement return value

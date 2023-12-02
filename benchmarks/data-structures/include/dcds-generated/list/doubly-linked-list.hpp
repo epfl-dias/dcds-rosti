@@ -19,26 +19,34 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <dcds/dcds.hpp>
-#include <random>
+#ifndef DCDS_DOUBLY_LINKED_LIST_HPP
+#define DCDS_DOUBLY_LINKED_LIST_HPP
 
-#include "dcds-generated/indexed-map.hpp"
+#include "dcds-generated/base.hpp"
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "INDEXED_MAP";
+class DoublyLinkedList : public dcds_generated_ds {
+ public:
+  constexpr static auto ds_name = "DoublyLinkedList";
+  constexpr static auto ds_node_name = "DLL_NODE";
 
-  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
-  auto map = IndexedMap();
-  map.dump();
-  map.build(false, false);
+ public:
+  DoublyLinkedList(dcds::valueType payload_type = dcds::valueType::INT64);
 
-  auto instance = map.createInstance();
-  instance->listAllAvailableFunctions();
+ private:
+  void generateLinkedListNode(dcds::valueType payload_type);
 
-  int64_t val = 0;
-  auto x = instance->op("lookup", 1, &val);
-  LOG(INFO) << std::any_cast<bool>(x);
+  void createFunction_empty();
+  void createFunction_pushFront();
+  void createFunction_popFront();
 
-  return 0;
-}
+  void createFunction_pushBack();
+  void createFunction_popBack();
+
+  void createFunction_extract();
+  void createFunction_touch();
+
+  void createFunction_getHeadPtr();
+  void createFunction_getTailPtr();
+};
+
+#endif  // DCDS_DOUBLY_LINKED_LIST_HPP

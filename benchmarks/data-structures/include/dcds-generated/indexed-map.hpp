@@ -19,26 +19,30 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <dcds/dcds.hpp>
-#include <random>
+#ifndef DCDS_INDEXED_MAP_HPP
+#define DCDS_INDEXED_MAP_HPP
 
-#include "dcds-generated/indexed-map.hpp"
+#include "dcds-generated/base.hpp"
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "INDEXED_MAP";
+class IndexedMap : public dcds_generated_ds {
+ public:
+  IndexedMap();
 
-  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
-  auto map = IndexedMap();
-  map.dump();
-  map.build(false, false);
+ private:
+  void generateLookupFunction();
 
-  auto instance = map.createInstance();
-  instance->listAllAvailableFunctions();
+  /**
+   * Insert a value into the IndexedMap. Both the key and value will be copied.
+   * If there was already an element in the map with the same key, it
+   * will not be updated, and false will be returned. Otherwise, true will be
+   * returned.
+   */
+  void generateInsertFunction();
 
-  int64_t val = 0;
-  auto x = instance->op("lookup", 1, &val);
-  LOG(INFO) << std::any_cast<bool>(x);
+  void generateUpdateFunction();
 
-  return 0;
-}
+ protected:
+  std::shared_ptr<dcds::Builder> generate_item();
+};
+
+#endif  // DCDS_INDEXED_MAP_HPP

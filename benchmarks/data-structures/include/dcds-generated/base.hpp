@@ -19,26 +19,35 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
+#ifndef DCDS_BASE_HPP
+#define DCDS_BASE_HPP
+
 #include <dcds/dcds.hpp>
-#include <random>
 
-#include "dcds-generated/indexed-map.hpp"
+class dcds_generated_ds {
+ protected:
+  explicit dcds_generated_ds(const std::string& name) : builder(std::make_shared<dcds::Builder>(name)) {}
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "INDEXED_MAP";
+ public:
+  auto getBuilder() { return builder; }
+  void dump() { builder->dump(); }
 
-  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
-  auto map = IndexedMap();
-  map.dump();
-  map.build(false, false);
+  void build(bool inject_cc = true, bool optimize = false) {
+    if (optimize) {
+      dcds::BuilderOptPasses buildOptimizer(builder);
+      buildOptimizer.runAll();
+    }
+    if (inject_cc) {
+      builder->injectCC();
+    }
 
-  auto instance = map.createInstance();
-  instance->listAllAvailableFunctions();
+    builder->build();
+  }
 
-  int64_t val = 0;
-  auto x = instance->op("lookup", 1, &val);
-  LOG(INFO) << std::any_cast<bool>(x);
+  auto createInstance() { return builder->createInstance(); }
 
-  return 0;
-}
+ protected:
+  std::shared_ptr<dcds::Builder> builder;
+};
+
+#endif  // DCDS_BASE_HPP

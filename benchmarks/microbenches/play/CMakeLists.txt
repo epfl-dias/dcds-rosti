@@ -9,6 +9,8 @@ target_link_libraries_system(play benchmark::benchmark)
 
 target_link_libraries(play
         PUBLIC
+        absl::check
+        bench-data-structures
         dcds)
 
 target_compile_features(play PUBLIC cxx_std_23)

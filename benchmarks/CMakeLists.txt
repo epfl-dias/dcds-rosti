@@ -1,1 +1,2 @@
+add_subdirectory(data-structures)
 add_subdirectory(microbenches)

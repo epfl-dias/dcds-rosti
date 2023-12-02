@@ -432,7 +432,8 @@ llvm::Value *LLVMCodegen::allocateOneVar(const std::string &var_name, dcds::valu
     }
     case dcds::valueType::RECORD_PTR: {
       auto vr = getBuilder()->CreateAlloca(llvm::Type::getInt64Ty(getLLVMContext()), nullptr, var_name);
-      // getBuilder()->CreateStore(createInt64(UINT64_C(0)), vr);
+      // Initialize all pointers to zero for safe size!
+      getBuilder()->CreateStore(createInt64(UINT64_C(0)), vr);
       return vr;
     }
     case dcds::valueType::INT32: {

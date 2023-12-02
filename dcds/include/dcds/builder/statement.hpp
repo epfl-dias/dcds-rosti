@@ -150,29 +150,6 @@ class ReadStatement : public Statement {
   ~ReadStatement() override = default;
 };
 
-class ReadIndexedStatement : public Statement {
- public:
-  explicit ReadIndexedStatement(std::string source_attribute,
-                                std::shared_ptr<expressions::LocalVariableExpression> destination,
-                                std::shared_ptr<expressions::Expression> index_key, bool fixed_integer_indexed)
-      : Statement(statementType::READ_INDEXED),
-        source_attr(std::move(source_attribute)),
-        dest_expr(std::move(destination)),
-        index_expr(std::move(index_key)),
-        integer_indexed(fixed_integer_indexed) {}
-
-  ReadIndexedStatement(const ReadIndexedStatement&) = default;
-
-  const std::string source_attr;
-  const std::shared_ptr<expressions::LocalVariableExpression> dest_expr;
-  const std::shared_ptr<expressions::Expression> index_expr;
-  const bool integer_indexed;
-
-  [[nodiscard]] Statement* clone() const override { return new ReadIndexedStatement(*this); }
-
-  ~ReadIndexedStatement() override = default;
-};
-
 class UpdateStatement : public Statement {
  public:
   explicit UpdateStatement(std::string destination_attribute, std::shared_ptr<expressions::Expression> source)
@@ -286,6 +263,30 @@ class LockStatement : public Statement {
   ~LockStatement() override = default;
 };
 
+// IndexedList
+
+class ReadIndexedStatement : public Statement {
+ public:
+  explicit ReadIndexedStatement(std::string source_attribute,
+                                std::shared_ptr<expressions::LocalVariableExpression> destination,
+                                std::shared_ptr<expressions::Expression> index_key, bool fixed_integer_indexed)
+      : Statement(statementType::READ_INDEXED),
+        source_attr(std::move(source_attribute)),
+        dest_expr(std::move(destination)),
+        index_expr(std::move(index_key)),
+        integer_indexed(fixed_integer_indexed) {}
+
+  ReadIndexedStatement(const ReadIndexedStatement&) = default;
+
+  const std::string source_attr;
+  const std::shared_ptr<expressions::LocalVariableExpression> dest_expr;
+  const std::shared_ptr<expressions::Expression> index_expr;
+  const bool integer_indexed;
+
+  [[nodiscard]] Statement* clone() const override { return new ReadIndexedStatement(*this); }
+
+  ~ReadIndexedStatement() override = default;
+};
 }  // namespace dcds
 
 #endif  // DCDS_STATEMENT_HPP

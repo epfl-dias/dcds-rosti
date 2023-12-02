@@ -75,6 +75,8 @@ class EqualExpression : public BinaryExpression {
 
   void* accept(ExpressionVisitor* v) override;
 
+  [[nodiscard]] std::string toString() const override;
+
   [[nodiscard]] valueType getResultType() const final { return dcds::valueType::BOOL; }
 };
 class NotEqualExpression : public BinaryExpression {
