@@ -59,8 +59,9 @@ void BuilderOptPasses::opt_pass_remove_unused_functions_from_composite_types(boo
         case statementType::READ_INDEXED:
           break;
 
-        case statementType::CC_LOCK_SHARED:
-        case statementType::CC_LOCK_EXCLUSIVE:
+        case statementType::CC_LOCK:
+          //        case statementType::CC_LOCK_SHARED:
+          //        case statementType::CC_LOCK_EXCLUSIVE:
           break;
       }
     });
@@ -127,8 +128,9 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
         case statementType::TEMP_VAR_ASSIGN:
         case statementType::READ_INDEXED:
           break;
-        case statementType::CC_LOCK_SHARED:
-        case statementType::CC_LOCK_EXCLUSIVE:
+        case statementType::CC_LOCK:
+          //        case statementType::CC_LOCK_SHARED:
+          //        case statementType::CC_LOCK_EXCLUSIVE:
           break;
       }
     });

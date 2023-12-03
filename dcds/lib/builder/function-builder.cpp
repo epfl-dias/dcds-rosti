@@ -112,5 +112,7 @@ void FunctionBuilder::print(std::ostream &out, size_t indent_level) {
   indent_p(out, indent_level);
   out << "\tstatements:" << std::endl;
 
+  CHECK(this->entryPoint.get() != nullptr) << "Entrypoint cannot be null!!";
+
   this->entryPoint->print(out, indent_level + 2);
 }

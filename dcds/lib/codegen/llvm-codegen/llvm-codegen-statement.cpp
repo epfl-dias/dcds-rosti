@@ -36,7 +36,7 @@ using namespace dcds::expressions;
 
 void LLVMCodegenStatement::buildStatement(Statement *stmt) {
   // FIXME: what about scoping of temporary variables??
-  LOG_IF(INFO, print_debug_log) << "[LLVMCodegen] buildStatement: " << stmt->stType;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegenStatement] buildStatement: " << stmt->stType;
 
   // READ, UPDATE, YIELD, TEMP_VAR_ADD, CONDITIONAL_STATEMENT, CALL
   if (stmt->stType == dcds::statementType::READ) {
@@ -68,8 +68,7 @@ void LLVMCodegenStatement::buildStatement(Statement *stmt) {
   } else if (stmt->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
     this->buildStatement_ConditionalStatement(stmt);
 
-  } else if (stmt->stType == dcds::statementType::CC_LOCK_SHARED ||
-             stmt->stType == dcds::statementType::CC_LOCK_EXCLUSIVE) {
+  } else if (stmt->stType == dcds::statementType::CC_LOCK) {
     buildStatement_CC_Lock(stmt);
 
   } else {
@@ -406,13 +405,14 @@ void LLVMCodegenStatement::buildStatement_CC_Lock(Statement *stmt) {
   auto mainRecord = getArg_mainRecord();
   auto txn = getArg_txn();
 
-  auto lockStmt = reinterpret_cast<LockStatement *>(stmt);
+  auto lockStmt = reinterpret_cast<LockStatement2 *>(stmt);
 
   // FIXME: is the mainRecord the record we want to lock?
 
   // void* _txnManager, void* txnPtr, uintptr_t record, size_t attributeIdx
   llvm::Value *ret = build_ctx->codegen->gen_call(
-      lockStmt->stType == dcds::statementType::CC_LOCK_SHARED ? lock_shared : lock_exclusive,
+      // lockStmt->stType == dcds::statementType::CC_LOCK_SHARED ? lock_shared : lock_exclusive,
+      lockStmt->is_exclusive ? lock_exclusive : lock_shared,
       {txnManager, txn,
        mainRecord /*, this->createSizeT(build_ctx->current_builder->getAttributeIndex(lockStmt->attribute))*/},
       build_ctx->codegen->DcdsToLLVMType(valueType::BOOL));

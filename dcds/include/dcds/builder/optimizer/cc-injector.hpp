@@ -36,13 +36,15 @@ class CCInjector {
   void inject();
 
  private:
+  using attribute_info = std::pair<std::string, std::string>;  // typeName, attributeName
+
   struct attribute_trait_t {
     bool is_nascent;
     bool is_const;
+    attribute_info source_var;
   };
 
-  using attribute_info = std::pair<std::string, std::string>;  // typeName, attributeName
-  using attribute_locks = std::map<attribute_info, LockStatement *>;
+  using attribute_locks = std::map<attribute_info, LockStatement2 *>;
   using attribute_traits = std::map<attribute_info, attribute_trait_t>;
 
  private:
@@ -55,7 +57,7 @@ class CCInjector {
 
  private:
   template <typename Iterator>
-  static void placeLockIfAbsent(std::map<attribute_info, LockStatement *> &lock_placed,
+  static void placeLockIfAbsent(std::map<attribute_info, LockStatement2 *> &lock_placed,
                                 attribute_traits &traits_in_scope, Iterator &pos, std::deque<Statement *> &statements,
                                 const std::string &attribute_name, const std::string &type_name, size_t typeID,
                                 bool lock_exclusive = true) {
@@ -69,32 +71,28 @@ class CCInjector {
           // LOG(INFO) << "No-need of lock as variable is a const";
           return;
         }
+
+        if (lock_placed.contains(traits_in_scope[attrInfo].source_var)) {
+          // LOG(INFO) << "source-lock already here";
+          // if source var is already here, skip the lock;
+          return;
+        }
       }
 
-      auto lkSt = new LockStatement(attrInfo.first, attrInfo.second, typeID, lock_exclusive);
+      auto lkSt = new LockStatement2(attrInfo.first, attrInfo.second, typeID, lock_exclusive);
       pos = statements.insert(pos, reinterpret_cast<Statement *>(lkSt));
 
       lock_placed.emplace(attrInfo, lkSt);
       pos++;
     } else {
-      // there is a lock already. verify the lock-compatibility.
-      auto prev_lock_st = lock_placed[attrInfo];
-      bool is_shared = (lock_placed[attrInfo]->stType == statementType::CC_LOCK_SHARED);
+      // there is a lock already.
+      // ==> verify the lock-compatibility.
+      bool is_shared = !(lock_placed[attrInfo]->is_exclusive);
 
       if (lock_exclusive && is_shared) {
-        // asked for ex but existing is shared
-        //  convert to exclusive
-        auto lkSt = new LockStatement(attrInfo.first, attrInfo.second, typeID, lock_exclusive);
-        lock_placed[attrInfo] = lkSt;
-
-        for (auto &element : statements) {
-          if (element == prev_lock_st) {
-            element = lkSt;
-            break;  // Stop searching after the replacement
-          }
-        }
-
-        delete prev_lock_st;
+        // requested exclusive, however, existing one is shared
+        // ==> convert to exclusive
+        lock_placed[attrInfo]->is_exclusive = true;
       }
     }
   }
@@ -106,7 +104,10 @@ class CCInjector {
 inline std::ostream &operator<<(std::ostream &os, const CCInjector::attribute_trait_t &ty) {
   os << "\tis_nascent: " << ty.is_nascent << std::endl;
   os << "\tis_const: " << ty.is_const << std::endl;
-  ;
+  if (!ty.source_var.first.empty()) {
+    os << "\tsource_var: " << ty.source_var.first << "::" << ty.source_var.second << std::endl;
+  }
+
   return os;
 }
 

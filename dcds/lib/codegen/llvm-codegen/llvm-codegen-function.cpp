@@ -46,6 +46,7 @@ LLVMCodegenFunction::LLVMCodegenFunction(LLVMCodegen *_codegen, dcds::Builder *b
   this->retval_variable_name = builder->getName() + "_" + fb->getName() + "_retval";
 
   this->fn_name = fn_name_prefix + fb->_name + fn_name_suffix;
+  LOG_IF(INFO, print_debug_log) << "[LLVMCodegenFunction] Building function: " << this->fn_name;
 
   // pre_args: { txnManager*, mainRecord, txnPtr, ^^retValPtr^^ }
   std::vector<std::pair<std::string, llvm::Type *>> pre_args;  // {ptrType, uintPtrType, ptrType};

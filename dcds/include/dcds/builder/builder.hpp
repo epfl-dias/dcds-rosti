@@ -194,7 +194,7 @@ class Builder : remove_copy {
     return addAttributeIndexedList(name, type, key_attribute->name);
   }
 
-  auto operator[](const std::string& name) { return attributes[name]; }
+  auto operator[](const std::string& name) { return getAttribute(name); }
 
  private:
   // should be called from optPasses only, otherwise user may declare, use and then delete it causing dangling issues.

@@ -43,8 +43,9 @@ enum class statementType {
   CONDITIONAL_STATEMENT,
   METHOD_CALL,
   LOG_STRING,
-  CC_LOCK_SHARED,
-  CC_LOCK_EXCLUSIVE,
+  //  CC_LOCK_SHARED,
+  //  CC_LOCK_EXCLUSIVE,
+  CC_LOCK,
   TEMP_VAR_ASSIGN
 };
 inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
@@ -75,12 +76,15 @@ inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
     case statementType::LOG_STRING:
       os << "LOG_STRING";
       break;
-    case statementType::CC_LOCK_SHARED:
-      os << "CC_LOCK_SHARED";
+    case statementType::CC_LOCK:
+      os << "CC_LOCK";
       break;
-    case statementType::CC_LOCK_EXCLUSIVE:
-      os << "CC_LOCK_EXCLUSIVE";
-      break;
+      //    case statementType::CC_LOCK_SHARED:
+      //      os << "CC_LOCK_SHARED";
+      //      break;
+      //    case statementType::CC_LOCK_EXCLUSIVE:
+      //      os << "CC_LOCK_EXCLUSIVE";
+      //      break;
     case statementType::TEMP_VAR_ASSIGN:
       os << "TEMP_VAR_ASSIGN";
       break;
@@ -245,22 +249,42 @@ class ConditionalStatement : public Statement {
   ~ConditionalStatement() override = default;
 };
 
-class LockStatement : public Statement {
+// class LockStatement : public Statement {
+//  public:
+//   explicit LockStatement(std::string typeName, std::string attribute_name, size_t typeID, bool lock_exclusive = true)
+//       : Statement(lock_exclusive ? statementType::CC_LOCK_EXCLUSIVE : statementType::CC_LOCK_SHARED),
+//         attribute(std::move(attribute_name)),
+//         type_name(std::move(typeName)),
+//         type_id(typeID) {}
+//   LockStatement(const LockStatement&) = default;
+//
+//   const std::string attribute;
+//   const std::string type_name;
+//   const size_t type_id;
+//
+//  public:
+//   [[nodiscard]] Statement* clone() const override { return new LockStatement(*this); }
+//   ~LockStatement() override = default;
+// };
+
+class LockStatement2 : public Statement {
  public:
-  explicit LockStatement(std::string typeName, std::string attribute_name, size_t typeID, bool lock_exclusive = true)
-      : Statement(lock_exclusive ? statementType::CC_LOCK_EXCLUSIVE : statementType::CC_LOCK_SHARED),
+  explicit LockStatement2(std::string typeName, std::string attribute_name, size_t typeID, bool lock_exclusive = true)
+      : Statement(statementType::CC_LOCK),
         attribute(std::move(attribute_name)),
         type_name(std::move(typeName)),
-        type_id(typeID) {}
-  LockStatement(const LockStatement&) = default;
+        type_id(typeID),
+        is_exclusive(lock_exclusive) {}
+  LockStatement2(const LockStatement2&) = default;
 
   const std::string attribute;
   const std::string type_name;
   const size_t type_id;
+  bool is_exclusive;
 
  public:
-  [[nodiscard]] Statement* clone() const override { return new LockStatement(*this); }
-  ~LockStatement() override = default;
+  [[nodiscard]] Statement* clone() const override { return new LockStatement2(*this); }
+  ~LockStatement2() override = default;
 };
 
 // IndexedList

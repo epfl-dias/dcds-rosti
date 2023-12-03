@@ -234,6 +234,9 @@ bool lock_shared(void* _txnManager, void* txnPtr, uintptr_t record) {
 
   if (unlikely(txn->exclusive_locks.contains(record))) {
     return true;
+  } else if (unlikely(txn->shared_locks.contains(record))) {
+    return true;
+
   } else {
     auto acquire_success = mainRecord.operator->()->lock_shared();
     if (acquire_success) {
@@ -256,6 +259,7 @@ bool lock_exclusive(void* _txnManager, void* txnPtr, uintptr_t record) {
     return true;
   } else {
     if (unlikely(txn->shared_locks.contains(record))) {
+      LOG(INFO) << "Upgrading: might-be-risky";
       txn->shared_locks.erase(record);
       mainRecord->unlock_shared();
     }

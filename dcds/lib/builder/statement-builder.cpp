@@ -114,8 +114,8 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
     // get the pointer to the actual index which is stored there.
     // then probe the index to get the value of it.
 
-    // we need a name-generator.
-    this->addReadStatement(attribute, add_temp_var("index_read_tmp_idxTy", valueType::RECORD_PTR));
+    //
+    // this->addReadStatement(attribute, add_temp_var("index_read_tmp_idxTy", valueType::RECORD_PTR));
     // now we have ptr to that index, now probe it for get.
 
     // how to handle if not found?
@@ -476,6 +476,10 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       auto st = reinterpret_cast<const TempVarAssignStatement *>(s);
       out << st->dest->toString() << " = " << st->source->toString();
 
+    } else if (s->stType == statementType::LOG_STRING) {
+      auto st = reinterpret_cast<const LogStringStatement *>(s);
+      out << st->log_string.substr(0, st->log_string.length() - 1);
+
     } else if (s->stType == dcds::statementType::METHOD_CALL) {
       auto st = reinterpret_cast<const MethodCallStatement *>(s);
       // auto st = std::static_pointer_cast<MethodCallStatement>(s);
@@ -501,10 +505,9 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       else
         out << "VOID";
 
-    } else if (s->stType == dcds::statementType::CC_LOCK_EXCLUSIVE ||
-               s->stType == dcds::statementType::CC_LOCK_SHARED) {
-      auto st = reinterpret_cast<const LockStatement *>(s);
-      // auto st = std::static_pointer_cast<LockStatement>(s);
+    } else if (s->stType == dcds::statementType::CC_LOCK) {
+      auto st = reinterpret_cast<const LockStatement2 *>(s);
+      out << " [" << (st->is_exclusive ? "EXCLUSIVE" : "SHARED") << "]";
       out << " attribute: " << st->type_name << "::" << st->attribute;
     }
 

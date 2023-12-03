@@ -21,7 +21,9 @@
 
 #include "dcds/builder/optimizer/cc-injector.hpp"
 
-static constexpr bool print_debug_log = false;
+#include <utility>
+
+static constexpr bool print_debug_log = true;
 
 using namespace dcds;
 
@@ -46,7 +48,7 @@ void CCInjector::inject() {
 
 void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, const attribute_locks &locks_in_scope,
                                          attribute_trait_t type_traits, attribute_traits &traits_in_scope) {
-  std::map<attribute_info, LockStatement *> lock_placed(locks_in_scope);
+  std::map<attribute_info, LockStatement2 *> lock_placed(locks_in_scope);
 
   auto typeName = s->getFunction()->builder->getName();
   auto typeId = s->getFunction()->builder->getTypeID();
@@ -61,6 +63,10 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
       auto readAttr = s->getFunction()->builder->getAttribute(rd_st->source_attr);
       attribute_info x{typeName, rd_st->source_attr};
       traits_in_scope[x].is_const = readAttr->is_runtime_constant || readAttr->is_compile_time_constant;
+
+      // FIXME: clear this when doing tmp-var-assign!!
+      attribute_info d{typeName, rd_st->dest_expr->getName()};
+      traits_in_scope[d].source_var = x;
 
       if (!type_traits.is_nascent)
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, rd_st->source_attr, typeName, typeId, false);
@@ -88,19 +94,38 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
     } else if (st->stType == statementType::METHOD_CALL) {
       auto mc_st = reinterpret_cast<MethodCallStatement *>(st);
       mc_st->function_instance = mc_st->function_instance->cloneShared();
+      attribute_info x{mc_st->function_instance->builder->getName(), mc_st->referenced_type_variable};
 
-      if (!(type_traits.is_nascent)) {
-        LOG_IF(INFO, print_debug_log) << "placing lock for method-call variable";
+//      LOG(INFO) << "=== " << mc_st->referenced_type_variable << " :: " << mc_st->function_instance->getName();
+//      LOG(INFO) << mc_st->function_instance->builder->getName() << " || " << mc_st->referenced_type_variable;
+//      LOG(INFO) << "===" << (traits_in_scope.contains(x));
+//      LOG_IF(INFO, print_debug_log) << traits_in_scope;
+//      if (traits_in_scope.contains(x)) {
+//        auto xx = traits_in_scope[x];
+//        LOG(INFO) << "XX";
+//        LOG(INFO) << xx.source_var.first << " || " << xx.source_var.second;
+//      }
+//      LOG(INFO) << "===" << (traits_in_scope.contains(x) && traits_in_scope[x].is_nascent);
+
+      // either the entire type is nascent, or the variable being operated on is nascent.
+      if (!(type_traits.is_nascent || (traits_in_scope.contains(x) && traits_in_scope[x].is_nascent))) {
+
+        LOG_IF(INFO, print_debug_log) << "placing lock for method-call variable: " << mc_st->referenced_type_variable;
+
         //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
         //                  << " -- IsFunctionConst: " << mc_st->function_instance->isConst();
         //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
         //                  << " -- IsFunctionReadOnly: " << mc_st->function_instance->isReadOnly();
 
-        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable, typeName,
-                          typeId, false);
+        // is the type-name wrong here??
+        //        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
+        //        typeName, typeId, false);
+
+        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
+                          mc_st->function_instance->builder->getName(), mc_st->function_instance->builder->getTypeID(),
+                          false);
       }
 
-      attribute_info x{mc_st->function_instance->builder->getName(), mc_st->referenced_type_variable};
       if (traits_in_scope.contains(x)) {
         this->injectCC_function(mc_st->function_instance, traits_in_scope[x]);
       } else {
@@ -109,12 +134,11 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
 
     } else if (st->stType == statementType::CONDITIONAL_STATEMENT) {
       auto cnd_st = reinterpret_cast<ConditionalStatement *>(st);
-      auto ifBlock = cnd_st->ifBlock;
-
-      injectCC_statementBlock(ifBlock, lock_placed, type_traits, traits_in_scope);
+      injectCC_statementBlock(const_cast<std::shared_ptr<StatementBuilder> &>(cnd_st->ifBlock), lock_placed,
+                              type_traits, traits_in_scope);
       if (cnd_st->elseBLock && !(cnd_st->elseBLock->statements.empty())) {
-        auto elseBlock = cnd_st->elseBLock;
-        injectCC_statementBlock(elseBlock, lock_placed, type_traits, traits_in_scope);
+        injectCC_statementBlock(const_cast<std::shared_ptr<StatementBuilder> &>(cnd_st->elseBLock), lock_placed,
+                                type_traits, traits_in_scope);
       }
     } else if (st->stType == statementType::CREATE) {
       auto ins_st = reinterpret_cast<InsertStatement *>(st);
@@ -144,7 +168,7 @@ void CCInjector::injectCC_function(std::shared_ptr<FunctionBuilder> &fb, attribu
   attribute_locks lock_placed;
   attribute_traits traits;
 
-  injectCC_statementBlock(fb->entryPoint, lock_placed, type_trait, traits);
+  injectCC_statementBlock(fb->entryPoint, lock_placed, std::move(type_trait), traits);
 
   LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] ##################: " << fb->getName();
   LOG_IF(INFO, print_debug_log) << "[CCInjector::injectCC_function] ##################";

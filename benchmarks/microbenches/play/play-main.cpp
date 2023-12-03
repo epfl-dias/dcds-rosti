@@ -40,10 +40,9 @@ int main(int argc, char** argv) {
   LOG(INFO) << "main() -- start";
 
   DoublyLinkedList dl;
-  dl.dump();
-  dl.build(true, true);
-  //dl.dump();
-
+  // dl.dump();
+  dl.build(true, false);
+  // dl.dump();
 
   auto instance = dl.createInstance();
   instance->listAllAvailableFunctions();
@@ -75,13 +74,14 @@ int main(int argc, char** argv) {
   EXPECT_TRUE(instance->op("pop_front", &val));
   assert(val == 11);
 
-  //  EXPECT_TRUE(instance->op("pop_back", &val));
-  //  assert(val == 23);
-  //  LOG(INFO) << "here.";
-  //  EXPECT_TRUE(instance->op("pop_back", &val));
-  //  assert(val == 11);
-  //  LOG(INFO) << "here..";
-  EXPECT_FALSE(instance->op("empty"));
+  //
+  //  //  EXPECT_TRUE(instance->op("pop_back", &val));
+  //  //  assert(val == 23);
+  //  //  LOG(INFO) << "here.";
+  //  //  EXPECT_TRUE(instance->op("pop_back", &val));
+  //  //  assert(val == 11);
+  //  //  LOG(INFO) << "here..";
+  //  EXPECT_FALSE(instance->op("empty"));
 
   LOG(INFO) << "main() -- done";
   return 0;
