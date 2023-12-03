@@ -29,18 +29,18 @@ DoublyLinkedList::DoublyLinkedList(dcds::valueType payload_type) : dcds_generate
   builder->addAttributePtr("head", nodeType);
   builder->addAttributePtr("tail", nodeType);
 
-  this->createFunction_empty();
-  this->createFunction_pushFront();
-  this->createFunction_popFront();
-  //
-  this->createFunction_pushBack();
-  this->createFunction_popBack();
+  //this->createFunction_empty();
+// this->createFunction_pushFront();
+  this->createFunction_popFront();  //-- segf
+//  //
+  //this->createFunction_pushBack();
+//  this->createFunction_popBack();  //--segf
   //
   //  this->createFunction_extract();
-  this->createFunction_touch();
+//  this->createFunction_touch();
 
-  this->createFunction_getHeadPtr();
-  this->createFunction_getTailPtr();
+//  this->createFunction_getHeadPtr();
+//  this->createFunction_getTailPtr();
 }
 
 void DoublyLinkedList::createFunction_getHeadPtr() {

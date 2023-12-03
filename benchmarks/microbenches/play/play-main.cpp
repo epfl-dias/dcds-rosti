@@ -41,7 +41,9 @@ int main(int argc, char** argv) {
 
   DoublyLinkedList dl;
   dl.dump();
-  dl.build(false, false);
+  dl.build(true, true);
+  //dl.dump();
+
 
   auto instance = dl.createInstance();
   instance->listAllAvailableFunctions();
