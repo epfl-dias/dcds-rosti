@@ -25,6 +25,8 @@
 #include <dcds/dcds.hpp>
 #include <random>
 
+#include "dcds/util/bench-utils/zipf-generator.hpp"
+
 constexpr size_t num_txn_per_thread = 5_M;
 constexpr size_t num_ops_per_txn = 10;
 
@@ -189,12 +191,22 @@ class YCSB {
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
     auto runtime_ms = thr(
         [](dcds::JitContainer* _instance, size_t _nr) {
-          int64_t one = 99;
+          int64_t o1 = 99;
+          int64_t o2 = 99;
+          int64_t o3 = 99;
+          int64_t o4 = 99;
+          int64_t o5 = 99;
+          int64_t o6 = 99;
+          int64_t o7 = 99;
+          int64_t o8 = 99;
+          int64_t o9 = 99;
+          int64_t o10 = 99;
           std::mt19937 engine(std::random_device{}());
           std::uniform_real_distribution<double> dist{0.0, 1.0};
           // dcds::profiling::Profile::resume();
           for (size_t i = 0; i < num_txn_per_thread; i++) {
-            _instance->op("lookup", (static_cast<size_t>(dist(engine) * _nr)) % _nr, &one);
+            _instance->op("lookup", (static_cast<size_t>(dist(engine) * _nr)) % _nr, &o1, &o2, &o3, &o4, &o5, &o6, &o7,
+                          &o8, &o9, &o10);
           }
           // dcds::profiling::Profile::pause();
         },
@@ -211,15 +223,127 @@ class YCSB {
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_sequential");
     auto runtime_ms = thr(
         [](dcds::JitContainer* _instance, size_t _nr) {
-          int64_t one = 99;
+          int64_t o1 = 99;
+          int64_t o2 = 99;
+          int64_t o3 = 99;
+          int64_t o4 = 99;
+          int64_t o5 = 99;
+          int64_t o6 = 99;
+          int64_t o7 = 99;
+          int64_t o8 = 99;
+          int64_t o9 = 99;
+          int64_t o10 = 99;
 
           for (size_t i = 0; i < num_txn_per_thread; i++) {
-            _instance->op("lookup", i % _nr, &one);
+            _instance->op("lookup", i % _nr, &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
           }
         },
         instance, n_records);
 
     if (print_res) printThroughput(runtime_ms, n_threads, " (Sequential)");
+    return runtime_ms;
+  }
+
+  inline auto test_MT_rw_random(size_t n_threads, const uint write_ratio = 50, bool print_res = true) {
+    assert(instance);
+    assert(write_ratio >= 0 && write_ratio <= 100);
+    auto thr = dcds::ThreadRunner(n_threads);
+
+    //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
+    auto runtime_ms = thr(
+        [write_ratio](dcds::JitContainer* _instance, const size_t _nr) {
+          int64_t o1 = 99;
+          int64_t o2 = 99;
+          int64_t o3 = 99;
+          int64_t o4 = 99;
+          int64_t o5 = 99;
+          int64_t o6 = 99;
+          int64_t o7 = 99;
+          int64_t o8 = 99;
+          int64_t o9 = 99;
+          int64_t o10 = 99;
+
+          std::mt19937 engine(std::random_device{}());
+          std::uniform_int_distribution<size_t> dist(0, _nr - 1);
+
+          if (write_ratio == 0) {
+            for (size_t i = 0; i < num_txn_per_thread; i++) {
+              // read-op
+              _instance->op("lookup", dist(engine), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+            }
+          } else {
+            std::mt19937 rw_gen(std::random_device{}());
+            std::uniform_int_distribution<size_t> rw_dist(0, 100);
+
+            for (size_t i = 0; i < num_txn_per_thread; i++) {
+              if (rw_dist(rw_gen) < write_ratio) {
+                // write-op
+                _instance->op("update", dist(engine), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+              } else {
+                // read-op
+                _instance->op("lookup", dist(engine), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+              }
+            }
+          }
+        },
+        instance, n_records);
+
+    if (print_res) printThroughput(runtime_ms, n_threads, " (Random)(R/W: " + std::to_string(write_ratio) + " )");
+    return runtime_ms;
+  }
+
+  inline auto test_MT_rw_zipf(size_t n_threads, double zipf_theta = 0, const uint write_ratio = 50,
+                              bool print_res = true) {
+    //    LOG_FIRST_N(INFO, 1) << "dcds::ZipfianGenerator: " << sizeof(dcds::ZipfianGenerator);
+    //    LOG_FIRST_N(INFO, 1) << "dcds::zip2: " << sizeof(dcds::zip2);
+
+    assert(instance);
+    assert(write_ratio >= 0 && write_ratio <= 100);
+    auto thr = dcds::ThreadRunner(n_threads);
+
+    //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
+    auto runtime_ms = thr(
+        [write_ratio, zipf_theta](dcds::JitContainer* _instance, const size_t _nr) {
+          int64_t o1 = 99;
+          int64_t o2 = 99;
+          int64_t o3 = 99;
+          int64_t o4 = 99;
+          int64_t o5 = 99;
+          int64_t o6 = 99;
+          int64_t o7 = 99;
+          int64_t o8 = 99;
+          int64_t o9 = 99;
+          int64_t o10 = 99;
+
+          auto zipf = dcds::ZipfianGenerator(_nr, zipf_theta);
+          // auto zipf = dcds::zip2(_nr, zipf_theta);
+          // auto zipf = dcds::absl_zipf(_nr, zipf_theta);
+
+          if (write_ratio == 0) {
+            for (size_t i = 0; i < num_txn_per_thread; i++) {
+              // read-op
+              _instance->op("lookup", zipf(), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+            }
+          } else {
+            std::mt19937 rw_gen(std::random_device{}());
+            std::uniform_int_distribution<size_t> rw_dist(0, 100);
+
+            for (size_t i = 0; i < num_txn_per_thread; i++) {
+              if (rw_dist(rw_gen) < write_ratio) {
+                // write-op
+                _instance->op("update", zipf(), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+              } else {
+                // read-op
+                _instance->op("lookup", zipf(), &o1, &o2, &o3, &o4, &o5, &o6, &o7, &o8, &o9, &o10);
+              }
+            }
+          }
+        },
+        instance, n_records);
+
+    if (print_res)
+      printThroughput(runtime_ms, n_threads,
+                      " (zipf: " + std::to_string(zipf_theta) + ")(R/W: " + std::to_string(write_ratio) + " )");
     return runtime_ms;
   }
 
@@ -264,7 +388,11 @@ class YCSB {
 
     // _builder->dump();
     _builder->injectCC();
-    // _builder->dump();
+    //    static bool printed = false;
+    //    if(!printed){
+    //      _builder->dump();
+    //      printed = true;
+    //    }
 
     //    LOG(INFO) << "######################--Building";
     _builder->build();

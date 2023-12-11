@@ -5,7 +5,16 @@ add_executable(YCSB
         YCSB-main.cpp
         )
 
-target_link_libraries_system(play benchmark::benchmark)
+target_link_libraries_system(YCSB
+        benchmark::benchmark
+        absl::strings
+        absl::base
+        absl::config
+        absl::utility
+        absl::flags
+        absl::flags_commandlineflag
+        absl::flags_parse
+)
 
 target_link_libraries(YCSB
         PUBLIC

@@ -19,91 +19,142 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
+#include <absl/flags/flag.h>
+#include <absl/flags/parse.h>
+
 #include <dcds/dcds.hpp>
-#include <random>
 
 #include "ycsb.hpp"
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "YCSB";
+ABSL_FLAG(uint16_t, num_columns, 1, "number of columns for YCSB table");
+ABSL_FLAG(uint16_t, num_iterations, 1, "number of iterations for each test");
+ABSL_FLAG(uint16_t, num_threads, 1, "number of threads");
+ABSL_FLAG(uint16_t, rw_ratio, 0, "rw_ratio");
+ABSL_FLAG(double, zipf_theta, 0, "zipf_theta");
+ABSL_FLAG(bool, use_flag, false, "use the flags or ignore");
 
-  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
+static void play() {
+  LOG(INFO) << "play";
+  constexpr auto num_columns = 4;
+  constexpr size_t num_runs = 3;
+  size_t rw_ratio = 0;
 
+  size_t num_threads = 18;
+  auto ycsb = YCSB(num_columns, num_threads * 1_M);
+
+  dcds::profiling::Profile::resume();
+
+  ycsb.test_MT_rw_random(num_threads, rw_ratio);
+
+  ycsb.test_MT_rw_zipf(24, 0.5, 50);
+  ycsb.test_MT_rw_zipf(24, 0.000001, 50);
+
+  dcds::profiling::Profile::pause();
+
+  dcds::storage::TableRegistry::getInstance().clear();
+}
+
+static void no_flags() {
   constexpr auto num_columns = 1;
-  constexpr size_t num_threads = 16;
-  constexpr size_t num_runs = 8;
+  constexpr size_t num_runs = 3;
+  //  std::vector<size_t> cores{1, 2, 4, 8, 16, 18, 24, 32, 36, 48, 64, 72, 84, 108, 120, 128, 144};
+  std::vector<size_t> cores{1, 2, 4, 8, 12, 16, 18, 24, 32, 36, 48};
+  std::vector<size_t> rw_ratios{0, 25, 50, 75, 100};
 
-  //  for(auto c = 1; c < num_columns ; c++){
-  //    for(size_t i = 1 ; i <= num_threads; i++){
-  //      for(size_t r = 1 ; r <= num_runs; r++){
-  //        auto ycsb = YCSB(1, i * 1_M);
-  //        ycsb.test_MT_lookup_sequential(i);
+  // FIXME: more than 1 column deadlocks for write.
+
+  //  for (auto c = 1; c <= num_columns; c++) {
+  //    LOG(INFO) << "###### Number of columns: " << c;
+  //    for (auto i : cores) {
+  //      for (size_t r = 0; r < num_runs; r++) {
+  //        auto ycsb = YCSB(c, i * 1_M);
+  //        if(i == cores.front() || i == cores.back())
+  //          dcds::profiling::Profile::resume();
+  //
+  //        //ycsb.test_MT_lookup_random(i);
+  //
+  //        if(i == cores.front() || i == cores.back())
+  //          dcds::profiling::Profile::pause();
+  //
+  //
+  //        dcds::storage::TableRegistry::getInstance().clear();
   //      }
   //    }
   //  }
 
   for (auto c = 1; c <= num_columns; c++) {
-    for (size_t i = 8; i <= num_threads; i++) {
-      for (size_t r = 0; r < num_runs; r++) {
-        auto ycsb = YCSB(1, i * 1_M);
-        if (r == 0 || r == 7) dcds::profiling::Profile::resume();
-        ycsb.test_MT_lookup_random(i);
+    LOG(INFO) << "###### Number of columns: " << c;
+    for (auto rw : rw_ratios) {
+      LOG(INFO) << "###### RW-RATIO: : " << rw;
+      for (auto t : cores) {
+        for (size_t r = 0; r < num_runs; r++) {
+          auto ycsb = YCSB(c, t * 1_M);
 
-        if (r == 0 || r == 7) dcds::profiling::Profile::pause();
+          if (t == cores.front() || t == cores.back()) dcds::profiling::Profile::resume();
 
-        dcds::storage::TableRegistry::getInstance().clear();
+          // ycsb.test_MT_rw_random(t, rw);
+          ycsb.test_MT_rw_zipf(t, 0.5, rw);
+
+          if (t == cores.front() || t == cores.back()) dcds::profiling::Profile::pause();
+
+          dcds::storage::TableRegistry::getInstance().clear();
+        }
       }
     }
   }
+}
 
-  //  auto builder = std::make_shared<dcds::Builder>("YCSB");
-  //  //   builder->addHint(dcds::hints::BuilderHints::SINGLE_THREADED);
-  //  auto ycsb_item = generateYCSB_Item(builder);
-  //
-  //  // Attribute array is integer-indexed.
-  //  // Attribute IndexedList is key-based index.
-  //
-  //  builder->addAttributeArray("records", ycsb_item, num_records);
-  //
-  //  generateLookupOneFunction(builder);
-  //  generateLookupNFunction(builder);
-  //  generateUpdateFunction(builder);
-  //
-  //  //  builder->dump();
-  //  builder->injectCC();
-  //  LOG(INFO) << "######################";
-  //  builder->dump();
-  //  LOG(INFO) << "######################";
-  //
-  //  builder->build();
-  //
-  //  auto instance = builder->createInstance();
-  //  instance->listAllAvailableFunctions();
-  //
-  //  test_MT_lookup_sequential(instance, 8);  // warm-up
-  //
-  //  LOG(INFO) << "-----test_MT_lookup_sequential (1 op/txn)----";
-  //  dcds::profiling::Profile::resume();
-  //  for (size_t i = 1; i <= num_threads; i *= 2) {
-  //    test_MT_lookup_sequential(instance, i);
-  //  }
-  //  dcds::profiling::Profile::pause();
-  //
-  //  LOG(INFO) << "-----test_MT_lookup_random (1 op/txn)----";
-  //
-  //  dcds::profiling::Profile::resume();
-  //  for (size_t i = 1; i <= num_threads; i *= 2) {
-  //    test_MT_lookup_random(instance, i);
-  //  }
-  //  dcds::profiling::Profile::pause();
+static void use_flags(int argc, char** argv) {
+  // absl::ParseCommandLine(argc, argv);
+  auto num_columns = absl::GetFlag(FLAGS_num_columns);
+  auto num_runs = absl::GetFlag(FLAGS_num_iterations);
+  auto num_threads = absl::GetFlag(FLAGS_num_threads);
+  auto rw_ratio = absl::GetFlag(FLAGS_rw_ratio);
+  auto zipf_theta = absl::GetFlag(FLAGS_zipf_theta);
 
-  //  LOG(INFO) << "-----test_MT_lookup_sequential-N  (" << num_ops_per_txn << " op/txn)---";
-  //  dcds::profiling::Profile::resume();
-  //  for (size_t i = 1; i <= num_threads; i *= 2) {
-  //    test_MT_lookup_sequential_n(instance, i);
-  //  }
-  //  dcds::profiling::Profile::pause();
+  if (zipf_theta >= 1) zipf_theta = zipf_theta / 100;
+
+  //  // FIXME: more than 1 column deadlocks.
+
+  LOG(INFO) << "num_columns: " << num_columns;
+  LOG(INFO) << "num_runs: " << num_runs;
+  LOG(INFO) << "num_threads: " << num_threads;
+  LOG(INFO) << "rw_ratio: " << rw_ratio;
+  LOG(INFO) << "zipf_theta: " << zipf_theta;
+
+  assert(rw_ratio >= 0 && rw_ratio <= 100);
+
+  for (size_t r = 0; r < num_runs; r++) {
+    auto ycsb = YCSB(num_columns, num_threads * 1_M);
+    if (zipf_theta > 0) {
+      ycsb.test_MT_rw_zipf(num_threads, zipf_theta, rw_ratio);
+    } else {
+      ycsb.test_MT_rw_random(num_threads, rw_ratio);
+    }
+
+    dcds::storage::TableRegistry::getInstance().clear();
+  }
+}
+
+int main(int argc, char** argv) {
+  dcds::InitializeLog(argc, argv);
+  absl::ParseCommandLine(argc, argv);
+
+  LOG(INFO) << "YCSB";
+
+  auto use_flag = absl::GetFlag(FLAGS_use_flag);
+  if (use_flag) {
+    use_flags(argc, argv);
+  } else {
+    play();
+    //      no_flags();
+  }
+
+  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
+
+  // use_flags(argc, argv);
+
+  // no_flags();
 
   return 0;
 }
