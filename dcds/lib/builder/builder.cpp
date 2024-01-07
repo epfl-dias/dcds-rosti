@@ -196,6 +196,14 @@ void Builder::injectCC() {
 }
 
 void Builder::dump() {
+  for (auto& a : attributes) {
+    std::cout << "Attribute: " << a.first << std::endl;
+  }
+
+  for (auto& rt : registered_subtypes) {
+    std::cout << "Registered sub-type: " << rt.first << std::endl;
+  }
+
   for (auto& f : functions) {
     f.second->print(std::cout, 0);
     std::cout << "\n\n";

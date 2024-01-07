@@ -58,9 +58,9 @@ std::string TemporaryVariableExpression::toString() const {
   std::stringstream out;
 
   out << this->var_type << " " << this->var_name;
-//  if (this->var_default_value.has_value()) {
-//    out << " - val-type: " << this->var_default_value.type().name();
-//  }
+  //  if (this->var_default_value.has_value()) {
+  //    out << " - val-type: " << this->var_default_value.type().name();
+  //  }
   return out.str();
 }
 std::string FunctionArgumentExpression::toString() const {

@@ -182,8 +182,10 @@ class Builder : remove_copy {
                                const std::string& key_attribute) {
     CHECK(!hasAttribute(name)) << "Duplicate attribute name: " << name;
     CHECK(type->hasAttribute(key_attribute))
-        << "Indexed list type does not contain the key-attribute: " << key_attribute;
-    CHECK(registered_subtypes.contains(type->getName())) << "Unknown/Unregistered type: " << type;
+        << "Indexed list type (" << type->getName() << ") does not contain the key-attribute: " << key_attribute;
+
+    // TODO: check recursively (e.g., LRU has a map of DoublyLinkedList::Node, which is two layers down.
+    // CHECK(registered_subtypes.contains(type->getName())) << "Unknown/Unregistered type: " << type->getName();
 
     auto pt = std::make_shared<dcds::AttributeIndexedList>(name, type, key_attribute);
     attributes.emplace(name, pt);
