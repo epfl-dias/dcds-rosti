@@ -393,6 +393,35 @@ StatementBuilder::conditional_blocks StatementBuilder::addConditionalBranch(dcds
   return conditional_blocks{ifBranch, elseBranch};
 }
 
+std::shared_ptr<StatementBuilder> StatementBuilder::addForLoop(
+    dcds::expressions::LocalVariableExpression *loop_var, dcds::expressions::Expression *loop_cond,
+    dcds::expressions::Expression *loop_iteration_expression) {
+  auto loop_body = std::make_shared<StatementBuilder>(this->parent_function, this);
+  this->child_blocks++;
+
+  auto rs = new ForLoopStatement(loop_var, loop_cond, loop_iteration_expression, loop_body);
+  statements.push_back(rs);
+  return loop_body;
+}
+
+std::shared_ptr<StatementBuilder> StatementBuilder::addWhileLoop(dcds::expressions::Expression *loop_cond) {
+  auto loop_body = std::make_shared<StatementBuilder>(this->parent_function, this);
+  this->child_blocks++;
+
+  auto rs = new WhileLoopStatement(loop_cond, loop_body);
+  statements.push_back(rs);
+  return loop_body;
+}
+
+std::shared_ptr<StatementBuilder> StatementBuilder::addDoWhileLoop(dcds::expressions::Expression *loop_cond) {
+  auto loop_body = std::make_shared<StatementBuilder>(this->parent_function, this);
+  this->child_blocks++;
+
+  auto rs = new DoWhileLoopStatement(loop_cond, loop_body);
+  statements.push_back(rs);
+  return loop_body;
+}
+
 void StatementBuilder::extractReadWriteSet_recursive(rw_set_t &read_set, rw_set_t &write_set) {
   this->for_each_statement([&](const Statement *stmt) {
     auto typeName = this->parent_function.builder->getName();
@@ -488,8 +517,12 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       }
       out << st->referenced_type_variable << "(" << st->function_instance->builder->getName() << ")";
       out << "->" << st->function_instance->getName() << "(";
+
       for (auto i = 0; i < st->function_arguments.size(); i++) {
+        bool is_ref_type = st->function_instance->getArguments()[i]->is_reference_type;
+        if (is_ref_type) out << "&(";
         out << st->function_arguments[i]->toString();
+        if (is_ref_type) out << ")";
         if (i != st->function_arguments.size() - 1) {
           out << ", ";
         }
@@ -509,6 +542,25 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       auto st = reinterpret_cast<const LockStatement2 *>(s);
       out << " [" << (st->is_exclusive ? "EXCLUSIVE" : "SHARED") << "]";
       out << " attribute: " << st->type_name << "::" << st->attribute;
+    }
+    // Loops
+    else if (s->stType == dcds::statementType::FOR_LOOP) {
+      auto st = reinterpret_cast<const ForLoopStatement *>(s);
+      out << "FOR (" << st->loop_var->toString() << "; " << st->cond_expr->toString() << "; "
+          << st->iteration_expr->toString() << ")" << std::endl;
+      auto curr_indent = indent_level + 1;
+      st->body->print(out, curr_indent + 1);
+    } else if (s->stType == dcds::statementType::WHILE_LOOP) {
+      auto st = reinterpret_cast<const WhileLoopStatement *>(s);
+      out << "WHILE ( " << st->cond_expr->toString() << ")" << std::endl;
+      auto curr_indent = indent_level + 1;
+      st->body->print(out, curr_indent + 1);
+    } else if (s->stType == dcds::statementType::DO_WHILE_LOOP) {
+      auto st = reinterpret_cast<const DoWhileLoopStatement *>(s);
+      out << "DO {" << std::endl;
+      auto curr_indent = indent_level + 1;
+      st->body->print(out, curr_indent + 1);
+      out << "} WHILE ( " << st->cond_expr->toString() << ")" << std::endl;
     }
 
     out << std::endl;
@@ -532,16 +584,7 @@ std::shared_ptr<StatementBuilder> StatementBuilder::clone_deep() {
 
   for (auto st : this->statements) {
     //    LOG(INFO) << "Cloning : " << st->stType;
-    if (st->stType == statementType::CONDITIONAL_STATEMENT) {
-      auto cd = reinterpret_cast<ConditionalStatement *>(st);
-
-      ret->statements.emplace_back(new ConditionalStatement(const_cast<dcds::expressions::Expression *>(cd->expr),
-                                                            cd->ifBlock->clone_deep(),
-                                                            cd->elseBLock ? cd->elseBLock->clone_deep() : nullptr));
-
-    } else {
-      ret->statements.emplace_back(st->clone());
-    }
+    ret->statements.emplace_back(st->clone());
   }
 
   return ret;

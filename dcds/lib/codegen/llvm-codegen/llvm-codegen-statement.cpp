@@ -68,12 +68,118 @@ void LLVMCodegenStatement::buildStatement(Statement *stmt) {
   } else if (stmt->stType == dcds::statementType::CONDITIONAL_STATEMENT) {
     this->buildStatement_ConditionalStatement(stmt);
 
+  } else if (stmt->stType == dcds::statementType::FOR_LOOP) {
+    this->buildStatement_ForLoop(stmt);
+
+  } else if (stmt->stType == dcds::statementType::WHILE_LOOP) {
+    this->buildStatement_WhileLoop(stmt);
+
+  } else if (stmt->stType == dcds::statementType::DO_WHILE_LOOP) {
+    this->buildStatement_DoWhileLoop(stmt);
+
   } else if (stmt->stType == dcds::statementType::CC_LOCK) {
     buildStatement_CC_Lock(stmt);
 
   } else {
     LOG(FATAL) << "unknown statement type: " << stmt->stType;
   }
+}
+
+void LLVMCodegenStatement::buildStatement_ForLoop(dcds::Statement *stmt) {
+  auto loopStatement = reinterpret_cast<ForLoopStatement *>(stmt);
+  CHECK(!loopStatement->body->statements.empty()) << "Build for loop requested but loop body is empty";
+
+  auto isLastStatementInBlock = (build_ctx->current_sb->statements.back() == stmt);
+
+  auto F = IRBuilder()->GetInsertBlock()->getParent();
+  llvm::Value *loopVar = LLVMExpressionVisitor::gen(build_ctx, loopStatement->loop_var);
+
+  BasicBlock *LoopCondBlock = BasicBlock::Create(ctx(), "for.loop.cond", F);
+  BasicBlock *LoopBodyBlock = BasicBlock::Create(ctx(), "for.loop.body", F);
+  //  BasicBlock *AfterLoopBlock = BasicBlock::Create(ctx(), "after.loop", F);
+  BasicBlock *AfterLoopBlock = isLastStatementInBlock ? build_ctx->getFunctionContext()->GetReturnBlock()
+                                                      : BasicBlock::Create(ctx(), "for.after.loop", F);
+
+  IRBuilder()->CreateBr(LoopCondBlock);
+  IRBuilder()->SetInsertPoint(LoopCondBlock);
+
+  llvm::Value *condExpr = LLVMExpressionVisitor::gen(build_ctx, loopStatement->cond_expr);
+
+  IRBuilder()->CreateCondBr(condExpr, LoopBodyBlock, AfterLoopBlock);
+  IRBuilder()->SetInsertPoint(LoopBodyBlock);
+
+  // Body of the loop:
+  LLVMScopedContext loop_body_ctx(this->build_ctx, loopStatement->body);
+  LLVMCodegenStatement::gen(&loop_body_ctx);
+
+  // Increment loop variable
+  llvm::Value *iterExpr = LLVMExpressionVisitor::gen(build_ctx, loopStatement->iteration_expr);
+  IRBuilder()->CreateStore(iterExpr, loopVar);
+
+  // Create unconditional branch back to the loop condition block
+  IRBuilder()->CreateBr(LoopCondBlock);
+
+  // Set insertion point to after the loop
+  IRBuilder()->SetInsertPoint(AfterLoopBlock);
+}
+
+void LLVMCodegenStatement::buildStatement_WhileLoop(dcds::Statement *stmt) {
+  auto loopStatement = reinterpret_cast<WhileLoopStatement *>(stmt);
+  CHECK(!loopStatement->body->statements.empty()) << "Build for loop requested but loop body is empty";
+
+  auto isLastStatementInBlock = (build_ctx->current_sb->statements.back() == stmt);
+
+  auto F = IRBuilder()->GetInsertBlock()->getParent();
+
+  BasicBlock *LoopCondBlock = BasicBlock::Create(ctx(), "while.loop.cond", F);
+  BasicBlock *LoopBodyBlock = BasicBlock::Create(ctx(), "while.loop.body", F);
+  BasicBlock *AfterLoopBlock = isLastStatementInBlock ? build_ctx->getFunctionContext()->GetReturnBlock()
+                                                      : BasicBlock::Create(ctx(), "while.after.loop", F);
+
+  IRBuilder()->CreateBr(LoopCondBlock);
+  IRBuilder()->SetInsertPoint(LoopCondBlock);
+
+  llvm::Value *condExpr = LLVMExpressionVisitor::gen(build_ctx, loopStatement->cond_expr);
+
+  IRBuilder()->CreateCondBr(condExpr, LoopBodyBlock, AfterLoopBlock);
+  IRBuilder()->SetInsertPoint(LoopBodyBlock);
+
+  // Body of the loop:
+  LLVMScopedContext loop_body_ctx(this->build_ctx, loopStatement->body);
+  LLVMCodegenStatement::gen(&loop_body_ctx);
+
+  // Create unconditional branch back to the loop condition block
+  IRBuilder()->CreateBr(LoopCondBlock);
+
+  // Set insertion point to after the loop
+  IRBuilder()->SetInsertPoint(AfterLoopBlock);
+}
+
+void LLVMCodegenStatement::buildStatement_DoWhileLoop(dcds::Statement *stmt) {
+  auto loopStatement = reinterpret_cast<DoWhileLoopStatement *>(stmt);
+  CHECK(!loopStatement->body->statements.empty()) << "Build for loop requested but loop body is empty";
+
+  auto isLastStatementInBlock = (build_ctx->current_sb->statements.back() == stmt);
+
+  auto F = IRBuilder()->GetInsertBlock()->getParent();
+
+  BasicBlock *LoopBodyBlock = BasicBlock::Create(ctx(), "doWhile.loop.body", F);
+  BasicBlock *AfterLoopBlock = isLastStatementInBlock ? build_ctx->getFunctionContext()->GetReturnBlock()
+                                                      : BasicBlock::Create(ctx(), "doWhile.after.loop", F);
+
+  // Body of the loop:
+  IRBuilder()->CreateBr(LoopBodyBlock);
+  IRBuilder()->SetInsertPoint(LoopBodyBlock);
+
+  LLVMScopedContext loop_body_ctx(this->build_ctx, loopStatement->body);
+  LLVMCodegenStatement::gen(&loop_body_ctx);
+
+  llvm::Value *condExpr = LLVMExpressionVisitor::gen(build_ctx, loopStatement->cond_expr);
+
+  IRBuilder()->CreateCondBr(condExpr, LoopBodyBlock, AfterLoopBlock);
+
+  // Set insertion point to after the loop
+  IRBuilder()->SetInsertPoint(AfterLoopBlock);
 }
 
 void LLVMCodegenStatement::buildStatement_ConditionalStatement(Statement *stmt) {
@@ -313,12 +419,12 @@ void LLVMCodegenStatement::buildStatement_MethodCall(Statement *stmt) {
   auto txn = getArg_txn();
 
   auto methodStmt = reinterpret_cast<MethodCallStatement *>(stmt);
+  auto fn_instance = methodStmt->function_instance;
 
   // {ds_name}_{function_name}_inner
   // 'inner' because txn is already here from wrapped outer function.
 
-  std::string function_name =
-      methodStmt->function_instance->builder->getName() + "_" + methodStmt->function_instance->getName() + "_inner";
+  std::string function_name = fn_instance->builder->getName() + "_" + fn_instance->getName() + "_inner";
 
   assert(build_ctx->codegen->userFunctions.contains(function_name));
 
@@ -348,13 +454,13 @@ void LLVMCodegenStatement::buildStatement_MethodCall(Statement *stmt) {
   llvm::Value *returnValueArg;
   llvm::Value *ret_dest_expr;
 
-  if (methodStmt->function_instance->getReturnValueType() == valueType::VOID) {
+  if (fn_instance->getReturnValueType() == valueType::VOID) {
     doesReturn = false;
   }
 
   CHECK((!(methodStmt->has_return_dest)) || (methodStmt->has_return_dest && doesReturn))
-      << "callee(" << build_ctx->current_fb->getName() << ") expects return but function("
-      << methodStmt->function_instance->getName() << ") does not return";
+      << "callee(" << build_ctx->current_fb->getName() << ") expects return but function(" << fn_instance->getName()
+      << ") does not return";
 
   if (doesReturn) {
     ret_dest_expr = LLVMExpressionVisitor::gen(build_ctx, methodStmt->return_dest);
@@ -368,20 +474,36 @@ void LLVMCodegenStatement::buildStatement_MethodCall(Statement *stmt) {
   }
   // ------
 
-  for (auto &fArg : methodStmt->function_arguments) {
-    // FIXME: there might be issue if the function expects pass by reference?
+  for (auto i = 0; i < fn_instance->getArguments().size(); i++) {
+    auto &fArg = methodStmt->function_arguments[i];
     llvm::Value *exprResult = LLVMExpressionVisitor::gen(build_ctx, fArg);
 
-    if (llvm::isa<llvm::AllocaInst>(exprResult)) {
-      // Temporary variables might be AllocaInst, and need to be loaded before use or passing to function by value.
-      auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
-      llvm::Value *loadedTmpVar =
-          IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(fArg->getResultType()), allocaInst);
-      callArgs.push_back(loadedTmpVar);
+    if (fn_instance->getArguments()[i]->is_reference_type) {
+      if (exprResult->getType()->isPointerTy()) {
+        callArgs.push_back(exprResult);
+      } else {
+        if (llvm::isa<llvm::AllocaInst>(exprResult)) {
+          callArgs.push_back(IRBuilder()->CreateBitCast(exprResult, exprResult->getType()->getPointerTo()));
+        } else {
+          assert(false);  // Isn't it same as isPointerTy()?
+          // llvm::AllocaInst *allocaInst = IRBuilder()->CreateAlloca(exprResult->getType());
+          // IRBuilder()->CreateStore(exprResult, allocaInst);
+          // callArgs.push_back(IRBuilder()->CreateBitCast(allocaInst, exprResult->getType()->getPointerTo()));
+        }
+      }
 
     } else {
-      // It's not an AllocaInst
-      callArgs.push_back(exprResult);
+      if (llvm::isa<llvm::AllocaInst>(exprResult)) {
+        // Temporary variables might be AllocaInst, and need to be loaded before use or passing to function by value.
+        auto *allocaInst = llvm::cast<llvm::AllocaInst>(exprResult);
+        llvm::Value *loadedTmpVar =
+            IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(fArg->getResultType()), allocaInst);
+        callArgs.push_back(loadedTmpVar);
+
+      } else {
+        // It's not an AllocaInst
+        callArgs.push_back(exprResult);
+      }
     }
   }
 
@@ -418,7 +540,12 @@ void LLVMCodegenStatement::buildStatement_CC_Lock(Statement *stmt) {
       build_ctx->codegen->DcdsToLLVMType(valueType::BOOL));
 
   // (ret == false) goto returnBB;
-  auto genIf = build_ctx->codegen->gen_if(IRBuilder()->CreateNot(ret))([&]() {
+  gen_conditional_abort(ret);
+}
+
+void LLVMCodegenStatement::gen_conditional_abort(llvm::Value *do_continue) {
+  // (ret == false) goto returnBB;
+  auto genIf = build_ctx->codegen->gen_if(IRBuilder()->CreateNot(do_continue))([&]() {
     IRBuilder()->CreateStore(build_ctx->codegen->createFalse(), build_ctx->getFunctionContext()->getReturnVariable());
 
     IRBuilder()->CreateBr(build_ctx->getFunctionContext()->GetReturnBlock());

@@ -70,6 +70,12 @@ class LLVMCodegenStatement {
   void buildStatement_MethodCall(Statement *stmt);
   void buildStatement_CC_Lock(Statement *stmt);
 
+  void buildStatement_ForLoop(dcds::Statement *stmt);
+  void buildStatement_WhileLoop(dcds::Statement *stmt);
+  void buildStatement_DoWhileLoop(dcds::Statement *stmt);
+
+  void gen_conditional_abort(llvm::Value *do_continue);
+
  private:
   inline auto &ctx() { return build_ctx->codegen->getLLVMContext(); }
   inline auto IRBuilder() { return build_ctx->codegen->getBuilder(); }

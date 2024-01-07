@@ -111,10 +111,16 @@ class StatementBuilder {
 
   conditional_blocks addConditionalBranch(dcds::expressions::Expression *expr);
 
+  std::shared_ptr<StatementBuilder> addForLoop(dcds::expressions::LocalVariableExpression *loop_var,
+                                               dcds::expressions::Expression *loop_cond,
+                                               dcds::expressions::Expression *loop_iteration_expression);
+  std::shared_ptr<StatementBuilder> addWhileLoop(dcds::expressions::Expression *loop_cond);
+  std::shared_ptr<StatementBuilder> addDoWhileLoop(dcds::expressions::Expression *loop_cond);
+
  public:
-  [[nodiscard]] bool haveReturnCall() const { return doesReturn; }
-  [[nodiscard]] bool haveMethodCalls() const { return doesHaveMethodCalls; }
-  [[nodiscard]] auto numChildBranches() const { return child_blocks; }
+  [[maybe_unused]] [[nodiscard]] bool haveReturnCall() const { return doesReturn; }
+  [[maybe_unused]] [[nodiscard]] bool haveMethodCalls() const { return doesHaveMethodCalls; }
+  [[maybe_unused]] [[nodiscard]] auto numChildBranches() const { return child_blocks; }
   auto hasParentBlock() { return parent_block != nullptr; }
   auto getParentBlock() { return parent_block; }
   auto getFunction() { return &parent_function; }
@@ -174,6 +180,11 @@ class StatementBuilder {
   static std::atomic<size_t> variable_name_index;
   std::shared_ptr<expressions::TemporaryVariableExpression> add_temp_var(const std::string &name_prefix,
                                                                          valueType type);
+
+  friend class ConditionalStatement;
+  friend class ForLoopStatement;
+  friend class WhileLoopStatement;
+  friend class DoWhileLoopStatement;
 };
 
 // std::ostream &operator<<(std::ostream &out, const StatementBuilder &sb);

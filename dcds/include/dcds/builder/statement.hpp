@@ -46,7 +46,11 @@ enum class statementType {
   //  CC_LOCK_SHARED,
   //  CC_LOCK_EXCLUSIVE,
   CC_LOCK,
-  TEMP_VAR_ASSIGN
+  TEMP_VAR_ASSIGN,
+
+  FOR_LOOP,
+  WHILE_LOOP,
+  DO_WHILE_LOOP
 };
 inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
   os << "statementType::";
@@ -69,6 +73,15 @@ inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
       break;
     case statementType::CONDITIONAL_STATEMENT:
       os << "CONDITIONAL_STATEMENT";
+      break;
+    case statementType::FOR_LOOP:
+      os << "FOR_LOOP";
+      break;
+    case statementType::WHILE_LOOP:
+      os << "WHILE_LOOP";
+      break;
+    case statementType::DO_WHILE_LOOP:
+      os << "DO_WHILE_LOOP";
       break;
     case statementType::METHOD_CALL:
       os << "METHOD_CALL";
@@ -242,11 +255,63 @@ class ConditionalStatement : public Statement {
   const std::shared_ptr<StatementBuilder> elseBLock;
 
  public:
-  [[nodiscard]] Statement* clone() const override {
-    // cannot clone statementBuilder from here.
-    assert(false);
-  }
+  [[nodiscard]] Statement* clone() const override;
   ~ConditionalStatement() override = default;
+};
+
+class ForLoopStatement : public Statement {
+ public:
+  explicit ForLoopStatement(expressions::LocalVariableExpression* loop_var_, expressions::Expression* loop_cond_expr,
+                            expressions::Expression* loop_iteration_expr, std::shared_ptr<StatementBuilder> loop_body)
+      : Statement(statementType::FOR_LOOP),
+        loop_var(loop_var_),
+        cond_expr(loop_cond_expr),
+        iteration_expr(loop_iteration_expr),
+        body(std::move(loop_body)) {
+    assert(body);
+  }
+  ForLoopStatement(const ForLoopStatement&) = default;
+
+  const expressions::LocalVariableExpression* loop_var;
+  const expressions::Expression* cond_expr;
+  const expressions::Expression* iteration_expr;
+  const std::shared_ptr<StatementBuilder> body;
+
+ public:
+  [[nodiscard]] Statement* clone() const override;
+  ~ForLoopStatement() override = default;
+};
+
+class WhileLoopStatement : public Statement {
+ public:
+  explicit WhileLoopStatement(expressions::Expression* loop_cond_expr, std::shared_ptr<StatementBuilder> loop_body)
+      : Statement(statementType::WHILE_LOOP), cond_expr(loop_cond_expr), body(std::move(loop_body)) {
+    assert(body);
+  }
+  WhileLoopStatement(const WhileLoopStatement&) = default;
+
+  const expressions::Expression* cond_expr;
+  const std::shared_ptr<StatementBuilder> body;
+
+ public:
+  [[nodiscard]] Statement* clone() const override;
+  ~WhileLoopStatement() override = default;
+};
+
+class DoWhileLoopStatement : public Statement {
+ public:
+  explicit DoWhileLoopStatement(expressions::Expression* loop_cond_expr, std::shared_ptr<StatementBuilder> loop_body)
+      : Statement(statementType::DO_WHILE_LOOP), cond_expr(loop_cond_expr), body(std::move(loop_body)) {
+    assert(body);
+  }
+  DoWhileLoopStatement(const DoWhileLoopStatement&) = default;
+
+  const expressions::Expression* cond_expr;
+  const std::shared_ptr<StatementBuilder> body;
+
+ public:
+  [[nodiscard]] Statement* clone() const override;
+  ~DoWhileLoopStatement() override = default;
 };
 
 // class LockStatement : public Statement {
