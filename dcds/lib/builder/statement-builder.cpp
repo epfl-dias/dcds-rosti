@@ -170,7 +170,9 @@ void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute>
   // NOTE: Destination will always be DS-attribute, and source can be either temporary variable or function argument.
 
   CHECK(!(attribute->is_compile_time_constant)) << "Cannot update a compile-time constant attribute";
-  CHECK(!(attribute->is_runtime_constant)) << "Cannot update a runtime constant attribute";
+
+  CHECK((!(attribute->is_runtime_constant) || this->parent_function.isSingleton()))
+      << "Cannot update a runtime constant attribute";
 
   if (!(this->parent_function.hasAttribute(attribute))) {
     throw dcds::exceptions::dcds_dynamic_exception("Attribute not registered in the data structure");

@@ -66,6 +66,9 @@ class FunctionBuilder : remove_copy {
   [[nodiscard]] auto isAlwaysInline() const { return _is_always_inline; }
   void setAlwaysInline(bool val) { _is_always_inline = val; }
 
+  [[nodiscard]] auto isSingleton() const { return _is_singleton; }
+  void setIsSingleton(bool val) { _is_singleton = val; }
+
   [[nodiscard]] bool isConst() { return _is_const; }
 
   // --------------------------------------
@@ -197,6 +200,9 @@ class FunctionBuilder : remove_copy {
   // Function attributes
   bool _is_always_inline = false;
   bool _is_const = true;
+
+  // called only-once, in the starting (so it can be allowed to write to runtime constants)
+  bool _is_singleton = false;
 
  public:
   void print(std::ostream &out, size_t indent_level = 0);
