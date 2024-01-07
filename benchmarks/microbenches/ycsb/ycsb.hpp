@@ -190,7 +190,7 @@ class YCSB {
 
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
     auto runtime_ms = thr(
-        [](dcds::JitContainer* _instance, size_t _nr) {
+        [](const uint64_t _tid, dcds::JitContainer* _instance, size_t _nr) {
           int64_t o1 = 99;
           int64_t o2 = 99;
           int64_t o3 = 99;
@@ -222,7 +222,7 @@ class YCSB {
 
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_sequential");
     auto runtime_ms = thr(
-        [](dcds::JitContainer* _instance, size_t _nr) {
+        [](const uint64_t _tid, dcds::JitContainer* _instance, size_t _nr) {
           int64_t o1 = 99;
           int64_t o2 = 99;
           int64_t o3 = 99;
@@ -251,7 +251,7 @@ class YCSB {
 
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
     auto runtime_ms = thr(
-        [write_ratio](dcds::JitContainer* _instance, const size_t _nr) {
+        [write_ratio](const uint64_t _tid, dcds::JitContainer* _instance, const size_t _nr) {
           int64_t o1 = 99;
           int64_t o2 = 99;
           int64_t o3 = 99;
@@ -303,7 +303,7 @@ class YCSB {
 
     //  dcds::profiling::ProfileRegion my_region("YCSB_MT_lookup_random");
     auto runtime_ms = thr(
-        [write_ratio, zipf_theta](dcds::JitContainer* _instance, const size_t _nr) {
+        [write_ratio, zipf_theta](const uint64_t _tid, dcds::JitContainer* _instance, const size_t _nr) {
           int64_t o1 = 99;
           int64_t o2 = 99;
           int64_t o3 = 99;

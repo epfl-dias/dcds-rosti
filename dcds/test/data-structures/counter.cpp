@@ -86,7 +86,7 @@ static size_t test_ST(dcds::JitContainer* instance, size_t init_value) {
 static size_t test_MT(dcds::JitContainer* instance, size_t n_threads) {
   auto thr = dcds::ThreadRunner(n_threads);
 
-  thr([&]() {
+  thr([&](const uint64_t _tid) {
     for (size_t i = 0; i < iterations; i++) {
       doOp(instance);
     }
