@@ -36,26 +36,28 @@ class Index {
   using value_type = uintptr_t;
 
   virtual value_type _find(key_type key) = 0;
-  virtual bool _find(key_type key, value_type value) = 0;
+  virtual bool _find(key_type key, value_type &value) = 0;
   virtual bool _contains(key_type key) = 0;
 
   virtual bool _insert(key_type key, value_type value) = 0;
   virtual bool _update(key_type key, value_type value) = 0;
+  virtual void _remove(key_type key) = 0;
 };
 
 template <typename K>
 class CuckooHashIndex : public Index<K> {
  public:
-  CuckooHashIndex() = default;
+  CuckooHashIndex() { _idx.reserve(1_M); };
 
   using value_type = typename Index<K>::value_type;
   using key_type = typename Index<K>::key_type;
 
   value_type _find(key_type key) override { return _idx.find(key); }
 
-  bool _find(key_type key, value_type value) override {
+  bool _find(key_type key, value_type &value) override {
     // return _idx.find(key, value);
-    return _idx.find_fn(key, [&value](const auto &v) mutable { value = v; });
+    return _idx.find(key, value);
+    // return _idx.find_fn(key, [&value](const auto &v) mutable { value = v; });
   }
 
   bool _insert(key_type key, value_type value) override { return _idx.insert(key, value); }
@@ -63,6 +65,8 @@ class CuckooHashIndex : public Index<K> {
   bool _contains(key_type key) override { return _idx.contains(key); }
 
   bool _update(key_type key, value_type value) override { return _idx.update(key, value); }
+
+  void _remove(key_type key) override { _idx.erase(key); }
 
  private:
   libcuckoo::cuckoohash_map<K, uintptr_t> _idx;

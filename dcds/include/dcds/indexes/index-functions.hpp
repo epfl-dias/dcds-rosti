@@ -33,14 +33,30 @@ extern "C" uintptr_t createIndexMap(dcds::valueType key_type);
 template <typename K>
 uintptr_t index_find(uintptr_t index, K key) {
   uintptr_t ret = 0;
-  auto found = reinterpret_cast<dcds::indexes::Index<K>*>(index)->_find(key, ret);
-  LOG(INFO) << "key: " << key << " found_status: " << found;
-  return found;
+  reinterpret_cast<dcds::indexes::Index<K>*>(index)->_find(key, ret);
+  // LOG(INFO) <<"[index_find] Index: " << index <<  " | key: " << key << " found_status: " << found <<  " | val: " <<
+  // ret;
+  return ret;
 }
 
 template <typename K>
 bool contains(uintptr_t index, K key) {
   return reinterpret_cast<dcds::indexes::Index<K>*>(index)->_contains(key);
+}
+
+template <typename K>
+bool index_insert(uintptr_t index, K key, uintptr_t value) {
+  auto idx = reinterpret_cast<dcds::indexes::Index<K>*>(index);
+  auto ins_res = idx->_insert(key, value);
+  // LOG(INFO) <<"[index_insert] Index: " << index <<  " | key: " << key << " | val: " << value << " |res: " << ins_res;
+  return ins_res;
+}
+
+template <typename K>
+void index_remove(uintptr_t index, K key) {
+  auto idx = reinterpret_cast<dcds::indexes::Index<K>*>(index);
+  idx->_remove(key);
+  // LOG(INFO) << "[index_remove]: remove key: " << key;
 }
 
 #endif  // DCDS_INDEX_FUNCTIONS_HPP

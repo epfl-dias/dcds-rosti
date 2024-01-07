@@ -37,6 +37,9 @@ class FunctionBuilder;
 enum class statementType {
   READ,
   READ_INDEXED,
+  INSERT_INDEXED,
+  REMOVE_INDEXED,
+
   UPDATE,
   CREATE,
   YIELD,
@@ -61,6 +64,12 @@ inline std::ostream& operator<<(std::ostream& os, dcds::statementType ty) {
       break;
     case dcds::statementType::READ_INDEXED:
       os << "READ_INDEXED";
+      break;
+    case dcds::statementType::INSERT_INDEXED:
+      os << "INSERT_INDEXED";
+      break;
+    case dcds::statementType::REMOVE_INDEXED:
+      os << "REMOVE_INDEXED";
       break;
     case statementType::UPDATE:
       os << "UPDATE";
@@ -382,6 +391,52 @@ class ReadIndexedStatement : public Statement {
 
   ~ReadIndexedStatement() override = default;
 };
+
+class InsertIndexedStatement : public Statement {
+ public:
+  explicit InsertIndexedStatement(std::string source_attribute, std::shared_ptr<expressions::Expression> index_key,
+                                  std::shared_ptr<expressions::LocalVariableExpression> value)
+      : Statement(statementType::INSERT_INDEXED),
+        source_attr(std::move(source_attribute)),
+        value_expr(std::move(value)),
+        index_expr(std::move(index_key)) {}
+
+  InsertIndexedStatement(const InsertIndexedStatement&) = default;
+
+  const std::string source_attr;
+  const std::shared_ptr<expressions::LocalVariableExpression> value_expr;
+  const std::shared_ptr<expressions::Expression> index_expr;
+
+  [[nodiscard]] Statement* clone() const override { return new InsertIndexedStatement(*this); }
+
+  ~InsertIndexedStatement() override = default;
+};
+
+class RemoveIndexedStatement : public Statement {
+ public:
+  explicit RemoveIndexedStatement(std::string source_attribute, std::shared_ptr<expressions::Expression> index_key)
+      : Statement(statementType::REMOVE_INDEXED),
+        source_attr(std::move(source_attribute)),
+        index_expr(std::move(index_key)) {}
+
+  RemoveIndexedStatement(const RemoveIndexedStatement&) = default;
+
+  const std::string source_attr;
+  const std::shared_ptr<expressions::Expression> index_expr;
+
+  [[nodiscard]] Statement* clone() const override { return new RemoveIndexedStatement(*this); }
+
+  ~RemoveIndexedStatement() override = default;
+};
+
+// class UpdateIndexedStatement: public Statement {
+//
+// };
+//
+// class UpsertIndexedStatement : public Statement {
+//
+// };
+
 }  // namespace dcds
 
 #endif  // DCDS_STATEMENT_HPP

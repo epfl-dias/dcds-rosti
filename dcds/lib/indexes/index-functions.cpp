@@ -67,6 +67,6 @@ uintptr_t createIndexMap(dcds::valueType key_type) {
 
   assert(ret != nullptr);
 
-  LOG(INFO) << "createIndexMap: ptr: " << ret << " | uintptr_t: " << reinterpret_cast<uintptr_t>(ret);
+  // LOG(INFO) << "createIndexMap: ptr: " << ret << " | uintptr_t: " << reinterpret_cast<uintptr_t>(ret);
   return reinterpret_cast<uintptr_t>(ret);
 }

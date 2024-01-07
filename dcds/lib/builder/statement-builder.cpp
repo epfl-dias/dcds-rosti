@@ -123,6 +123,47 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
     statements.push_back(rs);
   }
 }
+// for indexedMap
+void StatementBuilder::addRemoveStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                                          const std::shared_ptr<dcds::expressions::Expression> &key) {
+  CHECK(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST) << "Attribute is not a list type";
+  auto attributeList = std::static_pointer_cast<AttributeList>(attribute);
+  CHECK(attributeList->is_fixed_size == false) << "Attribute is not a indexed-list type";
+  CHECK(attributeList->is_primitive_type == false) << "Indexed list does not support primitive type yet";
+
+  auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+
+  CHECK(key->getResultType() == indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type)
+      << "Mismatched key type: "
+      << "Expected: " << key->getResultType()
+      << " vs Input: " << indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type;
+
+  auto s = new RemoveIndexedStatement(attribute->name, key);
+  statements.push_back(s);
+}
+
+// for indexedMap
+void StatementBuilder::addInsertStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                                          const std::shared_ptr<dcds::expressions::Expression> &key,
+                                          const std::shared_ptr<expressions::LocalVariableExpression> &value) {
+  CHECK(attribute->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST) << "Attribute is not a list type";
+  auto attributeList = std::static_pointer_cast<AttributeList>(attribute);
+  CHECK(attributeList->is_fixed_size == false) << "Attribute is not a indexed-list type";
+  CHECK(attributeList->is_primitive_type == false) << "Indexed list does not support primitive type yet";
+
+  CHECK(value->getType() == dcds::valueType::RECORD_PTR) << "value is not of the type RECORD_PTR: " << value->getType();
+
+  auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+
+  CHECK(key->getResultType() == indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type)
+      << "Mismatched key type: "
+      << "Expected: " << key->getResultType()
+      << " vs Input: " << indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type;
+
+  auto s = new InsertIndexedStatement(attribute->name, key, value);
+  statements.push_back(s);
+}
+
 
 void StatementBuilder::addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                                           const std::string &source) {
@@ -491,6 +532,13 @@ void StatementBuilder::print(std::ostream &out, size_t indent_level) {
       out << "src: " << st->source_attr << "[" << st->index_expr->toString() << "]"
           << ", dst: " << st->dest_expr->toString();
 
+    } else if (s->stType == dcds::statementType::INSERT_INDEXED) {
+      auto st = reinterpret_cast<const InsertIndexedStatement *>(s);
+      out << "src: " << st->source_attr << "[" << st->index_expr->toString() << "]"
+          << " = " << st->value_expr->toString();
+    } else if (s->stType == dcds::statementType::REMOVE_INDEXED) {
+      auto st = reinterpret_cast<const RemoveIndexedStatement *>(s);
+      out << st->source_attr << "[" << st->index_expr->toString() << "]";
     } else if (s->stType == statementType::UPDATE) {
       auto st = reinterpret_cast<const UpdateStatement *>(s);
       // auto st = std::static_pointer_cast<UpdateStatement>(s);

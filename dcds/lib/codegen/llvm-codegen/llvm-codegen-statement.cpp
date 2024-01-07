@@ -43,6 +43,10 @@ void LLVMCodegenStatement::buildStatement(Statement *stmt) {
     buildStatement_Read(stmt);
   } else if (stmt->stType == dcds::statementType::READ_INDEXED) {
     buildStatement_ReadIndexed(stmt);
+  } else if (stmt->stType == dcds::statementType::INSERT_INDEXED) {
+    buildStatement_InsertIndexed(stmt);
+  } else if (stmt->stType == dcds::statementType::REMOVE_INDEXED) {
+    buildStatement_RemoveIndexed(stmt);
   } else if (stmt->stType == dcds::statementType::UPDATE) {
     buildStatement_Update(stmt);
 
@@ -253,22 +257,157 @@ void LLVMCodegenStatement::buildStatement_Read(Statement *stmt) {
 
 llvm::Value *LLVMCodegenStatement::call_index_find(valueType key_type, llvm::Value *base_record_ptr,
                                                    llvm::Value *index_key) {
+  auto return_uintptr_type = Type::getInt64Ty(ctx());
   switch (key_type) {
     case valueType::INT64:
-      return build_ctx->codegen->gen_call(index_find<int64_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+      return build_ctx->codegen->gen_call(index_find<int64_t>, {base_record_ptr, index_key}, return_uintptr_type);
     case valueType::INT32:
-      return build_ctx->codegen->gen_call(index_find<int32_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+      return build_ctx->codegen->gen_call(index_find<int32_t>, {base_record_ptr, index_key}, return_uintptr_type);
     case valueType::FLOAT:
-      return build_ctx->codegen->gen_call(index_find<float>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+      return build_ctx->codegen->gen_call(index_find<float>, {base_record_ptr, index_key}, return_uintptr_type);
     case valueType::DOUBLE:
-      return build_ctx->codegen->gen_call(index_find<double>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+      return build_ctx->codegen->gen_call(index_find<double>, {base_record_ptr, index_key}, return_uintptr_type);
     case valueType::RECORD_PTR:
-      return build_ctx->codegen->gen_call(index_find<uintptr_t>, {base_record_ptr, index_key}, Type::getInt64Ty(ctx()));
+      return build_ctx->codegen->gen_call(index_find<uintptr_t>, {base_record_ptr, index_key}, return_uintptr_type);
     case valueType::VOID:
     case valueType::BOOL:
       assert(false);
       break;
   }
+}
+
+llvm::Value *LLVMCodegenStatement::call_index_insert(valueType key_type, llvm::Value *base_record_ptr,
+                                                     llvm::Value *index_key, llvm::Value *index_value) {
+  auto return_bool_type = Type::getInt1Ty(ctx());
+  switch (key_type) {
+    case valueType::INT64:
+      return build_ctx->codegen->gen_call(index_insert<int64_t>, {base_record_ptr, index_key, index_value},
+                                          return_bool_type);
+    case valueType::INT32:
+      return build_ctx->codegen->gen_call(index_insert<int32_t>, {base_record_ptr, index_key, index_value},
+                                          return_bool_type);
+    case valueType::FLOAT:
+      return build_ctx->codegen->gen_call(index_insert<float>, {base_record_ptr, index_key, index_value},
+                                          return_bool_type);
+    case valueType::DOUBLE:
+      return build_ctx->codegen->gen_call(index_insert<double>, {base_record_ptr, index_key, index_value},
+                                          return_bool_type);
+    case valueType::RECORD_PTR:
+      return build_ctx->codegen->gen_call(index_insert<uintptr_t>, {base_record_ptr, index_key, index_value},
+                                          return_bool_type);
+    case valueType::VOID:
+    case valueType::BOOL:
+      assert(false);
+      break;
+  }
+}
+
+llvm::Value *LLVMCodegenStatement::call_index_remove(valueType key_type, llvm::Value *base_record_ptr,
+                                                     llvm::Value *index_key) {
+  auto *return_void_type = Type::getVoidTy(ctx());
+  switch (key_type) {
+    case valueType::INT64:
+      return build_ctx->codegen->gen_call(index_remove<int64_t>, {base_record_ptr, index_key}, return_void_type);
+    case valueType::INT32:
+      return build_ctx->codegen->gen_call(index_remove<int32_t>, {base_record_ptr, index_key}, return_void_type);
+    case valueType::FLOAT:
+      return build_ctx->codegen->gen_call(index_remove<float>, {base_record_ptr, index_key}, return_void_type);
+    case valueType::DOUBLE:
+      return build_ctx->codegen->gen_call(index_remove<double>, {base_record_ptr, index_key}, return_void_type);
+    case valueType::RECORD_PTR:
+      return build_ctx->codegen->gen_call(index_remove<uintptr_t>, {base_record_ptr, index_key}, return_void_type);
+    case valueType::VOID:
+    case valueType::BOOL:
+      assert(false);
+      break;
+  }
+}
+
+// RemoveIndexedStatement
+void LLVMCodegenStatement::buildStatement_RemoveIndexed(Statement *stmt) {
+  auto removeStmt = reinterpret_cast<RemoveIndexedStatement *>(stmt);
+  CHECK(build_ctx->current_builder->hasAttribute(removeStmt->source_attr)) << "index attribute does not exists";
+
+  auto sourceAttribute = build_ctx->current_builder->getAttribute(removeStmt->source_attr);
+  CHECK(sourceAttribute->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST);
+  auto attributeList = std::static_pointer_cast<AttributeList>(sourceAttribute);
+
+  auto txnManager = getArg_txnManager();
+  auto mainRecord = getArg_mainRecord();
+  auto txn = getArg_txn();
+
+  llvm::Value *index_key = LLVMExpressionVisitor::gen(build_ctx, removeStmt->index_expr);
+  if (index_key->getType()->isPointerTy()) {
+    index_key =
+        IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(removeStmt->index_expr->getResultType()), index_key);
+  }
+
+  auto *base_record = build_ctx->codegen->allocateOneVar("idx_ins_tmp_arTy", valueType::RECORD_PTR);
+
+  build_ctx->codegen->gen_call(
+      table_read_attribute,
+      {txnManager, mainRecord, txn, base_record,
+       build_ctx->codegen->createSizeT(build_ctx->current_builder->getAttributeIndex(removeStmt->source_attr))},
+      Type::getVoidTy(ctx()));
+
+  auto indexedList = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+  assert(!indexedList->is_primitive_type);
+
+  auto *base_record_ptr =
+      IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(valueType::RECORD_PTR), base_record);
+
+  // FIXME: What about CC? removing key and it fails after?
+
+  call_index_remove(indexedList->type, base_record_ptr, index_key);
+  // auto *remove_success = call_index_remove(indexedList->type, base_record_ptr, index_key);
+  // gen_conditional_abort(remove_success);
+}
+
+// InsertIndexedStatement
+void LLVMCodegenStatement::buildStatement_InsertIndexed(Statement *stmt) {
+  auto insStmt = reinterpret_cast<InsertIndexedStatement *>(stmt);
+  CHECK(build_ctx->current_builder->hasAttribute(insStmt->source_attr)) << "index attribute does not exists";
+
+  auto sourceAttribute = build_ctx->current_builder->getAttribute(insStmt->source_attr);
+  CHECK(sourceAttribute->type_category == ATTRIBUTE_TYPE_CATEGORY::ARRAY_LIST);
+  auto attributeList = std::static_pointer_cast<AttributeList>(sourceAttribute);
+
+  auto txnManager = getArg_txnManager();
+  auto mainRecord = getArg_mainRecord();
+  auto txn = getArg_txn();
+
+  llvm::Value *value_rec = LLVMExpressionVisitor::gen(build_ctx, insStmt->value_expr);
+  llvm::Value *index_key = LLVMExpressionVisitor::gen(build_ctx, insStmt->index_expr);
+
+  auto *base_record = build_ctx->codegen->allocateOneVar("idx_ins_tmp_arTy", valueType::RECORD_PTR);
+
+  build_ctx->codegen->gen_call(
+      table_read_attribute,
+      {txnManager, mainRecord, txn, base_record,
+       build_ctx->codegen->createSizeT(build_ctx->current_builder->getAttributeIndex(insStmt->source_attr))},
+      Type::getVoidTy(ctx()));
+
+  auto indexedList = std::static_pointer_cast<AttributeIndexedList>(attributeList);
+  assert(!indexedList->is_primitive_type);
+
+  auto *base_record_ptr =
+      IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(valueType::RECORD_PTR), base_record);
+
+  // Here, instead of find, do an insert. what if fails?
+  //  auto *record_ptr = call_index_find(indexedList->type, base_record_ptr, index_key);
+  //  IRBuilder()->CreateStore(record_ptr, destination);
+  //  build_ctx->codegen->gen_call(printUInt64, {value_rec});
+
+  auto *value_ptr =
+      IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(insStmt->value_expr->getType()), value_rec);
+
+  if (index_key->getType()->isPointerTy()) {
+    index_key =
+        IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(insStmt->index_expr->getResultType()), index_key);
+  }
+
+  auto *ins_success = call_index_insert(indexedList->type, base_record_ptr, index_key, value_ptr);
+  gen_conditional_abort(ins_success);
 }
 
 void LLVMCodegenStatement::buildStatement_ReadIndexed(Statement *stmt) {
@@ -292,6 +431,10 @@ void LLVMCodegenStatement::buildStatement_ReadIndexed(Statement *stmt) {
       Type::getVoidTy(ctx()));
 
   llvm::Value *index_key = LLVMExpressionVisitor::gen(build_ctx, readStmt->index_expr);
+  if (index_key->getType()->isPointerTy()) {
+    index_key =
+        IRBuilder()->CreateLoad(build_ctx->codegen->DcdsToLLVMType(readStmt->index_expr->getResultType()), index_key);
+  }
 
   // now we have the pointer to actual table in record_ptr
   if (readStmt->integer_indexed) {

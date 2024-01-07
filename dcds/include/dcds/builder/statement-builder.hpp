@@ -55,6 +55,8 @@ class StatementBuilder {
                             std::string _name = "")
       : name(std::move(_name)), parent_function(parentFunction), parent_block(parentBlock) {}
 
+  //  ~StatementBuilder(){LOG(INFO) << "Destructing StatementBuilder";}
+
  public:
   void print(std::ostream &out, size_t indent_level = 0);
 
@@ -74,6 +76,15 @@ class StatementBuilder {
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute, const std::string &source);
   void addUpdateStatement(const std::shared_ptr<dcds::Attribute> &attribute,
                           const std::shared_ptr<expressions::Expression> &source);
+
+  // For array/list
+  void addInsertStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                          const std::shared_ptr<dcds::expressions::Expression> &key,
+                          const std::shared_ptr<expressions::LocalVariableExpression> &value);
+
+  // For indexed-list
+  void addRemoveStatement(const std::shared_ptr<dcds::Attribute> &attribute,
+                          const std::shared_ptr<dcds::expressions::Expression> &key);
 
   void addReturnStatement(const std::string &temporary_var_name);
   void addReturnStatement(const std::shared_ptr<expressions::Expression> &expr);

@@ -79,6 +79,8 @@ inline std::ostream &operator<<(std::ostream &os, dcds::VAR_SOURCE_TYPE ty) {
   return os;
 }
 
+namespace detail {}  // namespace detail
+
 }  // namespace dcds
 
 #endif  // DCDS_TYPES_HPP

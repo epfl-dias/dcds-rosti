@@ -62,13 +62,16 @@ class LLVMCodegenStatement {
  private:
   void buildStatement_ConditionalStatement(Statement *stmt);
   void buildStatement_Read(Statement *stmt);
-  void buildStatement_ReadIndexed(Statement *stmt);
   void buildStatement_Update(Statement *stmt);
   void buildStatement_LogString(Statement *stmt);
   void buildStatement_Yield(Statement *stmt);
   void buildStatement_Create(Statement *stmt);
   void buildStatement_MethodCall(Statement *stmt);
   void buildStatement_CC_Lock(Statement *stmt);
+
+  void buildStatement_ReadIndexed(Statement *stmt);
+  void buildStatement_InsertIndexed(Statement *stmt);
+  void buildStatement_RemoveIndexed(Statement *stmt);
 
   void buildStatement_ForLoop(dcds::Statement *stmt);
   void buildStatement_WhileLoop(dcds::Statement *stmt);
@@ -90,6 +93,9 @@ class LLVMCodegenStatement {
 
  private:
   llvm::Value *call_index_find(valueType key_type, llvm::Value *base_record_ptr, llvm::Value *index_key);
+  llvm::Value *call_index_insert(valueType key_type, llvm::Value *base_record_ptr, llvm::Value *index_key,
+                                 llvm::Value *index_value);
+  llvm::Value *call_index_remove(valueType key_type, llvm::Value *base_record_ptr, llvm::Value *index_key);
 };
 
 }  // namespace dcds
