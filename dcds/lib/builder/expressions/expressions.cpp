@@ -38,6 +38,7 @@ void* IsEvenExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
 // Constant expressions
 void* Int64Constant::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* Int32Constant::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* BoolConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* FloatConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* DoubleConstant::accept(ExpressionVisitor* v) { return v->visit(*this); }
@@ -48,6 +49,10 @@ void* AddExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* SubtractExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* EqualExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 void* NotEqualExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* GreaterThanExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* GreaterThanOrEqualToExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* LessThanExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
+void* LessThanOrEqualToExpression::accept(ExpressionVisitor* v) { return v->visit(*this); }
 
 std::string TemporaryVariableExpression::toString() const {
   std::stringstream out;

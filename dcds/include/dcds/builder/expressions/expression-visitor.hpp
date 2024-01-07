@@ -40,6 +40,7 @@ class ExpressionVisitor {
 
   // Constant expressions
   virtual void* visit(const expressions::Int64Constant& expr) = 0;
+  virtual void* visit(const expressions::Int32Constant& expr) = 0;
   virtual void* visit(const expressions::BoolConstant& expr) = 0;
   virtual void* visit(const expressions::FloatConstant& expr) = 0;
   virtual void* visit(const expressions::DoubleConstant& expr) = 0;
@@ -50,6 +51,10 @@ class ExpressionVisitor {
   virtual void* visit(const expressions::SubtractExpression& expr) = 0;
   virtual void* visit(const expressions::EqualExpression& expr) = 0;
   virtual void* visit(const expressions::NotEqualExpression& expr) = 0;
+  virtual void* visit(const expressions::GreaterThanExpression& expr) = 0;
+  virtual void* visit(const expressions::GreaterThanOrEqualToExpression& expr) = 0;
+  virtual void* visit(const expressions::LessThanExpression& expr) = 0;
+  virtual void* visit(const expressions::LessThanOrEqualToExpression& expr) = 0;
 
   // Temporary variables / Function Arguments
   virtual void* visit(const expressions::LocalVariableExpression& expr) = 0;

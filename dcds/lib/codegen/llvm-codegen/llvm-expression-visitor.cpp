@@ -124,6 +124,91 @@ void* LLVMExpressionVisitor::visit(const expressions::SubtractExpression& expr) 
   }
 }
 
+//
+void* LLVMExpressionVisitor::visit(const expressions::GreaterThanExpression& expr) {
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::GreaterThanExpression::visit";
+  auto builder = build_ctx->getCodegen()->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
+  if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
+    // FIXME: this is signed, do we need signed or unsigned?
+    return builder->CreateICmpSGT(leftValue, rightValue);
+  } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
+    // this is ordered comparison!
+    return builder->CreateFCmpOGT(leftValue, rightValue);
+  } else {
+    assert(false && "what is the type??");
+  }
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::GreaterThanOrEqualToExpression& expr) {
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::GreaterThanExpression::visit";
+  auto builder = build_ctx->getCodegen()->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
+  if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
+    // FIXME: this is signed, do we need signed or unsigned?
+    return builder->CreateICmpSGE(leftValue, rightValue);
+  } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
+    // this is ordered comparison!
+    return builder->CreateFCmpOGE(leftValue, rightValue);
+  } else {
+    assert(false && "what is the type??");
+  }
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::LessThanExpression& expr) {
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::LessThanExpression::visit";
+  auto builder = build_ctx->getCodegen()->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
+  if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
+    // FIXME: this is signed, do we need signed or unsigned?
+    return builder->CreateICmpSLT(leftValue, rightValue);
+  } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
+    // this is ordered comparison!
+    return builder->CreateFCmpOLT(leftValue, rightValue);
+  } else {
+    assert(false && "what is the type??");
+  }
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::LessThanOrEqualToExpression& expr) {
+  LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::LessThanExpression::visit";
+  auto builder = build_ctx->getCodegen()->getBuilder();
+
+  auto leftValue = static_cast<llvm::Value*>(expr.getLeft()->accept(this));
+  auto rightValue = static_cast<llvm::Value*>(expr.getRight()->accept(this));
+
+  leftValue = loadValueIfRequired(leftValue, expr.getLeft()->getResultType());
+  rightValue = loadValueIfRequired(rightValue, expr.getRight()->getResultType());
+
+  if (leftValue->getType()->isIntegerTy() && rightValue->getType()->isIntegerTy()) {
+    // FIXME: this is signed, do we need signed or unsigned?
+    return builder->CreateICmpSLE(leftValue, rightValue);
+  } else if (leftValue->getType()->isFloatingPointTy() && rightValue->getType()->isFloatingPointTy()) {
+    // this is ordered comparison!
+    return builder->CreateFCmpOLE(leftValue, rightValue);
+  } else {
+    assert(false && "what is the type??");
+  }
+}
+
 void* LLVMExpressionVisitor::visit(const expressions::IsEvenExpression& isEven) {
   LOG_IF(INFO, print_debug_log) << "LLVMExpressionVisitor::IsEvenExpression::visit";
   auto builder = build_ctx->getCodegen()->getBuilder();
@@ -195,6 +280,10 @@ void* LLVMExpressionVisitor::visit(const expressions::LocalVariableExpression& l
 
 void* LLVMExpressionVisitor::visit(const expressions::Int64Constant& expr) {
   return build_ctx->getCodegen()->createInt64(expr.getValue());
+}
+
+void* LLVMExpressionVisitor::visit(const expressions::Int32Constant& expr) {
+  return build_ctx->getCodegen()->createInt32(expr.getValue());
 }
 
 void* LLVMExpressionVisitor::visit(const expressions::FloatConstant& expr) {

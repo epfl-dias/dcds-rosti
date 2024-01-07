@@ -54,6 +54,21 @@ class Int64Constant : public Constant {
   int64_t val;
 };
 
+class Int32Constant : public Constant {
+ public:
+  explicit Int32Constant(int32_t _val) : Constant(Constant::ConstantType::INT32), val(_val) {}
+
+  [[nodiscard]] valueType getResultType() const override { return valueType::INT32; }
+
+  void* accept(ExpressionVisitor* v) override;
+
+  [[nodiscard]] auto getValue() const { return val; }
+  [[nodiscard]] std::string toString() const override { return "INT32_C{" + std::to_string(val) + "}"; }
+
+ private:
+  int32_t val;
+};
+
 class BoolConstant : public Constant {
  public:
   explicit BoolConstant(bool _val) : Constant(Constant::ConstantType::BOOL), val(_val) {}

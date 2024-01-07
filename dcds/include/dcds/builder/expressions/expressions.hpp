@@ -50,7 +50,7 @@ class Expression {
 
   virtual void *accept(ExpressionVisitor *v) = 0;
 
-  virtual std::string toString() const = 0;
+  [[nodiscard]] virtual std::string toString() const = 0;
 
  public:
   // Utilities

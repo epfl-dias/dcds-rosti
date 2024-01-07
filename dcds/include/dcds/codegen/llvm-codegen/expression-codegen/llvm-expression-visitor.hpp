@@ -65,6 +65,7 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
 
   // Constant expressions
   void* visit(const expressions::Int64Constant& expr) override;
+  void* visit(const expressions::Int32Constant& expr) override;
   void* visit(const expressions::BoolConstant& expr) override;
   void* visit(const expressions::FloatConstant& expr) override;
   void* visit(const expressions::DoubleConstant& expr) override;
@@ -75,6 +76,10 @@ class LLVMExpressionVisitor : public ExpressionVisitor {
   void* visit(const expressions::SubtractExpression& expr) override;
   void* visit(const expressions::EqualExpression& expr) override;
   void* visit(const expressions::NotEqualExpression& expr) override;
+  void* visit(const expressions::GreaterThanExpression& expr) override;
+  void* visit(const expressions::GreaterThanOrEqualToExpression& expr) override;
+  void* visit(const expressions::LessThanExpression& expr) override;
+  void* visit(const expressions::LessThanOrEqualToExpression& expr) override;
 
   // Temporary variables / Function Arguments
   void* visit(const expressions::LocalVariableExpression& localVariableExpr) override;
