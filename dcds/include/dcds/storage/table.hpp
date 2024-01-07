@@ -24,6 +24,7 @@
 
 #include <deque>
 #include <iostream>
+#include <mutex>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -32,6 +33,7 @@
 #include "dcds/storage/attribute-def.hpp"
 #include "dcds/transaction/concurrency-control/record-metadata.hpp"
 #include "dcds/transaction/transaction.hpp"
+#include "dcds/util/locks/spin-lock.hpp"
 #include "dcds/util/packed-ptr.hpp"
 
 namespace dcds::storage {
@@ -160,11 +162,7 @@ class SingleVersionRowStore : public Table {
  public:
   SingleVersionRowStore(table_id_t tableId, const std::string &table_name, size_t recordSize,
                         std::vector<AttributeDef> attributes);
-  ~SingleVersionRowStore() override {
-    for (auto &m : memory_allocations) {
-      free(m);
-    }
-  }
+  ~SingleVersionRowStore() override;
 
  public:
   //  record_reference_t getRefTypeData(record_metadata_t *rc, uint attribute_idx) override;
@@ -198,7 +196,9 @@ class SingleVersionRowStore : public Table {
 
  private:
   std::deque<void *> records_data;
-  std::deque<void *> memory_allocations;
+
+  dcds::utils::locks::SpinLock allocation_lock;
+  std::set<void *> memory_allocations;
 
  private:
   void *allocateRecordMemory(size_t n_records = 1);

@@ -90,15 +90,32 @@ SingleVersionRowStore::SingleVersionRowStore(table_id_t tableId, const std::stri
                                              std::vector<AttributeDef> attributes)
     : Table(tableId, table_name, recordSize, std::move(attributes), false) {}
 
+SingleVersionRowStore::~SingleVersionRowStore() {
+  allocation_lock.acquire();
+  for (auto& m : memory_allocations) {
+    free(m);
+  }
+  memory_allocations.clear();
+  allocation_lock.release();
+}
+
 void* SingleVersionRowStore::allocateRecordMemory(size_t n_records) {
   // TODO: use some sort of caching or allocate more and then return from the allocations.
-  // LOG(INFO) << "allocateRecordMemory(): " << record_size << " | actualSize: " << record_size_data_only;
-
-  // WHAT ABOUT ALIGNMENTS?
-  return memory_allocations.emplace_back(malloc(record_size * n_records));
+  // FIXME: what about alignments?
+  void* mem = malloc(record_size * n_records);
+  {
+    allocation_lock.acquire();
+    memory_allocations.insert(mem);
+    allocation_lock.release();
+  }
+  return mem;
 }
 void SingleVersionRowStore::freeRecordMemory(void* mem) {
-  std::erase_if(memory_allocations, [&](const auto& m) { return m == mem; });
+  {
+    allocation_lock.acquire();
+    memory_allocations.erase(mem);
+    allocation_lock.release();
+  }
   free(mem);
 }
 
