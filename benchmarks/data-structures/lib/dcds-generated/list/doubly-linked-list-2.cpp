@@ -23,43 +23,30 @@
 
 using namespace dcds::datastructures;
 
-DoublyLinkedList::DoublyLinkedList(dcds::valueType payload_type) : dcds_generated_ds(ds_name) {
+static auto int64_const_1 = std::make_shared<dcds::expressions::Int64Constant>(1);
+
+DoublyLinkedList2::DoublyLinkedList2(dcds::valueType payload_type) : dcds_generated_ds(ds_name) {
   this->generateLinkedListNode(payload_type);
 
   auto nodeType = builder->getRegisteredType(ds_node_name);
 
   builder->addAttributePtr("head", nodeType);
   builder->addAttributePtr("tail", nodeType);
+  builder->addAttribute("size", dcds::valueType::INT64, UINT64_C(0));
 
   this->createFunction_empty();
-  this->createFunction_pushFront();
-  this->createFunction_popFront();
-  this->createFunction_pushBack();
-  this->createFunction_popBack();
+  // this->createFunction_pushFront();
+  //   this->createFunction_popFront();
+  //   this->createFunction_pushBack();
+  // this->createFunction_popBack();
   //
   this->createFunction_touch();
 
-  this->createFunction_getHeadPtr();
-  this->createFunction_getTailPtr();
+  //  this->createFunction_getHeadPtr();
+  //  this->createFunction_getTailPtr();
 }
 
-void DoublyLinkedList::createFunction_getHeadPtr() {
-  auto fn = builder->createFunction("head_ptr", dcds::valueType::RECORD_PTR);
-  auto stmtBuilder = fn->getStatementBuilder();
-  auto tmpTmpHead = fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
-  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-  stmtBuilder->addReturnStatement("tmp_head");
-}
-
-void DoublyLinkedList::createFunction_getTailPtr() {
-  auto fn = builder->createFunction("tail_ptr", dcds::valueType::RECORD_PTR);
-  auto stmtBuilder = fn->getStatementBuilder();
-  auto tmpTmpHead = fn->addTempVariable("tmp_tail", builder->getAttribute("tail")->type);
-  stmtBuilder->addReadStatement(builder->getAttribute("tail"), "tmp_tail");
-  stmtBuilder->addReturnStatement("tmp_tail");
-}
-
-void DoublyLinkedList::generateLinkedListNode(dcds::valueType payload_type) {
+void DoublyLinkedList2::generateLinkedListNode(dcds::valueType payload_type) {
   if (builder->hasRegisteredType(ds_node_name)) {
     return;
   }
@@ -79,7 +66,7 @@ void DoublyLinkedList::generateLinkedListNode(dcds::valueType payload_type) {
   nodeBuilder->generateSetter(prevAttribute);  // set_prev
 }
 
-void DoublyLinkedList::createFunction_empty() {
+void DoublyLinkedList2::createFunction_empty() {
   // declare bool empty()
   auto fn = builder->createFunction("empty", dcds::valueType::BOOL);
 
@@ -96,7 +83,8 @@ void DoublyLinkedList::createFunction_empty() {
   conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
 }
 
-void DoublyLinkedList::createFunction_pushFrontWithReturn() {
+// will-be called from LRU
+void DoublyLinkedList2::createFunction_pushFrontWithReturn() {
   // declare void push_front(uint64_t key, uint64_t value)
   auto fn = builder->createFunction("push_front_with_return", dcds::valueType::RECORD_PTR);
   auto nodeType = builder->getRegisteredType(ds_node_name);
@@ -145,7 +133,7 @@ void DoublyLinkedList::createFunction_pushFrontWithReturn() {
   auto tmp_head = fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
   stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
 
-  // stmtBuilder->addLogStatement("[push_front_with_return] here4\n");
+  // stmtBuilder->addLogStatement("[push_front_with_return] tmp_head: %llu\n", {tmp_head});
 
   auto isListEmpty = stmtBuilder->addConditionalBranch(new dcds::expressions::IsNullExpression{tmp_head});
 
@@ -161,8 +149,8 @@ void DoublyLinkedList::createFunction_pushFrontWithReturn() {
     //    node->next = head;
     //    head->prev = node;
 
-    //    isListEmpty.elseBlock->addLogStatement("[push_front] non-empty: head is %llu\n", {tmp_head});
-    // isListEmpty.elseBlock->addLogStatement("[push_front_with_return] here6\n");
+    // isListEmpty.elseBlock->addLogStatement("[push_front] non-empty: head is %llu\n", {tmp_head});
+    //  isListEmpty.elseBlock->addLogStatement("[push_front_with_return] here6\n");
     isListEmpty.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_node", "set_next",
                                          std::vector<std::string>{"tmp_head"});
     // isListEmpty.elseBlock->addLogStatement("[push_front_with_return] here7\n");
@@ -175,10 +163,21 @@ void DoublyLinkedList::createFunction_pushFrontWithReturn() {
   // stmtBuilder->addLogStatement("[push_front_with_return] here8\n");
   stmtBuilder->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
   // stmtBuilder->addLogStatement("[push_front_with_return] here9\n");
+
+  if (builder->hasAttribute("size")) {
+    auto tmpSize = fn->addTempVariable("tmp_size", builder->getAttribute("size")->type);
+    stmtBuilder->addReadStatement(builder->getAttribute("size"), tmpSize);
+
+    //    auto const_1 = std::make_shared<dcds::expressions::Int64Constant>(1);
+    auto addExpr = std::make_shared<dcds::expressions::AddExpression>(tmpSize, int64_const_1);
+    LOG(INFO) << "XXXX: " << addExpr->toString();
+    stmtBuilder->addUpdateStatement(builder->getAttribute("size"), addExpr);
+  }
+
   stmtBuilder->addReturnStatement("tmp_node");
 }
 
-void DoublyLinkedList::createFunction_pushFront() {
+void DoublyLinkedList2::createFunction_pushFront() {
   // declare void push_front(uint64_t value)
   auto fn = builder->createFunction("push_front");
   auto nodeType = builder->getRegisteredType(ds_node_name);
@@ -229,128 +228,30 @@ void DoublyLinkedList::createFunction_pushFront() {
   // head = node;
   //  stmtBuilder->addLogStatement("[push_front] new head is %llu\n", {fn->getTempVariable("tmp_node")});
   stmtBuilder->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
+
+  if (builder->hasAttribute("size")) {
+    auto tmpSize = fn->addTempVariable("tmp_size", builder->getAttribute("size")->type);
+    stmtBuilder->addReadStatement(builder->getAttribute("size"), tmpSize);
+
+    // auto const_1 = std::make_shared<dcds::expressions::Int64Constant>(1);
+    auto addExpr = std::make_shared<dcds::expressions::AddExpression>(tmpSize, int64_const_1);
+    stmtBuilder->addUpdateStatement(builder->getAttribute("size"), addExpr);
+  }
+
   stmtBuilder->addReturnVoidStatement();
 }
-void DoublyLinkedList::createFunction_popFront() {
-  // declare bool pop_front(uint64_t *val)
-  auto fn = builder->createFunction("pop_front", dcds::valueType::BOOL);
-  fn->addArgument("pop_value", dcds::valueType::INT64, true);
 
+void DoublyLinkedList2::createFunction_popBack() {
+  // FIXME: this is the different from the original doublyLinkedList
+  // declare void pop_back()
+  auto fn = builder->createFunction("pop_back");
   auto stmtBuilder = fn->getStatementBuilder();
 
-  fn->addTempVariable("tmp_head", builder->getAttribute("head")->type);
-  stmtBuilder->addReadStatement(builder->getAttribute("head"), "tmp_head");
-
-  //  stmtBuilder->addLogStatement("[pop_front] Head: %llu\n", {fn->getTempVariable("tmp_head")});
-
-  auto conditionalBlocks =
-      stmtBuilder->addConditionalBranch(new dcds::expressions::IsNullExpression{fn->getTempVariable("tmp_head")});
-  conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
-  {
-    // head not null, pop it
-
-    // get pop value
-    conditionalBlocks.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_head", "get_payload",
-                                               "pop_value");
-
-    //    conditionalBlocks.elseBlock->addLogStatement("[pop_value] head-val is %llu\n",
-    //    {fn->getArgument("pop_value")});
-
-    // pop the ptr
-    fn->addTempVariable("tmp_head_next", dcds::valueType::RECORD_PTR);
-    conditionalBlocks.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_head", "get_next",
-                                               "tmp_head_next");
-
-    //    conditionalBlocks.elseBlock->addLogStatement("[pop_front] head-next  is %llu\n",
-    //    {fn->getTempVariable("tmp_head_next")});
-
-    // head = tmp_head_next
-    // if (tmp_head_next){
-    //    tmp_head_next->prev = nullptr
-    // } else {
-    //    tail = nullptr;
-    // }
-
-    conditionalBlocks.elseBlock->addUpdateStatement(builder->getAttribute("head"), "tmp_head_next");
-    auto cond2 = conditionalBlocks.elseBlock->addConditionalBranch(
-        new dcds::expressions::IsNotNullExpression{fn->getTempVariable("tmp_head_next")});
-
-    {
-      // hacked: to be passed constant expression!
-      fn->addTempVariable("nullptr_tmp", dcds::valueType::RECORD_PTR);
-      cond2.ifBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_head_next", "set_prev",
-                                   std::vector<std::string>{"nullptr_tmp"});
-    }
-
-    {
-      cond2.elseBlock->addUpdateStatement(builder->getAttribute("tail"),
-                                          std::make_shared<dcds::expressions::NullPtrConstant>());
-    }
-
-    conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
-  }
-}
-
-void DoublyLinkedList::createFunction_pushBack() {
-  // declare void push_back(uint64_t value)
-  auto fn = builder->createFunction("push_back");
   auto nodeType = builder->getRegisteredType(ds_node_name);
-  fn->addArgument("push_value", dcds::valueType::INT64);
-
-  auto stmtBuilder = fn->getStatementBuilder();
-
-  /*
-
-    if(!tail){
-      head = node;
-    } else {
-      node->prev = tail;
-      tail->next = node;
-    }
-    tail = node;
-
-   * */
-
-  stmtBuilder->addInsertStatement(nodeType, "tmp_node");
-  // stmtBuilder->addLogStatement("[push_back] new node: %llu\n", {fn->getTempVariable("tmp_node")});
-
-  stmtBuilder->addMethodCall(nodeType, "tmp_node", "set_payload", "", {"push_value"});
-
-  fn->addTempVariable("tmp_tail", builder->getAttribute("tail")->type);
-  stmtBuilder->addReadStatement(builder->getAttribute("tail"), "tmp_tail");
-
-  auto isListEmpty =
-      stmtBuilder->addConditionalBranch(new dcds::expressions::IsNullExpression{fn->getTempVariable("tmp_tail")});
-
-  {
-    // isListEmpty:: IF TRUE
-    //    head = node;
-    isListEmpty.ifBlock->addUpdateStatement(builder->getAttribute("head"), "tmp_node");
+  bool has_key_attr = nodeType->hasAttribute("key_");
+  if (has_key_attr) {
+    fn->addArgument("popped_key", nodeType->getAttribute("key_")->type, true);
   }
-  {
-    // isListEmpty:: IF FALSE
-    //    node->prev = tail;
-    //    tail->next = node;
-
-    //    isListEmpty.elseBlock->addLogStatement("[push_back] Tail: %llu\n", {fn->getTempVariable("tmp_tail")});
-    //    isListEmpty.elseBlock->addLogStatement("[push_back] Tail-tmpNode: %llu\n", {fn->getTempVariable("tmp_node")});
-
-    isListEmpty.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_node", "set_prev",
-                                         std::vector<std::string>{"tmp_tail"});
-    isListEmpty.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_tail", "set_next",
-                                         std::vector<std::string>{"tmp_node"});
-  }
-
-  // tail = node;
-  stmtBuilder->addUpdateStatement(builder->getAttribute("tail"), "tmp_node");
-  stmtBuilder->addReturnVoidStatement();
-}
-void DoublyLinkedList::createFunction_popBack() {
-  // declare bool pop_back(uint64_t *val)
-  auto fn = builder->createFunction("pop_back", dcds::valueType::BOOL);
-  fn->addArgument("pop_value", dcds::valueType::INT64, true);
-
-  auto stmtBuilder = fn->getStatementBuilder();
 
   fn->addTempVariable("tmp_tail", builder->getAttribute("tail")->type);
   stmtBuilder->addReadStatement(builder->getAttribute("tail"), "tmp_tail");
@@ -359,23 +260,24 @@ void DoublyLinkedList::createFunction_popBack() {
       stmtBuilder->addConditionalBranch(new dcds::expressions::IsNullExpression{fn->getTempVariable("tmp_tail")});
   {
     // empty list
-    conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
+    conditionalBlocks.ifBlock->addReturnVoidStatement();
+    // conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
   }
 
   {
     // tail not null, pop it
-    //    conditionalBlocks.elseBlock->addLogStatement("[pop_back] Tail: %llu\n", {fn->getTempVariable("tmp_tail")});
-
-    // get pop value
-    conditionalBlocks.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_tail", "get_payload",
-                                               "pop_value");
-    //    conditionalBlocks.elseBlock->addLogStatement("[pop_back] tail-val is %llu\n", {fn->getArgument("pop_value")});
+    // FIXME: to delete the popped node!
 
     // pop the ptr
     fn->addTempVariable("tmp_tail_prev", dcds::valueType::RECORD_PTR);
     conditionalBlocks.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_tail", "get_prev",
                                                "tmp_tail_prev");
+    if (has_key_attr) {
+      conditionalBlocks.elseBlock->addMethodCall(builder->getRegisteredType(ds_node_name), "tmp_tail", "get_key_",
+                                                 "popped_key");
+    }
 
+    //    conditionalBlocks.elseBlock->addLogStatement("[pop_back] tail is %llu\n", {fn->getTempVariable("tmp_tail")});
     //    conditionalBlocks.elseBlock->addLogStatement("[pop_back] tail-prev is %llu\n",
     //                                                 {fn->getTempVariable("tmp_tail_prev")});
 
@@ -404,18 +306,21 @@ void DoublyLinkedList::createFunction_popBack() {
                                           std::make_shared<dcds::expressions::NullPtrConstant>());
     }
 
-    conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
+    if (builder->hasAttribute("size")) {
+      auto tmpSize = fn->addTempVariable("tmp_size", builder->getAttribute("size")->type);
+      conditionalBlocks.elseBlock->addReadStatement(builder->getAttribute("size"), tmpSize);
+
+      auto addExpr = std::make_shared<dcds::expressions::SubtractExpression>(tmpSize, int64_const_1);
+      conditionalBlocks.elseBlock->addUpdateStatement(builder->getAttribute("size"), addExpr);
+    }
+
+    //    conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
+    // conditionalBlocks.elseBlock->addLogStatement("[pop_back] done\n");
+    conditionalBlocks.elseBlock->addReturnVoidStatement();
   }
 }
 
-void DoublyLinkedList::createFunction_extract() {
-  // extract-op
-  // node->prev->next = node->next
-  // node->next->prev = node->prev
-
-  // not so simple, what if it was head or tail.
-}
-void DoublyLinkedList::createFunction_touch() {
+void DoublyLinkedList2::createFunction_touch() {
   // void touch(node*)
   auto fn = builder->createFunction("touch");
   auto nodeArg = fn->addArgument("node_ptr", dcds::valueType::RECORD_PTR);
@@ -570,4 +475,21 @@ void DoublyLinkedList::createFunction_touch() {
   }
 
   // stmtBuilder->addReturnVoidStatement();
+}
+
+void DoublyLinkedList2::createFunction_getSize() {
+  // declare bool size()
+  if (!(builder->hasAttribute("size"))) {
+    LOG(WARNING) << "Doubly linked list does not have the size-attribute";
+    return;
+  }
+
+  auto fn = builder->createFunction("get_size", builder->getAttribute("size")->type);
+
+  auto stmtBuilder = fn->getStatementBuilder();
+
+  auto tmpSize = fn->addTempVariable("tmp_size", builder->getAttribute("size")->type);
+
+  stmtBuilder->addReadStatement(builder->getAttribute("size"), tmpSize);
+  stmtBuilder->addReturnStatement(tmpSize);
 }

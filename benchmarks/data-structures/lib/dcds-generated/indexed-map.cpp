@@ -21,6 +21,8 @@
 
 #include "dcds-generated/indexed-map.hpp"
 
+using namespace dcds::datastructures;
+
 const auto key_type = dcds::valueType::INT64;
 const auto value_type = dcds::valueType::INT64;
 const std::string item_name = "MAPPED_ITEM";

@@ -24,6 +24,8 @@
 
 #include "dcds-generated/base.hpp"
 
+namespace dcds::datastructures {
+
 class IndexedMap : public dcds_generated_ds {
  public:
   IndexedMap();
@@ -44,5 +46,7 @@ class IndexedMap : public dcds_generated_ds {
  protected:
   std::shared_ptr<dcds::Builder> generate_item();
 };
+
+}  // namespace dcds::datastructures
 
 #endif  // DCDS_INDEXED_MAP_HPP

@@ -67,6 +67,8 @@ class FIFO : public LinkedList {
   explicit FIFO();
   void test() final;
 
+  void testMT(size_t n_threads, size_t iterations = 100);
+
  protected:
   void createFunction_push() final;
   void createFunction_pop() final;

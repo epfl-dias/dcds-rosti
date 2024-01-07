@@ -24,6 +24,8 @@
 
 #include <dcds/dcds.hpp>
 
+namespace dcds::datastructures {
+
 class dcds_generated_ds {
  protected:
   explicit dcds_generated_ds(const std::string& name) : builder(std::make_shared<dcds::Builder>(name)) {}
@@ -44,10 +46,13 @@ class dcds_generated_ds {
     builder->build();
   }
 
-  auto createInstance() { return builder->createInstance(); }
+  virtual dcds::JitContainer* createInstance() { return builder->createInstance(); }
+
+  virtual ~dcds_generated_ds() = default;
 
  protected:
   std::shared_ptr<dcds::Builder> builder;
 };
 
+}  // namespace dcds::datastructures
 #endif  // DCDS_BASE_HPP

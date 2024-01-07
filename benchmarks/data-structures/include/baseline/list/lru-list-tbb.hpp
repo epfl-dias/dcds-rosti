@@ -1,5 +1,5 @@
 /*
-                              Copyright (c) 2023.
+                              Copyright (c) 2024.
           Data Intensive Applications and Systems Laboratory (DIAS)
                   École Polytechnique Fédérale de Lausanne
 
@@ -19,26 +19,29 @@
       RESULTING FROM THE USE OF THIS SOFTWARE.
  */
 
-#include <dcds/dcds.hpp>
-#include <random>
+#ifndef DCDS_LRU_LIST_TBB_HPP
+#define DCDS_LRU_LIST_TBB_HPP
 
-#include "dcds-generated/indexed-map.hpp"
+#define TBB_PREVIEW_CONCURRENT_LRU_CACHE 1
+#include "oneapi/tbb/concurrent_lru_cache.h"
 
-int main(int argc, char** argv) {
-  dcds::InitializeLog(argc, argv);
-  LOG(INFO) << "INDEXED_MAP";
+namespace dcds::baseline {
 
-  // dcds::ScopedAffinityManager scopedAffinity(dcds::Core{0});
-  auto map = dcds::datastructures::IndexedMap();
-  map.dump();
-  map.build(false, false);
+template <typename K = size_t, typename V = size_t>
+class LruListTbb {
+ private:
+  tbb::concurrent_lru_cache<K, V> instance;
+  static V ConstructValue([[maybe_unused]] K key) { return key; }
 
-  auto instance = map.createInstance();
-  instance->listAllAvailableFunctions();
+ public:
+  explicit LruListTbb(size_t capacity) : instance(&ConstructValue, capacity) {}
 
-  int64_t val = 0;
-  auto x = instance->op("lookup", 1, &val);
-  LOG(INFO) << std::any_cast<bool>(x);
+  inline auto insert(K key, V value) {
+    auto x = instance[key];
+    return true;
+  }
+};
 
-  return 0;
-}
+}  // namespace dcds::baseline
+
+#endif  // DCDS_LRU_LIST_TBB_HPP

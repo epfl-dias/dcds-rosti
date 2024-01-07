@@ -21,6 +21,8 @@
 
 #include "parser-generated/linked-list.hpp"
 
+#include <dcds/util/thread-runner.hpp>
+#include <dcds/util/timing.hpp>
 #include <utility>
 
 using namespace dcds_generated;
@@ -44,6 +46,8 @@ LinkedList::LinkedList(std::string _ds_name, std::string _ds_node_name)
 void LinkedList::build() {
   LOG(INFO) << "LinkedList::build() -- start";
   builder->build();
+  builder->injectCC();
+  builder->dump();
   LOG(INFO) << "LinkedList::build() -- end";
 }
 void LinkedList::optimize() {
@@ -53,6 +57,7 @@ void LinkedList::optimize() {
   LOG(INFO) << "LinkedList::optimize() -- end";
 
   builder->injectCC();
+  builder->dump();
 }
 void LinkedList::generateLinkedListNode() {
   if (builder->hasRegisteredType(ds_node_name)) {
@@ -343,4 +348,61 @@ void FIFO::test() {
   CHECK_TRUE(instance->op("empty"));
 
   LOG(INFO) << "FIFO::test() -- end";
+}
+
+void FIFO::testMT(size_t n_threads, size_t iterations) {
+  LOG(INFO) << "FIFO::testMT() -- start";
+  auto instance = builder->createInstance();
+  instance->listAllAvailableFunctions();
+  instance->op("empty");  // warmup
+  instance->op("push", 1);
+
+  std::vector<std::thread> runners;
+  std::barrier<void (*)()> sync_point(n_threads, []() {});
+
+  std::atomic<size_t> overall_sum = 0;
+  size_t expected_sum = n_threads * iterations;
+
+  std::vector<std::chrono::milliseconds> times;
+
+  for (size_t x = 0; x < n_threads; x++) {
+    runners.emplace_back([&, x]() {
+      size_t local_sum = 0;
+      uint64_t val = 0;
+
+      sync_point.arrive_and_wait();
+      // we need to time the following block
+      {
+        // time_block t("Trad_clust_p1:");
+        time_block t{[&](auto tms) {
+          //          LOG(INFO) << '\t' << std::this_thread::get_id() << ": "<< tms.count() << "ms";
+          times.emplace_back(tms);
+        }};
+
+        for (size_t i = 0; i < iterations; i++) {
+          instance->op("push", 1);
+        }
+
+        for (size_t i = 0; i < iterations; i++) {
+          instance->op("pop", &val);
+          local_sum += val;
+        }
+      }
+
+      sync_point.arrive_and_wait();  // not required i guess.
+
+      overall_sum.fetch_add(local_sum);
+    });
+  }
+
+  for (auto& th : runners) {
+    th.join();
+  }
+  size_t total = 0;
+  for (auto& t : times) {
+    total += t.count();
+  }
+  LOG(INFO) << "Total time: " << total << "ms";
+
+  LOG(INFO) << "Expected sum: " << expected_sum << " | calc_sum: " << overall_sum;
 }

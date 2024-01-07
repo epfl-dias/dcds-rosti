@@ -25,14 +25,19 @@
 #include <iostream>
 #include <libcuckoo/cuckoohash_map.hh>
 
-#include "parser-generated/doubly-linked-list.hpp"
 #include "parser-generated/linked-list.hpp"
+#include "un-generated/linked-list.hpp"
+
+constexpr size_t total_items = 8_K;
+
+constexpr size_t n_threads = 1;
+constexpr size_t n_iter = total_items / n_threads;
 
 static void test_linkedList_stack() {
   auto ll = dcds_generated::Stack();
 
   ll.build();
-  ll.optimize();
+  // ll.optimize();
   ll.test();
 }
 
@@ -40,16 +45,10 @@ static void test_linkedList_fifo() {
   auto ll = dcds_generated::FIFO();
 
   ll.build();
-  ll.optimize();
-  ll.test();
-}
+  //  ll.optimize();
+  // ll.test();
 
-static void test_doubly_linkedList() {
-  auto ll = dcds_generated::DoublyLinkedList();
-
-  ll.build();
-  ll.optimize();
-  ll.test();
+  ll.testMT(n_threads, n_iter);
 }
 
 int main(int argc, char** argv) {
@@ -57,7 +56,6 @@ int main(int argc, char** argv) {
   LOG(INFO) << "listBasedDS";
   test_linkedList_stack();
   test_linkedList_fifo();
-  test_doubly_linkedList();
   LOG(INFO) << "------- DONE";
   return 0;
 }

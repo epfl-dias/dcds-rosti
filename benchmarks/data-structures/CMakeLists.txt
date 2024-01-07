@@ -2,6 +2,9 @@
 set(bench-data-structures_cxx
         lib/dcds-generated/indexed-map.cpp
         lib/dcds-generated/list/doubly-linked-list.cpp
+        lib/dcds-generated/list/doubly-linked-list-2.cpp
+        lib/dcds-generated/list/fixed-size-doubly-linked-list.cpp
+        lib/dcds-generated/list/lru-list.cpp
         )
 
 add_library(bench-data-structures SHARED
