@@ -38,8 +38,8 @@ void UniformRandomLru::SetUp(const ::benchmark::State& state) {
   const size_t count_elements_to_insert = state.range(0);
   const size_t element_range = state.range(1);
 
-  CHECK(count_elements_to_insert % state.threads() == 0)
-      << "number of elements to insert must be divisible by the number of threads";
+  //  CHECK(count_elements_to_insert % state.threads() == 0)
+  //      << "number of elements to insert must be divisible by the number of threads";
   const size_t elements_per_thread = count_elements_to_insert / state.threads();
   std::uniform_int_distribution<> distrib(0, element_range);
 
@@ -72,13 +72,13 @@ void ZipfianRandomLru::SetUp(const ::benchmark::State& state) {
   constexpr size_t seed = 42;
   std::mt19937 gen(seed);
   const size_t count_elements_to_insert = state.range(0);
-  const int element_range = state.range(1);
+  const size_t element_range = state.range(1);
 
-  CHECK(count_elements_to_insert % state.threads() == 0)
-      << "number of elements to insert must be divisible by the number of threads";
+  //  CHECK(count_elements_to_insert % state.threads() == 0)
+  //      << "number of elements to insert must be divisible by the number of threads";
   const size_t elements_per_thread = count_elements_to_insert / state.threads();
   double zipf_param = static_cast<double>(state.range(3)) / 100.0;
-  absl::zipf_distribution<int> distrib(element_range, 2.0, zipf_param);
+  absl::zipf_distribution<size_t> distrib(element_range, 2.0, zipf_param);
 
   thread_keys.clear();
   thread_keys.resize(state.threads());

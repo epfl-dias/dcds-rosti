@@ -38,7 +38,7 @@ class UniformRandomLru : public benchmark::Fixture {
 
   void TearDown(const ::benchmark::State& state) override;
   // a vector of keys for each thread to use
-  std::vector<std::vector<int>> thread_keys;
+  std::vector<std::vector<size_t>> thread_keys;
 };
 
 /**
@@ -58,7 +58,7 @@ class ZipfianRandomLru : public benchmark::Fixture {
 
   void TearDown(const ::benchmark::State& state) override;
   // a vector of keys for each thread to use
-  std::vector<std::vector<int>> thread_keys;
+  std::vector<std::vector<size_t>> thread_keys;
 };
 
 #endif  // DCDS_LRU_BENCH_UTIL_HPP

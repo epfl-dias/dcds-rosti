@@ -23,16 +23,16 @@
 #include "lru-bench-util.hpp"
 #include "oneapi/tbb/concurrent_lru_cache.h"
 
-static int ConstructValue([[maybe_unused]] int _) { return 42; }
+static size_t ConstructValue([[maybe_unused]] size_t _) { return 42; }
 
 // IMPORTANT use repetitions instead of iterations, i.e. only use one iteration
 // each repetition will use a fresh concurrent_lru_cache. Iterations will re-use the same one
 BENCHMARK_DEFINE_F(UniformRandomLru, UniformTbbLru)(benchmark::State& st) {
   //  only thread 0 constructs the lru cache
-  static tbb::concurrent_lru_cache<int, int>* cache = nullptr;
+  static tbb::concurrent_lru_cache<size_t, size_t>* cache = nullptr;
   if (st.thread_index() == 0) {
     const size_t lru_size = st.range(2);
-    cache = new tbb::concurrent_lru_cache<int, int>(&ConstructValue, lru_size);
+    cache = new tbb::concurrent_lru_cache<size_t, size_t>(&ConstructValue, lru_size);
   }
   for ([[maybe_unused]] auto _ : st) {
     auto& this_threads_keys = thread_keys[st.thread_index()];
@@ -54,17 +54,17 @@ BENCHMARK_REGISTER_F(UniformRandomLru, UniformTbbLru)
     ->UseRealTime()
     ->ReportAggregatesOnly(true)
     ->ArgNames({"count_inserts", "max_key", "lru_size"})
-    ->Args({10000, 10000, 1000})
-    ->ThreadRange(1, 8);
+    ->Args({100000, 100000, 1000})
+    ->ThreadRange(1, 48);
 
 // IMPORTANT use repetitions instead of iterations, i.e. only use one iteration
 // each repetition will use a fresh concurrent_lru_cache. Iterations will re-use the same one
 BENCHMARK_DEFINE_F(ZipfianRandomLru, ZipfianTbbLru)(benchmark::State& st) {
   //  only thread 0 constructs the lru cache
-  static tbb::concurrent_lru_cache<int, int>* cache = nullptr;
+  static tbb::concurrent_lru_cache<size_t, size_t>* cache = nullptr;
   if (st.thread_index() == 0) {
     const size_t lru_size = st.range(2);
-    cache = new tbb::concurrent_lru_cache<int, int>(&ConstructValue, lru_size);
+    cache = new tbb::concurrent_lru_cache<size_t, size_t>(&ConstructValue, lru_size);
   }
   for ([[maybe_unused]] auto _ : st) {
     auto& this_threads_keys = thread_keys[st.thread_index()];
@@ -86,10 +86,13 @@ BENCHMARK_REGISTER_F(ZipfianRandomLru, ZipfianTbbLru)
     ->UseRealTime()
     ->ReportAggregatesOnly(true)
     ->ArgNames({"count_inserts", "max_key", "lru_size", "zipf_param*100"})
-    ->Args({10000, 10000, 1000, 10})
-    ->Args({10000, 10000, 1000, 20})
-    ->Args({10000, 10000, 1000, 40})
-    ->Args({10000, 10000, 1000, 60})
-    ->Args({10000, 10000, 1000, 80})
-    ->Args({10000, 10000, 1000, 100})
-    ->ThreadRange(1, 8);
+    //    ->Args({10000, 10000, 1000, 0})
+    ->Args({100000, 100000, 1000, 10})
+    ->Args({100000, 100000, 1000, 20})
+    ->Args({100000, 100000, 1000, 40})
+    ->Args({100000, 100000, 1000, 60})
+    ->Args({100000, 100000, 1000, 80})
+    ->Args({100000, 100000, 1000, 90})
+    ->Args({100000, 100000, 1000, 99})
+    //    ->Args({10000, 10000, 1000, 100})
+    ->ThreadRange(1, 48);
