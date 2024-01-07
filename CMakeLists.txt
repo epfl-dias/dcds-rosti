@@ -105,6 +105,15 @@ string(STRIP "${CMAKE_CXX_FLAGS} ${COMPILER_FLAGS}" CMAKE_CXX_FLAGS)
 string(STRIP "${CMAKE_C_FLAGS} ${COMPILER_FLAGS}" CMAKE_C_FLAGS)
 
 
+
+#add_compile_options(-fsanitize=address)
+#add_compile_options(-fsanitize-address-use-after-scope)
+add_compile_options(-fno-omit-frame-pointer)
+
+#add_link_options(-fsanitize=address)
+#add_link_options(-fsanitize-address-use-after-scope)
+add_link_options(-fno-omit-frame-pointer)
+
 #-----------------------------------------------------------------------
 # Various dependencies
 include(llvm-virtual)
