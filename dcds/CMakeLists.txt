@@ -29,7 +29,6 @@ set(dcds_cxx
 
         # Indexes
         lib/indexes/index-functions.cpp
-        # lib/indexes/art-node.cpp
 
         # Storage
         lib/storage/table-registry.cpp
