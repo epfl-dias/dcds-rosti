@@ -41,22 +41,32 @@ static void printThroughput(size_t runtime_ms, size_t n_threads, const std::stri
             << " | avg-per-thread: " << avg_per_thread << " MTPS"
             << " | total_time: " << runtime_ms << "ms";
 }
-static auto initWorkload(size_t n_threads) {
+static auto initWorkload(size_t n_threads, double zipf_theta = 0.0) {
   std::vector<std::vector<size_t>> thread_keys;
   constexpr size_t seed = 42;
   std::mt19937 gen(seed);
-  std::uniform_int_distribution<> distrib(0, domain_max);
 
   thread_keys.resize(n_threads);
   for (auto& per_thread_keys : thread_keys) {
     per_thread_keys.resize(num_op_per_thread, 42);
   }
 
-  for (size_t thread_idx = 0; thread_idx < n_threads; thread_idx++) {
-    for (size_t i = 0; i < num_op_per_thread; i++) {
-      thread_keys.at(thread_idx)[i] = distrib(gen);
+  if (zipf_theta == 0.0) {
+    std::uniform_int_distribution<> distrib(0, domain_max);
+    for (size_t thread_idx = 0; thread_idx < n_threads; thread_idx++) {
+      for (size_t i = 0; i < num_op_per_thread; i++) {
+        thread_keys.at(thread_idx)[i] = distrib(gen);
+      }
+    }
+  } else {
+    absl::zipf_distribution<size_t> distrib(domain_max, 2.0, zipf_theta);
+    for (size_t thread_idx = 0; thread_idx < n_threads; thread_idx++) {
+      for (size_t i = 0; i < num_op_per_thread; i++) {
+        thread_keys.at(thread_idx)[i] = distrib(gen);
+      }
     }
   }
+
   return thread_keys;
 }
 
@@ -65,7 +75,7 @@ static auto test_tbb_MT_rw_zipf(size_t n_threads, double zipf_theta = 0, bool pr
   tbb_lru_t lru(lru_capacity);
 
   auto thr = dcds::ThreadRunner(n_threads);
-  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads);
+  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads, zipf_theta);
 
   auto runtime_ms = thr(
       [thread_keys](const uint64_t _tid, tbb_lru_t* _instance, const size_t _nr) {
@@ -91,7 +101,7 @@ static auto test_global_lock_MT_rw_zipf(size_t n_threads, double zipf_theta = 0,
   std_lru_t lru(lru_capacity);
 
   auto thr = dcds::ThreadRunner(n_threads);
-  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads);
+  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads, zipf_theta);
 
   auto runtime_ms = thr(
       [thread_keys](const uint64_t _tid, std_lru_t* _instance, const size_t _nr) {
@@ -124,7 +134,7 @@ static auto test_dcds_MT_rw_zipf(size_t n_threads, double zipf_theta = 0, bool p
   auto instance = lru->createInstance();
 
   auto thr = dcds::ThreadRunner(n_threads);
-  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads);
+  std::vector<std::vector<size_t>> thread_keys = initWorkload(n_threads, zipf_theta);
 
   auto runtime_ms = thr(
       [thread_keys](const uint64_t _tid, dcds::JitContainer* _instance, const size_t _nr) {
@@ -148,13 +158,16 @@ static auto test_dcds_MT_rw_zipf(size_t n_threads, double zipf_theta = 0, bool p
 
 template <class Function, class... Args>
 static void test_runner_l(Function&& f, Args&&... args) {
-  constexpr size_t num_runs = 1;
-  std::vector<size_t> cores{1, 2, 4, 8, 12, 16, 24, 36, 48};
-  //  std::vector<size_t> cores{1, 2, 4, 8, 16, 18, 24,
-  //                            /*32, 36, 48, 64, 72, 84, 108, 120, 128, 144*/};
-  //  std::vector<size_t> cores{16, 18, 24, 32, 36, 48, 64, 72, 84, 108, 120, 128, 144};
+  constexpr size_t num_runs = 5;
+  std::vector<size_t> cores{24, 36, 48};
+  // std::vector<size_t> cores{1, 2, 4, 8, 12, 16, 24, 36, 48};
+  //   std::vector<size_t> cores{1, 2, 4, 8, 16, 18, 24,
+  //                             /*32, 36, 48, 64, 72, 84, 108, 120, 128, 144*/};
+  //   std::vector<size_t> cores{16, 18, 24, 32, 36, 48, 64, 72, 84, 108, 120, 128, 144};
 
-  std::vector<double> zipf_theta{0 /*, 0.1, 0.2, 0.4, 0.60, 0.80, 0.90, 0.99*/};
+  //  std::vector<double> zipf_theta{0, 0.1, 0.2, 0.4, 0.60, 0.80, 0.90, 0.99};
+  std::vector<double> zipf_theta{0};
+  std::reverse(zipf_theta.begin(), zipf_theta.end());
 
   for (auto zipf : zipf_theta) {
     for (auto t : cores) {

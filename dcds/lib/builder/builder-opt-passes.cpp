@@ -57,6 +57,7 @@ void BuilderOptPasses::opt_pass_remove_unused_functions_from_composite_types(boo
         case statementType::LOG_STRING:
         case statementType::TEMP_VAR_ASSIGN:
         case statementType::READ_INDEXED:
+        case statementType::INSERT_INDEXED:
           break;
 
         case statementType::CC_LOCK:
@@ -127,6 +128,7 @@ BuilderOptPasses::AttributeStats::AttributeStats(const std::shared_ptr<Builder>&
         case statementType::LOG_STRING:
         case statementType::TEMP_VAR_ASSIGN:
         case statementType::READ_INDEXED:
+        case statementType::INSERT_INDEXED:
           break;
         case statementType::CC_LOCK:
           //        case statementType::CC_LOCK_SHARED:

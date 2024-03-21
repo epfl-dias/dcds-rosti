@@ -34,9 +34,19 @@ class DoublyLinkedList {
  public:
   DoublyLinkedList();
 
-  void build();
-  void optimize();
+  void build(bool inject_cc = true, bool optimize = false);
   void test();
+
+  size_t benchmark_stack(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                         bool print_res = true);
+  size_t benchmark_stack2(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                          bool print_res = true);
+  size_t benchmark_stack3(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                          bool print_res = true);
+  size_t benchmark_fifo(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                        bool print_res = true);
+  //  size_t benchmark_push(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+  //                        bool print_res = true);
 
  private:
   void generateLinkedListNode();
@@ -47,8 +57,8 @@ class DoublyLinkedList {
   void createFunction_pushBack();
   void createFunction_popBack();
 
-  void createFunction_extract();
-  void createFunction_touch();
+  //  void createFunction_extract();
+  //  void createFunction_touch();
 
  private:
   std::shared_ptr<dcds::Builder> builder;

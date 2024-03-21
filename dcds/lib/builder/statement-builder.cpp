@@ -84,39 +84,15 @@ void StatementBuilder::addReadStatement(const std::shared_ptr<dcds::Attribute> &
         << " vs Input: " << indexedTy->composite_type->getAttribute(indexedTy->key_attribute)->type;
   }
 
-  // what will be the statements then?
-  //  e.g. sb->addReadStatement(rec_attribute, rec, key_arg);
-
-  // we need the value at that index.
-
-  // it will be translated into two statements. first is getting the pointer to actual table?
-
   if (attributeList->is_fixed_size) {
     // ARRAY access
     auto arrayTy = std::static_pointer_cast<AttributeArray>(attributeList);
-
-    // $$ for array
-    // get pointer to starting record, or index of starting record? and then add the index, and then do a read on that
-    // statement.
-    //    this->addReadStatement(attribute, add_temp_var("index_read_tmp_arTy", valueType::RECORD_PTR));
-    //    this->addLogStatement("read the pointer to the actual table record\n");
-
-    // now how to get the value?
-
     auto rs = new ReadIndexedStatement(attribute->name, destination, key, true);
     statements.push_back(rs);
 
   } else {
     // KV_MAP access
     auto indexedTy = std::static_pointer_cast<AttributeIndexedList>(attributeList);
-
-    // $$ for indexedList
-    // get the pointer to the actual index which is stored there.
-    // then probe the index to get the value of it.
-
-    //
-    // this->addReadStatement(attribute, add_temp_var("index_read_tmp_idxTy", valueType::RECORD_PTR));
-    // now we have ptr to that index, now probe it for get.
 
     // how to handle if not found?
     auto rs = new ReadIndexedStatement(attribute->name, destination, key, false);

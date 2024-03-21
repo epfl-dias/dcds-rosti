@@ -23,7 +23,7 @@
 
 #include <utility>
 
-static constexpr bool print_debug_log = true;
+static constexpr bool print_debug_log = false;
 
 using namespace dcds;
 
@@ -96,30 +96,9 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
       mc_st->function_instance = mc_st->function_instance->cloneShared();
       attribute_info x{mc_st->function_instance->builder->getName(), mc_st->referenced_type_variable};
 
-//      LOG(INFO) << "=== " << mc_st->referenced_type_variable << " :: " << mc_st->function_instance->getName();
-//      LOG(INFO) << mc_st->function_instance->builder->getName() << " || " << mc_st->referenced_type_variable;
-//      LOG(INFO) << "===" << (traits_in_scope.contains(x));
-//      LOG_IF(INFO, print_debug_log) << traits_in_scope;
-//      if (traits_in_scope.contains(x)) {
-//        auto xx = traits_in_scope[x];
-//        LOG(INFO) << "XX";
-//        LOG(INFO) << xx.source_var.first << " || " << xx.source_var.second;
-//      }
-//      LOG(INFO) << "===" << (traits_in_scope.contains(x) && traits_in_scope[x].is_nascent);
-
       // either the entire type is nascent, or the variable being operated on is nascent.
       if (!(type_traits.is_nascent || (traits_in_scope.contains(x) && traits_in_scope[x].is_nascent))) {
-
         LOG_IF(INFO, print_debug_log) << "placing lock for method-call variable: " << mc_st->referenced_type_variable;
-
-        //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
-        //                  << " -- IsFunctionConst: " << mc_st->function_instance->isConst();
-        //        LOG_IF(INFO, print_debug_log) << mc_st->function_instance->getName()
-        //                  << " -- IsFunctionReadOnly: " << mc_st->function_instance->isReadOnly();
-
-        // is the type-name wrong here??
-        //        placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
-        //        typeName, typeId, false);
 
         placeLockIfAbsent(lock_placed, traits_in_scope, it, s->statements, mc_st->referenced_type_variable,
                           mc_st->function_instance->builder->getName(), mc_st->function_instance->builder->getTypeID(),
@@ -144,6 +123,18 @@ void CCInjector::injectCC_statementBlock(std::shared_ptr<StatementBuilder> &s, c
       auto ins_st = reinterpret_cast<InsertStatement *>(st);
       auto t = traits_in_scope.emplace(std::pair{ins_st->type_name, ins_st->destination_var}, attribute_trait_t{});
       t.first->second.is_nascent = true;
+    } else if (st->stType == statementType::FOR_LOOP || st->stType == statementType::WHILE_LOOP ||
+               st->stType == statementType::DO_WHILE_LOOP) {
+      auto loop_st = reinterpret_cast<LoopStatement *>(st);
+      injectCC_statementBlock(const_cast<std::shared_ptr<StatementBuilder> &>(loop_st->body), lock_placed, type_traits,
+                              traits_in_scope);
+    } else {
+      // non-CC statements.
+      if (!(st->stType == statementType::YIELD || st->stType == statementType::REMOVE_INDEXED ||
+            st->stType == statementType::INSERT_INDEXED || st->stType == statementType::READ_INDEXED ||
+            st->stType == statementType::LOG_STRING)) {
+        LOG(FATAL) << "Unknown statement for CC::Inject: " << st->stType;
+      }
     }
 
     ++it;  // move on to next statement

@@ -23,11 +23,12 @@
 
 #include <dcds/util/thread-runner.hpp>
 #include <dcds/util/timing.hpp>
+#include <random>
 #include <utility>
 
 using namespace dcds_generated;
 
-// CHECKs with an any cast wrapper
+// CHECK with an any cast wrapper
 static void CHECK_TRUE(std::any v) { CHECK(std::any_cast<bool>(v)); }
 static void CHECK_FALSE(std::any v) { CHECK_EQ(std::any_cast<bool>(v), false); }
 
@@ -38,27 +39,31 @@ LinkedList::LinkedList(std::string _ds_name, std::string _ds_node_name)
   auto nodeType = builder->getRegisteredType(ds_node_name);
 
   builder->addAttributePtr("head", nodeType);
-  builder->addAttributePtr("tail", nodeType);
 
   this->createFunction_empty();
 }
 
-void LinkedList::build() {
+void LinkedList::build(bool inject_cc, bool optimize) {
+  if (optimize) {
+    LOG(INFO) << "LinkedList::optimize() -- start";
+    dcds::BuilderOptPasses buildOptimizer(builder);
+    buildOptimizer.runAll();
+    LOG(INFO) << "LinkedList::optimize() -- end";
+  }
+
+  if (inject_cc) {
+    builder->injectCC();
+  }
+
   LOG(INFO) << "LinkedList::build() -- start";
   builder->build();
-  builder->injectCC();
-  builder->dump();
-  LOG(INFO) << "LinkedList::build() -- end";
-}
-void LinkedList::optimize() {
-  LOG(INFO) << "LinkedList::optimize() -- start";
-  dcds::BuilderOptPasses buildOptimizer(builder);
-  buildOptimizer.runAll();
-  LOG(INFO) << "LinkedList::optimize() -- end";
 
-  builder->injectCC();
-  builder->dump();
+  //  LOG(INFO) << "LinkedList::build() -- end";
+  //  builder->dump();
+
+  LOG(INFO) << "LinkedList::build() -- FN end";
 }
+
 void LinkedList::generateLinkedListNode() {
   if (builder->hasRegisteredType(ds_node_name)) {
     return;
@@ -88,6 +93,96 @@ void LinkedList::createFunction_empty() {
 
   conditionalBlocks.ifBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(true));
   conditionalBlocks.elseBlock->addReturnStatement(std::make_shared<dcds::expressions::BoolConstant>(false));
+}
+
+static void printThroughput(size_t runtime_ms, size_t n_threads, size_t num_op_per_thread,
+                            const std::string& prefix = "") {
+  auto runtime_s = ((static_cast<double>(runtime_ms)) / 1000);
+  auto throughput = ((num_op_per_thread * n_threads) / runtime_s);
+  auto avg_per_thread = (throughput / n_threads) / 1000000;
+  LOG(INFO) << "Threads: " << n_threads << prefix
+            << ": Throughput: " << ((num_op_per_thread * n_threads) / runtime_s) / 1000000 << " MTPS"
+            << " | avg-per-thread: " << avg_per_thread << " MTPS"
+            << " | total_time: " << runtime_ms << "ms";
+}
+
+size_t LinkedList::benchmark(size_t n_threads, size_t num_op_per_thread, bool print_res) {
+  assert(builder->hasFunction("push"));
+  assert(builder->hasFunction("pop"));
+  auto instance = builder->createInstance();
+  auto thr = dcds::ThreadRunner(n_threads);
+  auto runtime_ms = thr(
+      [num_op_per_thread](const uint64_t _tid, dcds::JitContainer* _instance) {
+        constexpr size_t seed = 42;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> distrib(0, 1);
+        uint64_t val;
+
+        for (size_t i = 0; i < num_op_per_thread; i++) {
+          if (distrib(gen) == 0) {
+            // push
+            _instance->op("push", i);
+          } else {
+            // pop
+            _instance->op("pop", &val);
+          }
+        }
+      },
+      instance);
+
+  dcds::storage::TableRegistry::getInstance().clear();
+
+  if (print_res) printThroughput(runtime_ms, n_threads, num_op_per_thread, " DCDS-LIST::" + this->ds_name);
+  return runtime_ms;
+}
+
+size_t LinkedList::benchmark2(size_t n_threads, size_t num_op_per_thread, bool print_res) {
+  assert(builder->hasFunction("push"));
+  assert(builder->hasFunction("pop"));
+  auto instance = builder->createInstance();
+  auto thr = dcds::ThreadRunner(n_threads);
+  auto runtime_ms = thr(
+      [num_op_per_thread](const uint64_t _tid, dcds::JitContainer* _instance) {
+        constexpr size_t seed = 42;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> distrib(1, 5);
+        uint64_t val;
+
+        for (size_t i = 0; i < num_op_per_thread; i++) {
+          if (distrib(gen) > 2) {
+            // push
+            _instance->op("push", i);
+          } else {
+            // pop
+            _instance->op("pop", &val);
+          }
+        }
+      },
+      instance);
+
+  dcds::storage::TableRegistry::getInstance().clear();
+
+  if (print_res) printThroughput(runtime_ms, n_threads, num_op_per_thread, " LL2::" + this->ds_name);
+  return runtime_ms;
+}
+
+size_t LinkedList::benchmark_push(size_t n_threads, size_t num_op_per_thread, bool print_res) {
+  assert(builder->hasFunction("push"));
+  assert(builder->hasFunction("pop"));
+  auto instance = builder->createInstance();
+  auto thr = dcds::ThreadRunner(n_threads);
+  auto runtime_ms = thr(
+      [num_op_per_thread](const uint64_t _tid, dcds::JitContainer* _instance) {
+        for (size_t i = 0; i < num_op_per_thread; i++) {
+          _instance->op("push", i);
+        }
+      },
+      instance);
+
+  dcds::storage::TableRegistry::getInstance().clear();
+
+  if (print_res) printThroughput(runtime_ms, n_threads, num_op_per_thread, " bench_push::" + this->ds_name);
+  return runtime_ms;
 }
 
 Stack::Stack() : LinkedList("LL_Stack") {
@@ -212,10 +307,12 @@ void Stack::test() {
 }
 
 FIFO::FIFO() : LinkedList("LL_FIFO") {
+  builder->addAttributePtr("tail", builder->getRegisteredType(ds_node_name));
+
   this->createFunction_push();
   this->createFunction_pop();
-  builder->injectCC();
 }
+
 void FIFO::createFunction_push() {
   /*
 

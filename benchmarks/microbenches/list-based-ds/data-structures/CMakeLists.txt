@@ -1,7 +1,7 @@
 # Pure, regular C++ files
 set(list-based-datastructures_cxx
         lib/parser-generated/linked-list.cpp
-        lib/un-generated/linked-list.cpp
+        lib/parser-generated/doubly-linked-list.cpp
         )
 
 add_library(list-based-datastructures SHARED

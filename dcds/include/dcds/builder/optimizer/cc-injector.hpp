@@ -61,12 +61,10 @@ class CCInjector {
                                 attribute_traits &traits_in_scope, Iterator &pos, std::deque<Statement *> &statements,
                                 const std::string &attribute_name, const std::string &type_name, size_t typeID,
                                 bool lock_exclusive = true) {
+    // lock_exclusive = true; // HACK TO CHECK
     attribute_info attrInfo{type_name, attribute_name};
     if (!(lock_placed.contains(attrInfo))) {
       if (traits_in_scope.contains(attrInfo)) {
-        //        LOG(INFO) << "trait-in-scope: " << attrInfo.second;
-        //        LOG(INFO) << "\tis_nascent: " << traits_in_scope[attrInfo].is_nascent;
-        //        LOG(INFO) << "\tis_const: " << traits_in_scope[attrInfo].is_const;
         if (traits_in_scope[attrInfo].is_const) {
           // LOG(INFO) << "No-need of lock as variable is a const";
           return;

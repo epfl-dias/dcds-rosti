@@ -31,9 +31,15 @@ class LinkedList {
   explicit LinkedList(std::string _ds_name = "LinkedList", std::string _ds_node_name = "LL_NODE");
   virtual ~LinkedList() = default;
 
-  void build();
-  void optimize();
+  void build(bool inject_cc = true, bool optimize = false);
   virtual void test() = 0;
+
+  size_t benchmark(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                   bool print_res = true);
+  size_t benchmark2(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                    bool print_res = true);
+  size_t benchmark_push(size_t n_threads = std::thread::hardware_concurrency(), size_t num_op_per_thread = 1_M,
+                        bool print_res = true);
 
  private:
   void generateLinkedListNode();
