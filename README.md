@@ -1,12 +1,10 @@
-
 # Declarative Concurrent Data Structures (DCDS)
+DCDS is an ongoing project at the [Data Intensive Applications and Systems](https://www.epfl.ch/labs/dias/) (DIAS) lab at EPFL.
 
 
-## Considerations
-
-- Contention on data structure attributes. For example, in a simple FIFO queue, if the data structure maintains size as a class attribute, and is read/updated across the frequency operations, then it becomes the contention point, and hence, serializes all concurrent operations which is undesirable. Either think of alternatives, like implementing a empty() operation which checks for head/tail existence only, or use size in a read-only separate operation (later, it can be approximate or optimistic reads also), or in the future, use scans for getting size.
+The core library is in `dcds/` and the benchmarks are in `benchmarks.`
 
 ## Dependencies
 
-- Currently, is a C++20 project and effectively depends on (Pelago)[https://gitlab.epfl.ch/DIAS/PROJECTS/caldera/pelago] to use a modern clang on DIAS servers.
+- Currently, is a C++20 project and depends on LLVM. It is tested with LLVM-14 on Ubuntu 22.04. We use CMake, Clang and LLVM-14 from the [Pelago](https://github.com/epfl-dias/pelago) toolchain.
 
